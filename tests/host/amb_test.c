@@ -1537,6 +1537,24 @@ int main(void)
         }
     }
 
+    /* (BERLIN) a piece changed while playing starts its own arc: Timewind (a long Emerge) playing, then Stratosfear (no
+     * Emerge): in Flow within two bars; and back to Timewind: in Emerge */
+    {
+        fresh();
+        piece(0);
+        en_play(1);
+        run(10.0f);
+        CHECK(en_section == EN_SEC_EMERGE, "test_piece_change_arc: Timewind not in Emerge (%d)", en_section);
+        piece(4);
+        run(2.0f);
+        CHECK(en_section == EN_SEC_FLOW, "test_piece_change_arc: Stratosfear in section %d, not Flow", en_section);
+        run(10.0f);
+        piece(0);
+        run(2.0f);
+        CHECK(en_section == EN_SEC_EMERGE, "test_piece_change_arc: back to Timewind, section %d, not Emerge",
+              en_section);
+    }
+
     /* (BERLIN) Timewind has one sequence (Schulze's): ten minutes, no Sequence 2 note */
     {
         fresh();

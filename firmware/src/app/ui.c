@@ -2349,13 +2349,18 @@ static void draw_meters(void)                    /* left: the four layers */
     }
 }
 
-static void draw_duck(void)                      /* right: the kick's ducking, falling from the top */
+static void draw_duck(void)                      /* (BERLIN) right: the echo's level, rising from the bottom (eased: up
+                                                  * at once, down over ~half a second) */
 {
-    int32_t h = (int32_t)(fm_clampf(en_duck * (float)proj.par[P_TAPBT] * 0.01f, 0.0f, 1.0f) * 52.0f + 0.5f);
+    static float lv;
+    const float pk = epk[(epk_w + EPK_N - 1u) % EPK_N].pk;
+    int32_t h;
+    lv = fm_maxf(fm_clampf(pk * 3.0f, 0.0f, 1.0f), lv * 0.93f);
+    h = (int32_t)(lv * 52.0f + 0.5f);
     cv_round(220, 32, 8, 56, 3, K_PULSE_T);
     if (h > 0)
-        cv_round(220, 32, 8, h + 2, 3, K_PULSE);
-    cv_text(216 - text_w(&FONT_XS, "DUCK"), 76, &FONT_XS, "DUCK", K_DIM);
+        cv_round(220, 32 + 54 - h, 8, h + 2, 3, K_PULSE);
+    cv_text(216 - text_w(&FONT_XS, "ECHO"), 76, &FONT_XS, "ECHO", K_DIM);
 }
 
 /* below: the bar, a lane a layer. On a layer's page (and its sound pages) its lanes as ever, the others in grey (the

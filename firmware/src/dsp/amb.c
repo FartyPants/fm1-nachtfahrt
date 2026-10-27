@@ -3395,6 +3395,8 @@ static void drain(void)
             regrow();
             if (seq_have)                        /* (a piece's own patterns, kept) */
                 seq_take();
+            ar_start();                          /* (BERLIN) a piece (changed, or back to its recipe) from its arc's
+                                                  * start: its own Emerge, or Flow at once */
             break;
         case C_SEQ:
             seq_have = (uint8_t)a;
