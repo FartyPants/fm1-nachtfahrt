@@ -179,9 +179,6 @@ static const uint8_t GROOVE_PAT[NGROOVE] = {0, 1, 2, 4, 3};
  * held past the next kick, and Roller's nearly to its next note: the kick lands on a bass the duck shapes, not
  * in silence) */
 static const uint16_t GROOVE[5] = {0x0001u, 0x4444u, 0x0909u, 0x4949u, 0x0481u};
-static const float GROOVE_GATE[5] = {15.0f, 3.25f, 2.2f, 1.8f, 2.6f};
-static const float GROOVE_LVL[5] = {1.0f, 0.7f, 1.0f, 0.9f, 1.0f};   /* (the longer ones lower: Offbeat's held more
-                                                                      * than twice as long, and under the kick) */
 static const uint8_t DRIFT_BARS[7] = {2, 4, 8, 16, 32, 64, 0};
 
 uint32_t en_groove(int g) { return GROOVE[(unsigned)g < 5u ? g : 0]; }
@@ -656,13 +653,6 @@ static void fm_note(fmvoice_t *v, const fmpatch_t *p, float f, float rmul, float
     }
 }
 
-static void fm_tune(fmvoice_t *v, const fmpatch_t *p, float f, float rmul, float qmul)   /* a slide: the rates only */
-{
-    int k;
-    for (k = 0; k < 4; k++)
-        v->inc[k] = f * p->op[k].ratio * (k == 1 ? rmul : k >= 2 ? qmul : 1.0f) * (1.0f / EN_SR);
-}
-
 /* the control rate: the envelopes a step on, the levels (ms: the modulators' scaled, as Colour and Tone have it) */
 static void fm_ctl(fmvoice_t *v, const fmpatch_t *p, int alg, float ms)
 {
@@ -801,20 +791,7 @@ static const fmpatch_t *cv_patch(int cv) { return cv == 1 ? &FM_KEYS : cv == 4 ?
 static float rotor, click;                      /* Tonewheel: the rotor's turn, the key click */
 
 /* ------------------------------------------------------------------ bass --- */
-static struct {
-    float ph, note, target, env;
-    int32_t gate;                               /* samples left of the note */
-    uint8_t midi_note;
-} bass;
-static float bass_vol;
-/* the bass's voices: Sub (a sine and a little of its octave, softly clipped), Round (its third harmonic
- * too, rounder), Growl (FM at 1, a bite that opens with each note and closes), Pulse (a sine clipped hard
- * towards a square) */
-enum { BV_SUB, BV_PUNCH, BV_RUBBER, BV_PLUCK, BV_GROWL };
-static const float BV_GAIN[EN_NBV] = {1.0f, 1.1f, 1.0f, 1.0f, 1.16f};
 static const fmpatch_t *const BV_PATCH[EN_NBV] = {0, &FM_PUNCH, &FM_RUBBER, &FM_PLUCK, &FM_GROWL};
-static fmvoice_t bfm;
-static float bass_bite, bite_dec;
 
 /* ----------------------------------------------------------------- pings --- */
 #define NBELL 6
@@ -852,7 +829,6 @@ static uint8_t hat_order[12];
 static const uint8_t HAT_ORDER[12] = {3, 11, 7, 15, 1, 9, 5, 13, 0, 8, 4, 12};
 static int hat_k, hat_kb;
 static float duck_x, duck_d, duck_depth, duck_rel;
-static float duck_xb, duck_db, duck_relb;       /* the bass's duck: deeper, and slower to let go (it pumps) */
 /* the kits: the kick (its pitch at the strike, times its note; how quickly it falls; its length; its click;
  * its drive) and the hats (their high-pass, times Hats'; how much noise against the metal; their length) */
 static const struct {
@@ -1019,11 +995,6 @@ static void voice_chord(void)
     en_chord_n = (uint8_t)chord_nt;
     if (en_playing)
         drone_chord();
-}
-
-static int bass_note(int pc)                    /* E1..Eb2, an octave up or down (E0..Eb1: felt more than heard) */
-{
-    return 28 + ((pc - 4) % 12 + 12) % 12;
 }
 
 /* the chords' slots: how far the progression runs (to its last filled slot; 0: none, or Play at Random), a
@@ -2038,7 +2009,7 @@ static void drum_fire(int d, float vel)
         v->inc_end = f * (1.0f / EN_SR);
         v->adec = fm_expf(-6.9f / (KIT[kit].t60 * fm_exp2f(1.2f * 0.0f) * EN_SR));
         v->clk = KIT[kit].click * 2.0f * fm_maxf(1.0f + pu, 0.0f);   /* (Tight: 1, as before) */
-        duck_x = duck_xb = 1.0f;
+        duck_x = 1.0f;
         break;
     }
     case 1:                                     /* the shaker: short; it chokes the open hat */
@@ -2100,32 +2071,6 @@ static void drums_wait_step(int32_t k)          /* k samples went by: hits whose
             drum[d].wait = 0;
             drum_fire(d, drum[d].pend);
         }
-}
-
-/* ----------------------------------------------------------------- bass --- */
-static void bass_hit(int first, int up)
-{
-    int pc = chord_pcs[0], n, g = 1;
-    if ((!first || g == 0) && chord_nt >= 3 && frand() < 0.2f)
-        pc = chord_pcs[2];                      /* the fifth (with Drone: a whole bar of it) */
-    n = bass_note(pc);
-    if (!first && up)
-        n += 12;                                /* now and then, an octave up */
-    if (bass.env < 0.05f)
-        bass.note = (float)n;                   /* from silence: no slide */
-    bass.target = (float)n;
-    if (bass.gate > 0 || bass.midi_note)
-        midi(0x82, bass.midi_note, 0);
-    bass.gate = (int32_t)(fm_minf(GROOVE_GATE[gpat()] * fm_exp2f(0.0f), 15.8f) * step_len);
-    bass_bite = 1.0f;
-    {
-        int bv = (unsigned)par[P_LVOICE] < EN_NBV ? par[P_LVOICE] : 0;
-        if (BV_PATCH[bv])
-            fm_note(&bfm, BV_PATCH[bv], mtof(bass.note), 1.0f, 1.0f, fm_d(P_BFDEC));
-    }
-    bass.midi_note = (uint8_t)n;
-    hit(2, first ? 1.0f : 0.75f);
-    midi(0x92, (uint32_t)n, 90);
 }
 
 /* ------------------------------------------------------- the arrangement --- */
@@ -2413,7 +2358,6 @@ static void tick(void)
                                                     * or not (lighter without one; lightest in a Break) */
             const float gd = lay_kick ? 0.7f : 0.45f;
             duck_x = fm_maxf(duck_x, gd);
-            duck_xb = fm_maxf(duck_xb, gd);
         }
         if (hats && lay_hats && bar_sh >> st & 1u && dhit(1, st, &v1))
             drum_hit(1, v1, st & 1);
@@ -2426,12 +2370,6 @@ static void tick(void)
             if (par[P_SMODE] ? dhit(4, st, &v4) : frand() < 0.03f + 0.05f * evolve)
                 drum_hit(4, v4, 0);
         }
-    }
-    if (EN_DUB && lay_bass && !(mutes & EN_M_BASS) && !(perf & EN_PF_DROP) && bar_bass >> st & 1u) {
-        /* (1.3.0) the bar's notes, from the plan (Density and Energy: which rest, the same each A bar); the octave
-         * note, if the plan has one, the same place each bar */
-        const uint32_t first = bar_bass & (0u - bar_bass), below = bar_bass & ((1u << st) - 1u);
-        bass_hit(first >> st & 1u, ph.oct >= 0 && pcount(below) == ph.oct % (pcount(bar_bass) > 1 ? pcount(bar_bass) : 1) && st);
     }
     if (EN_DUB && en_stab_pat >> st & 1u) {               /* (the random draws made muted or not: the music goes on the same) */
         uint32_t later = en_stab_pat >> (st + 1);
@@ -2885,16 +2823,14 @@ int en_fm_alg(int layer)
 static int pulse;
 /* (1.3.0) the FM pages' fourth knob, an LFO synced to the bar: the chord's filter over two bars (+-1.5 octaves at
  * 100), the pings' FM brightness over one, the bass's bite over four; a sine from the grid's place, eased */
-static float lfo_c, lfo_p, lfo_b, lfo_n;      /* (lfo_n: the noise's, its rings' tone over a bar, +-1 octave at 100;
+static float lfo_c, lfo_p, lfo_n;      /* (lfo_n: the noise's, its rings' tone over a bar, +-1 octave at 100;
                                                  * its crest on beat 2, the chord's on beat 3: they move apart) */
 static void lfo_step(void)
 {
     const float pos = (float)(sixteenth & 63u) + (float)pulse * (1.0f / 6.0f);   /* (four bars of sixteenths) */
-    const float tc = fm_sinf(6.2831853f * pos * (1.0f / 32.0f)), tp = fm_sinf(6.2831853f * pos * (1.0f / 16.0f)),
-                tb = fm_sinf(6.2831853f * pos * (1.0f / 64.0f));
+    const float tc = fm_sinf(6.2831853f * pos * (1.0f / 32.0f)), tp = fm_sinf(6.2831853f * pos * (1.0f / 16.0f));
     lfo_c += (1.5f * (float)par[P_CFDEC] * 0.01f * tc - lfo_c) * 0.2f;
     lfo_p += (0.8f * (float)par[P_PFDEC] * 0.01f * tp - lfo_p) * 0.2f;
-    lfo_b += (1.2f * (float)par[P_BFDEC] * 0.01f * tb - lfo_b) * 0.2f;
     lfo_n += (0.67f * (float)par[P_NLFO] * 0.01f * fm_sinf(6.2831853f * pos * (1.0f / 16.0f)) - lfo_n) * 0.2f;
 }
 static uint32_t ext_age;
@@ -3116,8 +3052,6 @@ static void quiet(void)
             midi(pluck[i].layer ? 0x83u : 0x81u, pluck[i].note, 0);
         }
     st_env = st_amp = 0.0f;
-    bass.env = 0.0f;
-    bass.gate = 0;
     notes_off();
 }
 
@@ -3173,9 +3107,7 @@ void en_init(void)
         stab[i].ph[1] = 0.37f + 0.21f * (float)i;
     }
     duck_rel = fm_expf(-1.0f / (0.13f * EN_SR));
-    duck_relb = fm_expf(-1.0f / (0.25f * EN_SR));
     throw_dec = fm_expf(-1.0f / (0.5f * EN_SR));
-    bite_dec = fm_expf(-1.0f / (0.07f * EN_SR));
     arcm = arc = 0.0f;
     for (i = 0; i < P_NPARAMS; i++)
         apply(i, PARAMS[i].def);
@@ -3183,7 +3115,6 @@ void en_init(void)
     for (i = 0; i < EN_NLOOP; i++)
         loop_pos[i] = 0;
     regrow();
-    bass.note = bass.target = (float)bass_note(chord_pcs[0]);
     pl_decay = pl_decay_t;
 }
 
@@ -3247,7 +3178,6 @@ static void play_stop(void)
         drum[d].wait = 0;                        /* a swung hit still waiting stays unplayed */
     tick_wait = 0;
     en_playing = 0;
-    bass.gate = 0;
     drone_off(dr_bank);
     lead_off();
     if (!en_ext)
@@ -3408,7 +3338,7 @@ static void drain(void)
 
 /* --------------------------------------------------------------- render --- */
 #define BLK 256
-static float mixl[BLK], mixr[BLK], rsend[BLK], esend[BLK], kickb[BLK], bassb[BLK], crl[BLK], crr[BLK];
+static float mixl[BLK], mixr[BLK], rsend[BLK], esend[BLK], kickb[BLK], crl[BLK], crr[BLK];
 
 /* (the classics pass) the chord's and the pings' dry, wider: each side a little of the other's, 5 and 8 ms later and
  * drifting slowly (a chorus crossed), so the two sides differ without the voices panned further; Width (0 none,
@@ -3454,7 +3384,6 @@ static void widen(uint32_t n)
     }
 }
 
-/* (bassb: the bass, mono, on its own so the duck takes it deeper than the rest) */
 
 static void render_stabs(uint32_t n)
 {
@@ -3592,63 +3521,6 @@ static void render_stabs(uint32_t n)
         en_pad_note[i] = stab[i].note;
         en_pad_amp[i] = amp;
     }
-}
-
-static void render_bass(uint32_t n)
-{
-    uint32_t j;
-    const int bv = (unsigned)par[P_LVOICE] < EN_NBV ? par[P_LVOICE] : 0;
-    const float g = bass_vol * 0.5f * BV_GAIN[bv] * GROOVE_LVL[gpat()],
-                xb = lfo_b, xs = 0.0f,   /* (the LFO on the bite) */
-                drv = 1.2f * fm_exp2f(1.2f * xb), bi = fm_maxf(1.0f + xb, 0.0f);   /* Bite: the drive, the FM bite */
-    const int balg = BV_PATCH[bv] ? fm_alg_of(P_BALG, BV_PATCH[bv]) : 0;
-    const float bfb = BV_PATCH[bv] ? fm_fb(P_BFB, BV_PATCH[bv]) : 0.0f;
-    float ph = bass.ph, env = bass.env, inc, bite = bass_bite;
-    int32_t gate = bass.gate;
-    if (env < 1e-5f && gate <= 0) {
-        bass.env = 0.0f;
-        en_bass_level = 0.0f;
-        return;
-    }
-    bass.note += (bass.target - bass.note) * fm_minf((float)n / (0.012f * 1.0f * EN_SR), 1.0f);
-                                                 /* a short slide (Slide: ~1 ms .. ~250 ms) */
-    inc = mtof(bass.note) * (1.0f / EN_SR);
-    if (BV_PATCH[bv])                            /* the FM voices follow the slide */
-        fm_tune(&bfm, BV_PATCH[bv], mtof(bass.note), 1.0f, 1.0f);
-    for (j = 0; j < n; j++) {
-        float x, tgt = gate > 0 ? 1.0f : 0.0f;
-        if (gate > 0 && --gate == 0)
-            midi(0x82, bass.midi_note, 0);
-        if (perf & EN_PF_DROP && gate > 0) {   /* PERFORM's Drop: the bass let go at once (~20 ms) */
-            gate = 0;
-            midi(0x82, bass.midi_note, 0);
-            tgt = 0.0f;
-        }
-        env += (tgt - env) * (tgt > env ? 0.02f : 0.0012f);   /* ~1 ms in, ~20 ms out */
-        if (BV_PATCH[bv]) {                      /* (Bite: the modulators' levels) */
-            if (!(j & 31u))
-                fm_ctl(&bfm, BV_PATCH[bv], balg, bi);
-            x = fm_sample(&bfm, balg, bfb, 1.0f);
-        } else {
-            x = sine(ph) + 0.2f * sine(2.0f * ph);
-        }
-        if (xs > 0.0f)                           /* Shape: towards a square, or back to a sine */
-            x += xs * (sat(x * 4.0f) - x);
-        else if (xs < 0.0f)
-            x -= xs * (sine(ph) - x);
-        bite *= bite_dec;
-        ph += inc;
-        if (ph >= 1.0f)
-            ph -= 1.0f;
-        x = sat(x * drv) * env * g * (1.2f / drv + 0.0f) * (0.6f + 0.4f * fm_minf(drv / 1.2f, 1.6f));
-        bassb[j] += x;
-        rsend[j] += x * 0.04f;
-    }
-    bass.ph = ph;
-    bass_bite = fm_flush(bite);
-    bass.env = fm_flush(env);
-    bass.gate = gate;
-    en_bass_level = env;
 }
 
 static void render_bells(uint32_t n)
@@ -4567,8 +4439,10 @@ static void render_lead(uint32_t n)
     const float g = lead_vol * 0.45f, vib = (float)par[P_VIB] * 0.004f + (lv == 3 ? 0.25f : 0.0f), gl = 0.84f, gr = 1.08f;
     uint32_t j;
     float dt = 0.0f;
-    if (!lead.on && lead.env < 1e-5f)
+    if (!lead.on && lead.env < 1e-5f) {
+        en_bass_level = 0.0f;                    /* (the meter, at rest) */
         return;
+    }
     for (j = 0; j < n; j++) {
         float x, bp, a;
         if (!(j & 15u)) {                        /* the glide, the vibrato, the filter: every 16 */
@@ -4655,10 +4529,9 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
     else
         mb_s[0] = mb_s[1] = mb_s[2] = mb_s[3] = 0.0f;
     for (j = 0; j < n; j++)
-        mixl[j] = mixr[j] = rsend[j] = esend[j] = kickb[j] = bassb[j] = 0.0f;
+        mixl[j] = mixr[j] = rsend[j] = esend[j] = kickb[j] = 0.0f;
     lfo_step();
     render_stabs(n);
-    render_bass(n);
     render_bells(n);
     render_plucks(n);
     render_drone(n);
@@ -4675,13 +4548,10 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
     eg += (1.0f - eg) * fx_wash;                 /* Wash: everything into the echo */
     epk = en_echo_pk;
     for (j = 0; j < n; j++) {
-        float wl, wr, l, r, el, er, dg, dgb, rin, cl, cr, sd, dry = 1.0f - 0.75f * fx_wash;
+        float wl, wr, l, r, el, er, dg, rin, cl, cr, sd, dry = 1.0f - 0.75f * fx_wash;
         duck_d += (duck_x - duck_d) * 0.08f;
         duck_x *= duck_rel;
-        dg = 1.0f - 0.3f * duck_depth * duck_d;  /* the duck split: the wash ducked lightly, the bass deep (it pumps) */
-        duck_db += (duck_xb - duck_db) * 0.08f;
-        duck_xb *= duck_relb;
-        dgb = 1.0f - fm_minf(2.0f * duck_depth, 0.9f) * duck_db;
+        dg = 1.0f - 0.3f * duck_depth * duck_d;  /* the duck: the wash ducked lightly */
         echoes(esend[j] * eg, &el, &er);
         {   /* (a strike: the returns down by up to 6 dB, back over ~150 ms; not a throw's, which rides over) */
             float ge;
@@ -4695,7 +4565,7 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
         rin = (rsend[j] * rg + (el + er) * 0.12f * rev_send) * 0.8f;   /* (the classics pass: less of the echo into
                                                   * the plate, 0.25 before: the repeats stay distinct) */
         if (fx_vt + fx_wash > 0.001f)            /* Reverb, Wash: the dry into the plate */
-            rin += (mixl[j] + mixr[j] + 2.0f * bassb[j]) * (0.35f * fx_vt + 0.3f * fx_wash);
+            rin += (mixl[j] + mixr[j]) * (0.35f * fx_vt + 0.3f * fx_wash);
         cloud(rin * ca * 2.5f * cl_in + pl_back * cloud_amt * 0.22f, &cl, &cr);   /* the grains, into the plate: they bloom;
                                                  * the plate's tail back into the line: the wash grows on itself */
         {   /* the plate, every other sample (its input the pair's mean, its output a line between) */
@@ -4722,8 +4592,8 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
         ms_lp1 += 0.0113f * (sd - ms_lp1);
         ms_lp2 += 0.0113f * (sd - ms_lp1 - ms_lp2);
         sd = ms_lp1 + ms_lp2;
-        l = (l - sd) * dg + bassb[j] * dry * dgb;
-        r = (r + sd) * dg + bassb[j] * dry * dgb;
+        l = (l - sd) * dg;
+        r = (r + sd) * dg;
         if (shut > 0.01f) {
             float bp;
             l = svf_lp(mb_c, mb_s, l, &bp);
@@ -4761,8 +4631,6 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
     en_echo_pk = epk;
     duck_x = fm_flush(duck_x);
     duck_d = fm_flush(duck_d);
-    duck_xb = fm_flush(duck_xb);
-    duck_db = fm_flush(duck_db);
     ms_lp1 = fm_flush(ms_lp1);
     ms_lp2 = fm_flush(ms_lp2);
 }
