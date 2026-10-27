@@ -2563,7 +2563,7 @@ static void plate_init(void)
     lfo_c = 1.0f;
 }
 
-/* ------------------------------------------------- echo: tape and Echoplex --- */
+/* ------------------------------------------------------------ echo: tape --- */
 /* The dub echo: a tape loop (up to ~5.6 s, synced to the tempo) at a quarter rate (11 kHz, 16-bit,
  * mono), with two heads: the first plays the loop's length, the second a part of it (3/4 at first),
  * each panned to its side. In the feedback, a band-pass (each repeat thinner and darker) that the sweep
@@ -2571,7 +2571,7 @@ static void plate_init(void)
  * running away. With Motion the heads wander, the feedback leans now on one, now on the other, and now
  * and then the second slides to another part of the loop (the repeats bend in pitch on the way). A
  * thrown stab pushes the feedback up a little. Frozen (dub hold), the loop stops listening and plays
- * what it holds, sample for sample, for ever. A short Echoplex (~160 ms) smears what goes in. */
+ * what it holds, sample for sample, for ever. */
 #define TAPE_N 62000                             /* 5.6 s at 11.025 kHz */
 #define TAPE_SR 11025.0f
 static int16_t tape[TAPE_N] EN_POOL;
@@ -2583,11 +2583,6 @@ static float head2 = 0.75f, head2_t = 0.75f, head2_v;   /* its place (of the loo
 static float fb_lean;                            /* 0..1: how much of the feedback is the second head's */
 static float hg[4] = {1.0f, 0.0f, 0.0f, 1.0f};   /* the heads' pan gains: 1 left, 1 right, 2 left, 2 right */
 static uint32_t head_left;                       /* samples until the second head may move */
-#define PLEX_N 7100                              /* 160 ms at 44.1 kHz */
-#define PLEX_TAP 2700                            /* the right's tap: ~100 ms */
-static int16_t plex[PLEX_N];
-static int plex_w;
-static float plex_lp, plex_lp2;
 
 static inline float tape_read(float d)           /* d quarter-rate samples ago */
 {
@@ -2659,7 +2654,7 @@ static void heads_step(uint32_t n)
     tape_lpc = 0.58f + 0.3f * sw;
 }
 
-/* one sample of both: the input (a mono send) to the tape's heads (el, er) and the Echoplex (xl, xr) */
+/* one sample: the input (a mono send) to the tape's heads (el, er) */
 /* 1.3.0, the echo dissolving (build/research/dubtechno/REPORT2.md, variant D): what enters the tape band-limited (Tone),
  * each repeat through five allpasses in the feedback (Blur: their gain), so a repeat comes back softer and darker
  * than the last; one head (the second only while a throw rings), the Echoplex's short taps out of the mix. (The
@@ -2690,17 +2685,8 @@ static inline float ec_fb(float x)
     return eapf(4, 553, 441, eapf(3, 277, 276, eapf(2, 126, 151, eapf(1, 37, 89, eapf(0, 0, 37, x)))));
 }
 
-static inline void echoes(float in, float *el, float *er, float *xl, float *xr)
+static inline void echoes(float in, float *el, float *er)
 {
-    float y = (float)plex[plex_w] * (1.0f / 12000.0f);
-    int t = plex_w - PLEX_TAP;
-    plex_lp += 0.3f * (y - plex_lp);
-    plex_lp2 += 0.3f * ((float)plex[t < 0 ? t + PLEX_N : t] * (1.0f / 12000.0f) - plex_lp2);
-    plex[plex_w] = s16(in + 0.45f * plex_lp);
-    if (++plex_w >= PLEX_N)
-        plex_w = 0;
-    *xl = plex_lp;
-    *xr = plex_lp2;
     tape_acc += in;
     if (++tape_ph >= 4) {                        /* the tape, a quarter of the time */
         float d, h1, h2, h3, f1, f2, fb, w;
@@ -3216,14 +3202,12 @@ void en_init(void)
     memset(phz, 0, sizeof phz);                  /* (and the Drone's phaser from the top) */
     ph_last[0] = ph_last[1] = ph_lfo = 0.0f;
     ar_cr_env = 0.0f;                            /* (no Crash ringing on) */
-    for (i = 0; i < PLEX_N; i++)
-        plex[i] = 0;
     for (i = 0; i < CL_LEN; i++)
         cl_buf[i] = 0;
     for (i = 0; i < CL_NG; i++)
         cl_g[i].len = 0;
     cl_live = 0;
-    tape_w = plex_w = tape_ph = 0;
+    tape_w = tape_ph = 0;
     head2 = head2_t = 0.75f;
     head2_v = 0.0f;
     echo_len = 0.0f;
@@ -4742,14 +4726,14 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
     eg += (1.0f - eg) * fx_wash;                 /* Wash: everything into the echo */
     epk = en_echo_pk;
     for (j = 0; j < n; j++) {
-        float wl, wr, l, r, el, er, xl, xr, dg, dgb, rin, cl, cr, sd, dry = 1.0f - 0.75f * fx_wash;
+        float wl, wr, l, r, el, er, dg, dgb, rin, cl, cr, sd, dry = 1.0f - 0.75f * fx_wash;
         duck_d += (duck_x - duck_d) * 0.08f;
         duck_x *= duck_rel;
         dg = 1.0f - 0.3f * duck_depth * duck_d;  /* the duck split: the wash ducked lightly, the bass deep (it pumps) */
         duck_db += (duck_xb - duck_db) * 0.08f;
         duck_xb *= duck_relb;
         dgb = 1.0f - fm_minf(2.0f * duck_depth, 0.9f) * duck_db;
-        echoes(esend[j] * eg, &el, &er, &xl, &xr);
+        echoes(esend[j] * eg, &el, &er);
         {   /* (a strike: the returns down by up to 6 dB, back over ~150 ms; not a throw's, which rides over) */
             float ge;
             ec_dd += (ec_dk - ec_dd) * 0.05f;
