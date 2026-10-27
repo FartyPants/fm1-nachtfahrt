@@ -75,73 +75,17 @@ wait 600
 release GLO
 reboot
 wait 1000
-expect format 17
+expect format 1
 expect par110 1
 expect par106 20
-# a 1.2.0 project (format 10): read, everything kept (Basic's chord level, set to 50 here), the noise from the
-# recipes (Basic's: Vinyl, 0; Fog's: Tape)
-tap SEL
-key w5 down
-spin K1 -100
-spin K1 50
-key w5 up
-tap SEL
-expect par0 50
-store10
-reboot
-wait 1000
-expect format 17
-expect par111 70
-expect par113 100
-expect par0 50
-expect par110 0
-expect par106 0
-turn PRESET 3
-wait 500
-expect par110 1
-expect par106 -10
 # Setup's KNOB 4: Save, a turn saves (Saved once done)
 tap GLO
 wait 300
 expect view 6
-spin K2 1
+spin K2 -1
 wait 300
 expect dirty 1
 spin K4 1
 wait 300
 said SAVED
 expect dirty 0
-# a 1.3.0 echo-and-density project (format 14): kept, the Noise page's second and the hats' length from the recipes
-tap SAVE
-tap SAVE
-wait 300
-spin K1 10
-wait 300
-expect par121 95
-store14
-reboot
-wait 1000
-expect format 17
-expect par121 85
-expect par124 0
-# a 1.3.0 Noise space project (format 15): kept, the noise's LFO from the recipe (Fog's 35)
-tap SAVE
-tap SAVE
-wait 300
-expect view 21
-spin K1 10
-wait 300
-expect par121 95
-store15
-reboot
-wait 1000
-expect format 17
-expect par121 95
-expect par125 35
-# a 1.3.0 noise-LFO project (format 16): kept, the kick's rumble from the recipe (Fog's 30)
-store16
-reboot
-wait 1000
-expect format 17
-expect par121 95
-expect par126 30

@@ -42,7 +42,6 @@ if [ -f build/amb.fwsc ]; then
 else
     echo "  skip update-path tests (no build/amb.fwsc: run ./build.sh)"
 fi
-run recipe-prints sh -c "\${PYTHON:-python3} tools/gen_recipe_prints.py | cmp - firmware/src/app/recipe_prints.h"   # (the pieces' past recipes: regenerate after changing one)
 run host-build sh host/build_host.sh
 if command -v emcc >/dev/null 2>&1; then
     run emu sh -c "sh web/emu/build.sh >/dev/null && node tests/host/emu_test.mjs build/emu/amb.wasm"

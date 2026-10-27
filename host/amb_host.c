@@ -23,16 +23,7 @@
  *   at S [LABEL]                 run until S seconds after the film started (or the boot, without a film)
  *   bar N [LABEL]                run until bar N's downbeat (N x 16 sixteenths played): a move on the beat.
  *                                Both print the film's time there, "@ mm:ss.s  bar N  LABEL" (the edit's cue)
- *   store8                       save the project as DUB-1 1.0.0 did (format 8): reboot then reads it
- *   store10                      save it as 1.2.0 did (format 10, without the noise's five)
  *   storefile PATH               a saved project from a file (tests/host/proj-*.bin)
- *   store16                      save it as 1.3.0's noise LFO did (format 16, without the kick's rumble)
- *   store15                      save it as 1.3.0's Noise space did (format 15, without the noise's LFO)
- *   store14                      save it as 1.3.0's echo and density did (format 14)
- *   store13                      save it as 1.3.0's pages did (format 13, without the chord's Ghost .. the shimmer's Tune)
- *   store12 [G]                  save it as 1.3.0's ladder did (format 12, without Throws, Ghost, Notes, Hats level;
- *                                each groove as its ladder step: the knob's 0..4 as 0 2 4 6 8; G: the playing
- *                                piece's ladder step instead, 0..8)
  *   pingmark                     remember the ping loops (expect pingsame 1: they are as they were)
  *   splashrun                    the launch screen played out as the device does at power-on (55 ms a frame,
  *                                the music running, the UI not), then the UI started again
@@ -731,54 +722,6 @@ int main(int argc, char **argv)
             t = now_ms - film_t0;
             t = (t + 50u) / 100u;                /* (in tenths, rounded first: 59.96 s is 01:00.0, not 00:60.0) */
             printf("@ %02u:%02u.%u  bar %u  %s", t / 600u, t % 600u / 10u, t % 10u, en_bars / 16u, lab[0] ? lab : "\n");
-        } else if (!strcmp(cmd, "store8")) {     /* the project as DUB-1 1.0.0 saved it (format 8), into the flash */
-            static project8_t o;
-            int i;
-            keep();
-            memset(&o, 0, sizeof o);
-            o.magic = PROJ_MAGIC, o.format = 8u;
-            memcpy(o.par, proj.par, sizeof o.par);
-            o.pool = proj.pool, o.leds = proj.leds, o.piece = proj.piece, o.screen = proj.screen;
-            for (i = 0; i < NPIECES; i++) {
-                memcpy(o.slot[i].par, proj.slot[i].par, sizeof o.slot[i].par);
-                o.slot[i].pool = proj.slot[i].pool;
-            }
-            plat_store_save(OBJ_PROJ, &o, sizeof o);
-        } else if (!strcmp(cmd, "store10")) {    /* the project as DUB-1 1.2.0 / 1.3.0's chords saved it (format 10) */
-            static project10_t o;
-            int i;
-            keep();
-            memset(&o, 0, sizeof o);
-            o.magic = PROJ_MAGIC, o.format = 10u;
-            memcpy(o.par, proj.par, sizeof o.par);
-            o.pool = proj.pool, o.leds = proj.leds, o.piece = proj.piece, o.screen = proj.screen;
-            for (i = 0; i < NPIECES; i++) {
-                memcpy(o.slot[i].par, proj.slot[i].par, sizeof o.slot[i].par);
-                o.slot[i].pool = proj.slot[i].pool;
-                memcpy(o.slot[i].pings, proj.slot[i].pings, sizeof o.slot[i].pings);
-                o.slot[i].pings_ok = proj.slot[i].pings_ok;
-                o.slot[i].screen = proj.slot[i].screen;
-            }
-            plat_store_save(OBJ_PROJ, &o, sizeof o);
-        } else if (!strcmp(cmd, "store12")) {    /* the project as 1.3.0's ladder saved it (format 12) */
-            static project12_t o;
-            static const int16_t LAD[5] = {0, 2, 4, 6, 8};
-            int i;
-            keep();
-            memset(&o, 0, sizeof o);
-            o.magic = PROJ_MAGIC, o.format = 12u;
-            memcpy(o.par, proj.par, sizeof o.par);
-            o.par[P_GROOVE] = a[0] ? (int16_t)atoi(a) : LAD[proj.par[P_GROOVE] % 5];
-            o.pool = proj.pool, o.leds = proj.leds, o.piece = proj.piece, o.screen = proj.screen;
-            for (i = 0; i < NPIECES; i++) {
-                memcpy(o.slot[i].par, proj.slot[i].par, sizeof o.slot[i].par);
-                o.slot[i].par[P_GROOVE] = a[0] && i == proj.piece ? (int16_t)atoi(a) : LAD[proj.slot[i].par[P_GROOVE] % 5];
-                o.slot[i].pool = proj.slot[i].pool;
-                memcpy(o.slot[i].pings, proj.slot[i].pings, sizeof o.slot[i].pings);
-                o.slot[i].pings_ok = proj.slot[i].pings_ok;
-                o.slot[i].screen = proj.slot[i].screen;
-            }
-            plat_store_save(OBJ_PROJ, &o, sizeof o);
         } else if (!strcmp(cmd, "storefile")) {  /* a saved project from a file, as it would be in the flash */
             static uint8_t fb[PLAT_STORE_MAX];
             FILE *f = fopen(a, "rb");
@@ -790,70 +733,6 @@ int main(int argc, char **argv)
                 return 2;
             }
             plat_store_save(OBJ_PROJ, fb, (uint32_t)got);
-        } else if (!strcmp(cmd, "store16")) {    /* the project as 1.3.0's noise LFO saved it (format 16) */
-            static project16_t o;
-            int i;
-            keep();
-            memset(&o, 0, sizeof o);
-            o.magic = PROJ_MAGIC, o.format = 16u;
-            memcpy(o.par, proj.par, sizeof o.par);
-            o.pool = proj.pool, o.leds = proj.leds, o.piece = proj.piece, o.screen = proj.screen;
-            for (i = 0; i < NPIECES; i++) {
-                memcpy(o.slot[i].par, proj.slot[i].par, sizeof o.slot[i].par);
-                o.slot[i].pool = proj.slot[i].pool;
-                memcpy(o.slot[i].pings, proj.slot[i].pings, sizeof o.slot[i].pings);
-                o.slot[i].pings_ok = proj.slot[i].pings_ok;
-                o.slot[i].screen = proj.slot[i].screen;
-            }
-            plat_store_save(OBJ_PROJ, &o, sizeof o);
-        } else if (!strcmp(cmd, "store15")) {    /* the project as 1.3.0's Noise space saved it (format 15) */
-            static project15_t o;
-            int i;
-            keep();
-            memset(&o, 0, sizeof o);
-            o.magic = PROJ_MAGIC, o.format = 15u;
-            memcpy(o.par, proj.par, sizeof o.par);
-            o.pool = proj.pool, o.leds = proj.leds, o.piece = proj.piece, o.screen = proj.screen;
-            for (i = 0; i < NPIECES; i++) {
-                memcpy(o.slot[i].par, proj.slot[i].par, sizeof o.slot[i].par);
-                o.slot[i].pool = proj.slot[i].pool;
-                memcpy(o.slot[i].pings, proj.slot[i].pings, sizeof o.slot[i].pings);
-                o.slot[i].pings_ok = proj.slot[i].pings_ok;
-                o.slot[i].screen = proj.slot[i].screen;
-            }
-            plat_store_save(OBJ_PROJ, &o, sizeof o);
-        } else if (!strcmp(cmd, "store14")) {    /* the project as 1.3.0's echo and density saved it (format 14) */
-            static project14_t o;
-            int i;
-            keep();
-            memset(&o, 0, sizeof o);
-            o.magic = PROJ_MAGIC, o.format = 14u;
-            memcpy(o.par, proj.par, sizeof o.par);
-            o.pool = proj.pool, o.leds = proj.leds, o.piece = proj.piece, o.screen = proj.screen;
-            for (i = 0; i < NPIECES; i++) {
-                memcpy(o.slot[i].par, proj.slot[i].par, sizeof o.slot[i].par);
-                o.slot[i].pool = proj.slot[i].pool;
-                memcpy(o.slot[i].pings, proj.slot[i].pings, sizeof o.slot[i].pings);
-                o.slot[i].pings_ok = proj.slot[i].pings_ok;
-                o.slot[i].screen = proj.slot[i].screen;
-            }
-            plat_store_save(OBJ_PROJ, &o, sizeof o);
-        } else if (!strcmp(cmd, "store13")) {    /* the project as 1.3.0's pages saved it (format 13) */
-            static project13_t o;
-            int i;
-            keep();
-            memset(&o, 0, sizeof o);
-            o.magic = PROJ_MAGIC, o.format = 13u;
-            memcpy(o.par, proj.par, sizeof o.par);
-            o.pool = proj.pool, o.leds = proj.leds, o.piece = proj.piece, o.screen = proj.screen;
-            for (i = 0; i < NPIECES; i++) {
-                memcpy(o.slot[i].par, proj.slot[i].par, sizeof o.slot[i].par);
-                o.slot[i].pool = proj.slot[i].pool;
-                memcpy(o.slot[i].pings, proj.slot[i].pings, sizeof o.slot[i].pings);
-                o.slot[i].pings_ok = proj.slot[i].pings_ok;
-                o.slot[i].screen = proj.slot[i].screen;
-            }
-            plat_store_save(OBJ_PROJ, &o, sizeof o);
         } else if (!strcmp(cmd, "pingmark")) {
             ping_mark = ping_hash();
         } else if (!strcmp(cmd, "splashrun")) {

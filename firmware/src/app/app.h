@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* DUB-1 app: the project (everything that is saved) and the app's entry points. Included by the unity
+/* BERLIN app: the project (everything that is saved) and the app's entry points. Included by the unity
  * build after gfx.c (drawing helpers in scope) and by the host simulator. */
 #pragma once
 #include <stdint.h>
@@ -9,22 +9,8 @@
 #ifndef EN_VERSION                       /* a release build passes its own (tools/build.py --release) */
 #define EN_VERSION "DEV"
 #endif
-#define PROJ_MAGIC 0x31425544u           /* "DUB1": AMB-1's projects ("ENO1") give the recipes */
-#define PROJ_FORMAT 17u                  /* 17: the kick's rumble (P_RUMBLE; 8-16 read, it from the recipes);
-                                         * 16: the noise's LFO (P_NLFO; 8-15 read, it from the recipes);
-                                         * 15: the Noise page's second (Width, Plate, Echo) and the hats' length
-                                         * (P_NWIDTH..P_HLEN; 8-14 read, the new ones from the recipes);
-                                         * 14: the chord's Ghost, the kick's density, the echo's Blur, Tone and
-                                         * Width, the shimmer's Tune (P_CGHOST..P_NTUNE; 8-13 read, the new ones from the
-                                         * recipes);
-                                         * 13: Throws, Ghost, Notes, Hats level (P_CTHROW..P_HATSLVL), the groove five
-                                         * patterns again with Notes (12's ladder converted; 8-12 read, the new ones
-                                         * from the recipes);
-                                         * 12: the groove a ladder (0 Drone .. 8 Roller; 8-11 read, converted);
-                                         * 11: the noise's five (P_NCOL..P_NCHAR; 8-10 read, the noise from the recipes);
-                                         * 10: the chords' slots as yours, the walk's or gaps (9's and 8's read, an empty
-                                         * slot a gap); 9: each piece's ping loops (8, DUB-1 1.0.0's, read and kept;
-                                         * older projects give the recipes) */
+#define PROJ_MAGIC 0x314C5242u           /* "BRL1": DUB-1's ("DUB1") and AMB-1's ("ENO1") projects give the recipes */
+#define PROJ_FORMAT 1u
 #define NPIECES EN_NPIECES
 
 typedef struct {
