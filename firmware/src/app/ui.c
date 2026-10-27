@@ -2436,9 +2436,9 @@ static void draw_lanes(void)
  * as the group's (its key lit too), the ones held filled */
 static void grid_band(int32_t oy)                 /* the whole screen, in two bands of 240 x 120 */
 {
-    static const char *const GROUP[4] = {"ECHO", "FILTER", "SPACE", "RHYTHM"};
-    static const char *const CELL[EN_NFX] = {"Throw", "Time x2", "Stop", "Swell", "Low", "High", "Wah", "Phone",
-                                             "Verb", "Crash", "Freeze", "Wash", "Stutter", "Gate", "Siren", "Riser"};
+    static const char *const GROUP[4] = {"ECHO", "FILTER", "SPACE", "MOVES"};   /* (BERLIN's) */
+    static const char *const CELL[EN_NFX] = {"Repeat", "Time", "Stop", "Swell", "Low", "High", "Sweep", "Phaser",
+                                             "Reverb", "Takeoff", "Freeze", "Wash", "Octave", "Return", "Twitter", "Nova"};
     int r, c;
     cv_begin(240, 120, K_BG);
     text_c(120, 2 - oy, &FONT_S, "EFFECTS", K_ACC);

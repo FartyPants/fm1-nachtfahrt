@@ -22,6 +22,7 @@ SEQ	sequence
 Seq	sequence
 ATMOS	atmosphere
 Atmos	atmosphere
+Nova	supernova
 # the echo times (the dotted ones first: the longer text wins)
 1/8.	dotted eighth
 1/8	eighth

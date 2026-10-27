@@ -139,8 +139,9 @@ void en_macro(int i, int v);
 void en_lock(int on);                          /* PERFORM's Lock: each phrase keeps the kick's shape, the noise's groove,
                                                 * the drums' and the bass's plan, the shaker's pattern */
 /* the effects grid (REC held): the effects held now, a bit each (EN_FX_*), in the grid's order */
-enum { EN_FX_THROW, EN_FX_TIME, EN_FX_TAPESTOP, EN_FX_SWELL, EN_FX_LOWPASS, EN_FX_HIGHPASS, EN_FX_WAH, EN_FX_PHONE,
-       EN_FX_VERB, EN_FX_CRASH, EN_FX_FREEZE, EN_FX_WASH, EN_FX_STUTTER, EN_FX_GATE, EN_FX_SIREN, EN_FX_RISER, EN_NFX };
+enum { EN_FX_REPEAT, EN_FX_TIME, EN_FX_TAPESTOP, EN_FX_SWELL, EN_FX_LOWPASS, EN_FX_HIGHPASS, EN_FX_SWEEP, EN_FX_PHASER,
+       EN_FX_REVERB, EN_FX_TAKEOFF, EN_FX_FREEZE, EN_FX_WASH, EN_FX_OCTAVE, EN_FX_RETURN, EN_FX_TWITTER, EN_FX_SUPERNOVA,
+       EN_NFX };
 extern const char *const EN_FX_NAME[EN_NFX];
 void en_fx(uint32_t mask);
 /* MIDI clock in (as FoMni): ticks drive the 1/16 grid (6 a step) while they keep coming */

@@ -458,8 +458,9 @@ void en_lock(int on) { post(C_LOCK, on != 0, 0); }
 void en_prog_rotate(void) { post(C_PROT, 0, 0); }
 void en_prog_rewalk(void) { post(C_REWALK, 0, 0); }
 void en_ping_nudge(void) { post(C_PNUDGE, 0, 0); }
-const char *const EN_FX_NAME[EN_NFX] = {"Throw", "Time x2", "Tape stop", "Swell", "Low-pass", "High-pass", "Wah",
-                                        "Phone", "Verb", "Crash", "Freeze", "Wash", "Stutter", "Gate", "Siren", "Riser"};
+const char *const EN_FX_NAME[EN_NFX] = {"Repeat", "Time", "Tape stop", "Swell", "Low-pass", "High-pass", "Sweep",
+                                        "Phaser", "Reverb", "Take-off", "Freeze", "Wash", "Octave", "Return", "Twitter",
+                                        "Supernova"};
 
 /* -------------------------------------------------------------- state --- */
 volatile uint8_t en_playing, en_frozen, en_ext;
@@ -784,7 +785,6 @@ static int shape, root_note = 55;               /* the voicing's shape, the chor
 static const float STAB_PAN[EN_NPAD] = {-0.3f, -0.09f, 0.12f, 0.33f};   /* (1.3.0: 60% of the spread) */
 static float stab_gl[EN_NPAD], stab_gr[EN_NPAD];
 static int32_t gate_ctr;                        /* samples since the sixteenth began (the grid's Gate) */
-static float fx_gate, gate_g, gate_dec;
 /* the chord's voices: how it sounds (CV_*), how quickly it strikes (the amplitude's smoothing a sample:
  * 0.035 ~0.6 ms .. 0.00012 ~190 ms), its length (times Decay's), how far its own envelope opens the filter
  * (octaves), its modulator's ratio and index (FM voices, in turns: the index at the strike, and at rest),
@@ -881,6 +881,7 @@ static int kit;
 static float echo_send, rev_send, echo_len, echo_len_t, echo_fb = 0.6f, ein_gain = 1.0f, echo_t60 = 6.0f;
 static float fb_cap = 2.0f;                     /* stopped, the feedback eases under 90%: the tails die */
 static float fx_em = 1.0f, fx_ek = 0.001f, fx_ts = 1.0f;   /* the grid on the echo: its time's multiple, its easing; the tape stop */
+static float fx_nova;                            /* (BERLIN) the grid's Supernova: the echo's feedback past full, eased */
 static float rev_in_gain = 1.0f;                /* falls to 0 while frozen */
 static float tape_lpc = 0.55f, tape_hpc = 0.08f; /* the echo's feedback band-pass */
 static float crackle_vol, cloud_amt;
@@ -1430,7 +1431,7 @@ static void bell_ring(int l, int slot)
  * past full; Fade), 8 bars, and the arc again (Seq2 in and Lead in counted again from the Sequence fully in) */
 static uint8_t ar_sec = EN_SEC_FLOW, ar_end, ar_first;
 static int ar_left = 64, ar_bar, ar_in;
-static float ar_seq = 1.0f, ar_cut = 1.0f, ar_atm = 1.0f, ar_push, ar_nova, ar_cr_env, ar_cr_f = 5000.0f;
+static float ar_seq = 1.0f, ar_cut = 1.0f, ar_atm = 1.0f, ar_push, ar_nova, ar_cr_env, ar_cr_f = 5000.0f, ar_cr_g = 1.0f;
 static uint32_t ar_rng;
 volatile uint8_t en_swell;
 volatile uint32_t en_endings;
@@ -1495,7 +1496,7 @@ static void ar_tick_bar(void)                    /* a bar line (the first, at th
         ar_end = 8;
         en_swell = 0;
         if (par[P_ENDING] == 0)
-            ar_cr_env = 1.0f, ar_cr_f = 5000.0f;
+            ar_cr_env = 1.0f, ar_cr_f = 5000.0f, ar_cr_g = 1.0f;
         ar_nova = par[P_ENDING] == 1 ? 1.0f : 0.0f;
         ar_shape();
         return;
@@ -1728,7 +1729,7 @@ static void seq_tick(void)                       /* a sixteenth: the sequences' 
             st = sq_pos[l] < q.len ? sq_pos[l] : 0;
             if ((q.gate >> st & 1u) && !(q.skip >> st & 1u) &&
                 (sq_written[l] || pat || sq_prio[l][st] < 25 + 3 * pe(P_DENSITY) / 4) && (ch >= 100 || irand(100) < ch)) {
-                played = seq_note(&q, l, st);
+                played = seq_note(&q, l, st) + (!l && fxm >> EN_FX_OCTAVE & 1u ? 12 : 0);   /* (the grid's Octave) */
                 vel = q.acc >> st & 1u ? 120 : 120 - 86 * par[P_SACCENT] / 100;   /* the root accented (Accent 50: 77,
                                                                                * as Synth Seeker's 121 and 77) */
                 if (l)
@@ -1738,6 +1739,8 @@ static void seq_tick(void)                       /* a sixteenth: the sequences' 
                 pluck_voice(l, played, vel, 0);
             }
             sq_pos[l] = seq_next(&q, st);
+            if (fxm >> EN_FX_RETURN & 1u && sq_pos[l] >= 4)   /* (the grid's Return: round its first four steps) */
+                sq_pos[l] = 0;
             sq_wrap[l] = (uint8_t)(sq_pos[l] <= st);
             en_loop_pos[l] = (uint8_t)st;
         }
@@ -2409,7 +2412,7 @@ static void tick(void)
         int last = !later, thr = (fill && last) || frand() < fm_minf(0.12f * loose() * (sec == SEC_BREAK ? 1.5f : 1.0f) * throw_mul, 0.6f);
         float vel = st == (int)__builtin_ctz(en_stab_pat) ? 0.9f + 0.1f * frand() : 0.65f + 0.25f * frand();
         if (!(mutes & EN_M_CHORD))
-            stab_fire(vel, thr || (perf & EN_PF_SWEEP) || (fxm >> EN_FX_THROW & 1u));
+            stab_fire(vel, thr || (perf & EN_PF_SWEEP));
     }
     noise_step((int)(sixteenth & 31u));         /* (the noise's groove: two bars) */
     for (d = 0; d < EN_NDRUM; d++)
@@ -2557,8 +2560,6 @@ static uint32_t head_left;                       /* samples until the second hea
 #define PLEX_N 7100                              /* 160 ms at 44.1 kHz */
 #define PLEX_TAP 2700                            /* the right's tap: ~100 ms */
 static int16_t plex[PLEX_N];
-static int stt_state, stt_len, stt_pos;         /* Stutter: 0 off, 1 recording a sixteenth, 2 looping it */
-static float stt_mix;
 static int plex_w;
 static float plex_lp, plex_lp2;
 
@@ -2669,15 +2670,11 @@ static inline void echoes(float in, float *el, float *er, float *xl, float *xr)
     int t = plex_w - PLEX_TAP;
     plex_lp += 0.3f * (y - plex_lp);
     plex_lp2 += 0.3f * ((float)plex[t < 0 ? t + PLEX_N : t] * (1.0f / 12000.0f) - plex_lp2);
-    if (stt_state) {                             /* (the grid's Stutter has the Echoplex's buffer) */
-        *xl = *xr = 0.0f;
-    } else {
-        plex[plex_w] = s16(in + 0.45f * plex_lp);
-        if (++plex_w >= PLEX_N)
-            plex_w = 0;
-        *xl = plex_lp;
-        *xr = plex_lp2;
-    }
+    plex[plex_w] = s16(in + 0.45f * plex_lp);
+    if (++plex_w >= PLEX_N)
+        plex_w = 0;
+    *xl = plex_lp;
+    *xr = plex_lp2;
     tape_acc += in;
     if (++tape_ph >= 4) {                        /* the tape, a quarter of the time */
         float d, h1, h2, h3, f1, f2, fb, w;
@@ -2712,8 +2709,9 @@ static inline void echoes(float in, float *el, float *er, float *xl, float *xr)
                 tape_w = 0;
             tape[tape_w] = s;
         } else {
-            float g = fm_minf(echo_fb + 0.15f * st_throw + 0.12f * perf_echo + 0.1f * dub_up + 0.35f * ar_nova,
-                              fb_cap + 0.3f * ar_nova);   /* (Dub: past the knob; the arc's Supernova, past full) */
+            const float nova = fm_maxf(ar_nova, fx_nova);   /* (the arc's ending, or the grid's) */
+            float g = fm_minf(echo_fb + 0.15f * st_throw + 0.12f * perf_echo + 0.1f * dub_up + 0.35f * nova,
+                              fb_cap + 0.3f * nova);   /* (Dub: past the knob; Supernova, past full) */
             if (ec_pp)
                 g *= g;                          /* (two repeats a turn round: the feedback squared) */
             tape_lp += tape_lpc * (f1 + fb_lean * st_throw * (f2 - f1) - tape_lp);   /* each time round: thinner, darker */
@@ -3190,6 +3188,13 @@ void en_init(void)
     plate_init();
     for (i = 0; i < TAPE_N; i++)
         tape[i] = 0;
+    memset(pl_buf, 0, sizeof pl_buf);            /* (BERLIN) the plate and the diffusers quiet too: a reset rings with
+                                                  * nothing that came before (the short lines clear themselves) */
+    memset(eap, 0, sizeof eap);
+    pl_bw = pl_damp_l = pl_damp_r = pl_acc = pl_ol = pl_or = pl_back = 0.0f;
+    memset(phz, 0, sizeof phz);                  /* (and the Drone's phaser from the top) */
+    ph_last[0] = ph_last[1] = ph_lfo = 0.0f;
+    ar_cr_env = 0.0f;                            /* (no Crash ringing on) */
     for (i = 0; i < PLEX_N; i++)
         plex[i] = 0;
     for (i = 0; i < CL_LEN; i++)
@@ -3217,7 +3222,6 @@ void en_init(void)
     duck_relb = fm_expf(-1.0f / (0.25f * EN_SR));
     throw_dec = fm_expf(-1.0f / (0.5f * EN_SR));
     bite_dec = fm_expf(-1.0f / (0.07f * EN_SR));
-    gate_dec = fm_expf(-6.9f / (1.5f * EN_SR));
     arcm = arc = 0.0f;
     for (i = 0; i < P_NPARAMS; i++)
         apply(i, PARAMS[i].def);
@@ -3552,7 +3556,7 @@ static void render_stabs(uint32_t n)
     const float att = fm_clampf(CV[cv].att * fm_exp2f(-(xa > 0.0f ? 9.0f : 3.0f) * xa), 0.00004f, 0.3f),
                 fe = CV[cv].fenv * 1.0f;
     float pc = 0.0f, ck = click;
-    const float dk = st_dec + (gate_dec - st_dec) * fx_gate;   /* (the grid's Gate: the chord rings on, to be chopped) */
+    const float dk = st_dec;
     const fmpatch_t *pt = cv_patch(cv);
     const int alg = pt ? fm_alg_of(P_CALG, pt) : 0;
     const float cfb = pt ? fm_fb(P_CFB, pt) : 0.0f;
@@ -3652,13 +3656,6 @@ static void render_stabs(uint32_t n)
         hr += 0.0225f * (yr - hr);
         yl -= hl;
         yr -= hr;
-        if (fx_gate > 0.001f) {                  /* the grid's Gate: the chord in sixteenths */
-            float gt = (float)(gate_ctr + j) < 0.5f * step_len ? 1.0f : 0.0f, gg;
-            gate_g += (gt - gate_g) * 0.05f;
-            gg = 1.0f - fx_gate * (1.0f - gate_g);
-            yl *= gg;
-            yr *= gg;
-        }
         mixl[j] += yl * chord_dry * (1.0f - 0.5f * thr);   /* (Ghost: the dry against the sends; a throw's, -6 dB) */
         mixr[j] += yr * chord_dry * (1.0f - 0.5f * thr);
         esend[j] += (yl + yr) * (0.8f + 2.5f * thr) * chord_snd;
@@ -4354,16 +4351,17 @@ static void render_crackle(uint32_t n)
 }
 
 /* -------------------------------------------------------- the effects grid --- */
-/* REC held, the keys: each effect eased in while its key is held and out when let go, costing nothing until
- * then. The echo ones (Throw, Time, Tape stop, Swell) are in the echo; Gate in the chord; Freeze in the cloud;
- * the rest here: a master filter on everything (Low-pass and High-pass sweeping, Wah, Phone), the plate thrown
- * (Verb, Crash), Wash (everything into the echo and the plate, the dry down), Stutter (a sixteenth caught and
- * looped), a dub Siren and a noise Riser */
-static float mf_lp = 14.2f, mf_hp = 4.3f, mf_wah, mf_ph, mf_lfo;   /* the master filter: log2 of its cutoffs */
-static float mf_c[3][4], mf_s[12];
-static float crash_lp, crash_att;                /* (the Crash: darker, eased in) */
-static float fx_vt, fx_wash, fx_cf, crash, sir_amp, sir_ph, sir_lfo, ris_amp, ris_oct, ris_s[2], ris_c[4];
-static uint32_t fx_noise = 9871u;
+/* (BERLIN) REC held, the keys: each effect eased in while its key is held and out when let go, costing nothing until
+ * then. The echo's (Repeat: the Sequence thrown into it; Time, Tape stop, Swell; Supernova: its feedback past full);
+ * a master filter on everything (Low-pass, High-pass); Sweep the Sequence's own filter, swept; Phaser on all the dry
+ * music; Reverb (the dry into the plate), Take-off (the Crash ending's noise falling into the echo), Freeze (the
+ * cloud), Wash; Octave and Return in the sequences; Twitter, a burst of bleeps (Space's) into the echo */
+static float mf_lp = 14.2f, mf_hp = 4.3f;        /* the master filter: log2 of its cutoffs */
+static float mf_c[2][4], mf_s[8];
+static float fx_vt, fx_wash, fx_cf, fx_rep, fx_sw, fx_swl, fx_swm = 1.0f, fx_ph, fx_phl, fx_phz[2][6], fx_phlast[2];
+static float tw_amp, tw_env, tw_f, tw_glide, tw_ph, tw_pan;
+static int32_t tw_wait;
+static uint32_t tw_rng = 0x1F83D9ABu;
 
 static void fx_ctl(uint32_t n)                   /* once a chunk: the effects' easing, the filters' coefficients */
 {
@@ -4376,85 +4374,97 @@ static void fx_ctl(uint32_t n)                   /* once a chunk: the effects' e
     ec = on >> EN_FX_TIME & 1u ? (echo_len_t * 2.0f <= (float)(TAPE_N - 8) ? 2.0f : 0.5f) : 1.0f;
     fx_em = ec * fx_ts;
     fx_ek = fx_ts > 1.01f ? 0.004f : 0.001f;
-    /* the master filter's targets: Low-pass down to 350 Hz, High-pass up to 1.3 kHz, Phone a band 450..3 kHz */
-    lpt = on >> EN_FX_LOWPASS & 1u ? 8.45f : on >> EN_FX_PHONE & 1u ? 11.55f : 14.2f;
-    hpt = on >> EN_FX_HIGHPASS & 1u ? 10.35f : on >> EN_FX_PHONE & 1u ? 8.8f : 4.3f;
+    fx_rep += ((on >> EN_FX_REPEAT & 1u ? 1.0f : 0.0f) - fx_rep) * fm_minf(t / 0.03f, 1.0f);
+    fx_nova += ((on >> EN_FX_SUPERNOVA & 1u ? 1.0f : 0.0f) - fx_nova) * fm_minf(t / (on >> EN_FX_SUPERNOVA & 1u ? 0.5f : 0.2f), 1.0f);
+    /* the master filter's targets: Low-pass down to 350 Hz, High-pass up to 1.3 kHz */
+    lpt = on >> EN_FX_LOWPASS & 1u ? 8.45f : 14.2f;
+    hpt = on >> EN_FX_HIGHPASS & 1u ? 10.35f : 4.3f;
     mf_lp += (lpt - mf_lp) * fm_minf(t / (lpt < mf_lp ? 0.5f : 0.3f), 1.0f);
     mf_hp += (hpt - mf_hp) * fm_minf(t / (hpt > mf_hp ? 0.5f : 0.3f), 1.0f);
-    mf_wah += ((on >> EN_FX_WAH & 1u ? 1.0f : 0.0f) - mf_wah) * fm_minf(t / 0.08f, 1.0f);
-    mf_ph += ((on >> EN_FX_PHONE & 1u ? 1.0f : 0.0f) - mf_ph) * fm_minf(t / 0.05f, 1.0f);
-    if (mf_lp < 14.15f || mf_hp > 4.35f || mf_wah > 0.001f) {
-        float wf;
-        mf_lfo += t * 1.3f;                      /* (the wah: 1.3 sweeps a second) */
-        if (mf_lfo >= 1.0f)
-            mf_lfo -= 1.0f;
-        wf = 350.0f * fm_exp2f(2.2f * (0.5f + 0.5f * sine(mf_lfo)));
+    if (mf_lp < 14.15f || mf_hp > 4.35f) {
         svf_coefs(mf_c[0], fm_exp2f(mf_lp), 1.0f);
         svf_coefs(mf_c[1], fm_exp2f(mf_hp), 1.2f);
-        svf_coefs(mf_c[2], wf, 0.35f);
     }
-    fx_gate += ((on >> EN_FX_GATE & 1u ? 1.0f : 0.0f) - fx_gate) * fm_minf(t / 0.03f, 1.0f);
-    fx_vt += ((on >> EN_FX_VERB & 1u ? 1.0f : 0.0f) - fx_vt) * fm_minf(t / 0.03f, 1.0f);
+    /* Sweep: the Sequence's filter swept two octaves either way, a turn in ~3 s (from where it is: down first) */
+    fx_sw += ((on >> EN_FX_SWEEP & 1u ? 1.0f : 0.0f) - fx_sw) * fm_minf(t / 0.2f, 1.0f);
+    if (fx_sw > 0.001f) {
+        fx_swl += t * 0.33f;
+        if (fx_swl >= 1.0f)
+            fx_swl -= 1.0f;
+    } else {
+        fx_swl = 0.5f;
+    }
+    fx_swm = fm_exp2f(2.0f * fx_sw * sine(fx_swl));
+    fx_ph += ((on >> EN_FX_PHASER & 1u ? 1.0f : 0.0f) - fx_ph) * fm_minf(t / 0.1f, 1.0f);
+    fx_vt += ((on >> EN_FX_REVERB & 1u ? 1.0f : 0.0f) - fx_vt) * fm_minf(t / 0.03f, 1.0f);
     fx_cf += ((on >> EN_FX_FREEZE & 1u ? 1.0f : 0.0f) - fx_cf) * fm_minf(t / 0.1f, 1.0f);
     fx_wash += ((on >> EN_FX_WASH & 1u ? 1.0f : 0.0f) - fx_wash) * fm_minf(t / (on >> EN_FX_WASH & 1u ? 0.4f : 0.8f), 1.0f);
-    if (rise >> EN_FX_CRASH & 1u)
-        crash = 1.0f, crash_att = 0.0f;
-    if (rise >> EN_FX_STUTTER & 1u) {            /* a sixteenth, caught from now */
-        stt_state = 1;
-        stt_pos = 0;
-        stt_len = (int)fm_clampf(step_len, 1000.0f, (float)PLEX_N);
-    } else if (!(on >> EN_FX_STUTTER & 1u) && stt_mix < 0.001f) {
-        stt_state = 0;
-    }
-    sir_amp += ((on >> EN_FX_SIREN & 1u ? 1.0f : 0.0f) - sir_amp) * fm_minf(t / (on >> EN_FX_SIREN & 1u ? 0.02f : 0.15f), 1.0f);
-    if (on >> EN_FX_RISER & 1u) {                /* the riser: up an octave and a half a second, louder as it goes */
-        ris_oct = fm_minf(ris_oct + t * 1.5f, 5.2f);
-        ris_amp += (fm_minf(0.25f + ris_oct * 0.15f, 1.0f) - ris_amp) * fm_minf(t / 0.05f, 1.0f);
-    } else {
-        ris_amp *= fm_expf(-t / 0.15f);
-        if (ris_amp < 0.001f)
-            ris_oct = 0.0f;
-    }
-    if (ris_amp > 0.0005f)
-        svf_coefs(ris_c, 250.0f * fm_exp2f(ris_oct), 0.5f);
+    if (rise >> EN_FX_TAKEOFF & 1u)              /* Take-off: the arc's Crash, now (-9 dB: over any music, not only
+                                                  * the ending's full) */
+        ar_cr_env = 1.0f, ar_cr_f = 5000.0f, ar_cr_g = 0.35f;
+    tw_amp += ((on >> EN_FX_TWITTER & 1u ? 1.0f : 0.0f) - tw_amp) * fm_minf(t / (on >> EN_FX_TWITTER & 1u ? 0.02f : 0.3f), 1.0f);
 }
 
-static void render_fx(uint32_t n)                /* the Siren and the Riser: two more voices, into the mix */
+static void phase6(float *bus, uint32_t n, float *z, float *lastp, float ca, float fb, float wet)
+{                                                /* six all-passes (ca), fed back (fb), mixed in (wet) */
+    float last = *lastp;
+    uint32_t j;
+    int st;
+    for (j = 0; j < n; j++) {
+        float y = bus[j] + fb * last;
+        for (st = 0; st < 6; st++) {
+            const float o = ca * y + z[st];
+            z[st] = y - ca * o;
+            y = o;
+        }
+        last = y;
+        bus[j] = bus[j] * (1.0f - wet) + y * wet;
+    }
+    *lastp = last;
+}
+static void render_fx(uint32_t n)                /* Twitter (bleeps into the echo) and the Phaser (on the dry music) */
 {
     uint32_t j;
-    if (sir_amp > 0.0005f)
-        for (j = 0; j < n; j++) {               /* a square-ish tone, its pitch swung by a triangle, ~0.8 a second */
-            float tri, x;
-            sir_lfo += 0.8f / EN_SR;
-            if (sir_lfo >= 1.0f)
-                sir_lfo -= 1.0f;
-            tri = sir_lfo < 0.5f ? 4.0f * sir_lfo - 1.0f : 3.0f - 4.0f * sir_lfo;
-            sir_ph += 480.0f * fm_exp2f(1.3f * tri) * (1.0f / EN_SR);
-            if (sir_ph >= 1.0f)
-                sir_ph -= 1.0f;
-            x = sat(sine(sir_ph) * 3.0f) * 0.075f * sir_amp;   /* (1.3.0: -4 dB, it stood 6 dB over the music) */
-            mixl[j] += x;
-            mixr[j] += x;
-            esend[j] += x * 2.0f;
+    if (fxm >> EN_FX_TWITTER & 1u || tw_env > 1e-4f)
+        for (j = 0; j < n; j++) {               /* a bleep every 30 .. 110 ms while held: a sine from 1.2 .. 4.8 kHz,
+                                                  * gliding up to three octaves either way, gone in ~30 ms */
+            float x;
+            if (--tw_wait <= 0 && fxm >> EN_FX_TWITTER & 1u) {
+                tw_rng = tw_rng * 1664525u + 1013904223u;
+                tw_f = 1200.0f * fm_exp2f(2.0f * (float)(tw_rng >> 8) * (1.0f / 16777216.0f));
+                tw_rng = tw_rng * 1664525u + 1013904223u;
+                tw_glide = fm_exp2f((6.0f * (float)(tw_rng >> 8) * (1.0f / 16777216.0f) - 3.0f) / (0.05f * EN_SR));
+                tw_rng = tw_rng * 1664525u + 1013904223u;
+                tw_wait = (int32_t)(EN_SR * (0.03f + 0.08f * (float)(tw_rng >> 8) * (1.0f / 16777216.0f)));
+                tw_pan = (tw_rng & 1u) ? 0.3f : 0.7f;
+                tw_env = 1.0f;
+            }
+            if (tw_env > 1e-4f) {
+                tw_ph += fm_clampf(tw_f, 100.0f, 15000.0f) * (1.0f / EN_SR);
+                if (tw_ph >= 1.0f)
+                    tw_ph -= 1.0f;
+                tw_f *= tw_glide;
+                x = sine(tw_ph) * tw_env * 0.07f * tw_amp;
+                tw_env *= 0.99925f;
+                mixl[j] += x * (1.0f - tw_pan);
+                mixr[j] += x * tw_pan;
+                esend[j] += x * 1.5f;
+                rsend[j] += x * 0.5f;
+            }
         }
-    if (ris_amp > 0.0005f)
-        for (j = 0; j < n; j++) {               /* noise through a rising band-pass */
-            float w, v1, v2, v3, x;
-            fx_noise = fx_noise * 1664525u + 1013904223u;
-            w = (float)(int32_t)fx_noise * (1.0f / 2147483648.0f);
-            v3 = w - ris_s[1];
-            v1 = ris_c[0] * ris_s[0] + ris_c[1] * v3;
-            v2 = ris_s[1] + ris_c[1] * ris_s[0] + ris_c[2] * v3;
-            ris_s[0] = 2.0f * v1 - ris_s[0];
-            ris_s[1] = 2.0f * v2 - ris_s[1];
-            x = v1 * 0.22f * ris_amp;            /* (1.3.0: -4 dB, it stood 6 dB over the music) */
-            mixl[j] += x;
-            mixr[j] += x;
-            rsend[j] += x * 1.2f;
-            esend[j] += x * 0.5f;
+    if (fx_ph > 0.005f) {                        /* the Phaser, deep: six all-passes a side swept ~150 Hz .. 3 kHz, a
+                                                  * turn in ~5 s, the right a quarter on */
+        int ch;
+        for (ch = 0; ch < 2; ch++) {
+            const float sw = 0.5f + 0.5f * sine(fx_phl + (ch ? 0.25f : 0.0f)),
+                        tn = fm_tanf(FM_PI * 150.0f * fm_exp2f(4.3f * sw) * (1.0f / EN_SR));
+            phase6(ch ? mixr : mixl, n, fx_phz[ch], &fx_phlast[ch], (1.0f - tn) / (1.0f + tn), 0.7f * fx_ph,
+                   0.5f * fx_ph);
         }
-    ris_s[0] = fm_flush(ris_s[0]);
-    ris_s[1] = fm_flush(ris_s[1]);
+        fx_phl += (float)n * (0.2f / EN_SR);
+        if (fx_phl >= 1.0f)
+            fx_phl -= 1.0f;
+    }
 }
 
 static inline float svf_lp(const float *c, float *s, float x, float *bp)   /* one TPT SVF step: low-pass (bp: its band) */
@@ -4466,20 +4476,13 @@ static inline float svf_lp(const float *c, float *s, float x, float *bp)   /* on
     return v2;
 }
 
-/* the master filter on one side (s: its six states): the low-pass, then the high-pass, the wah's band, the phone */
+/* the master filter on one side (s: its four states): the low-pass, then the high-pass */
 static inline float mfx(float x, float *s)
 {
     float bp, lp;
     x = svf_lp(mf_c[0], s, x, &bp);
     lp = svf_lp(mf_c[1], s + 2, x, &bp);
-    x = x - mf_c[1][3] * bp - lp;
-    if (mf_wah > 0.001f) {
-        (void)svf_lp(mf_c[2], s + 4, x, &bp);
-        x += mf_wah * (bp * 1.8f - x);
-    }
-    if (mf_ph > 0.001f)
-        x += mf_ph * (sat(x * 2.2f) * 0.6f - x);
-    return x;
+    return x - mf_c[1][3] * bp - lp;
 }
 
 static float ms_lp1, ms_lp2;                     /* the side's lows (mono below ~150 Hz) */
@@ -4494,14 +4497,15 @@ static void render_plucks(uint32_t n)
     for (i = 0; i < NPLUCK; i++) {
         pluck_t *v = &pluck[i];
         float amp = v->amp, env = v->env, att = v->att, ph = v->ph, ph2 = v->ph2;
-        const float g = v->layer ? g1 : g0, dt = v->dt, dt2 = v->dt2, adec = v->adec, edec = v->edec;
+        const float g = v->layer ? g1 : g0, dt = v->dt, dt2 = v->dt2, adec = v->adec, edec = v->edec,
+                    es = 0.6f * (sq_echo[v->layer] + fx_rep * (2.5f - sq_echo[v->layer]));   /* (Repeat: thrown in) */
         uint32_t j;
         if (!v->on)
             continue;
         for (j = 0; j < n; j++) {
             float x, bp;
             if (!(j & 15u)) {
-                const float f = v->cut * fm_exp2f(3.5f * env);
+                const float f = v->cut * fm_exp2f(3.5f * env) * fx_swm;   /* (the grid's Sweep) */
                 svf_coefs(v->c1, f, 1.4f);
                 svf_coefs(v->c2, f, 0.6f);
             }
@@ -4525,7 +4529,7 @@ static void render_plucks(uint32_t n)
             mixl[j] += x * v->gl;
             mixr[j] += x * v->gr;
             rsend[j] += x * 0.35f * sq_rev[v->layer];
-            esend[j] += x * 0.6f * sq_echo[v->layer];
+            esend[j] += x * es;
             amp *= adec;
             env *= edec;
             att += (1.0f - att) * 0.03f;
@@ -4625,23 +4629,11 @@ static void render_drone(uint32_t n)
         }
     }
     if (ph_depth > 0.005f) {                     /* the phaser */
-        int ch, st;
+        int ch;
         for (ch = 0; ch < 2; ch++) {
             const float sw = 0.5f + 0.5f * sine(ph_lfo + (ch ? 0.25f : 0.0f)),
-                        t = fm_tanf(FM_PI * 200.0f * fm_exp2f(3.3f * sw) * (1.0f / EN_SR)), ca = (1.0f - t) / (1.0f + t),
-                        fb = 0.55f * ph_depth, wet = 0.5f * ph_depth;
-            float *bus = ch ? drr : drl, *z = phz[ch], last = ph_last[ch];
-            for (j = 0; j < n; j++) {
-                float y = bus[j] + fb * last;
-                for (st = 0; st < 6; st++) {
-                    const float o = ca * y + z[st];
-                    z[st] = y - ca * o;
-                    y = o;
-                }
-                last = y;
-                bus[j] = bus[j] * (1.0f - wet) + y * wet;
-            }
-            ph_last[ch] = last;
+                        t = fm_tanf(FM_PI * 200.0f * fm_exp2f(3.3f * sw) * (1.0f / EN_SR));
+            phase6(ch ? drr : drl, n, phz[ch], &ph_last[ch], (1.0f - t) / (1.0f + t), 0.55f * ph_depth, 0.5f * ph_depth);
         }
         ph_lfo += (float)n * (0.07f / EN_SR);     /* (a turn in ~14 s) */
         if (ph_lfo >= 1.0f)
@@ -4720,7 +4712,7 @@ static void render_crash(uint32_t n)
     for (j = 0; j < n; j++) {
         float x;
         svf_lp(c, ar_cr_s, atm_noise(), &bp);
-        x = 0.5f * bp * ar_cr_env;
+        x = 0.5f * ar_cr_g * bp * ar_cr_env;
         mixl[j] += x;
         mixr[j] += x;
         esend[j] += 1.2f * x;
@@ -4788,7 +4780,7 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
             for (j = 0; j < n; j++)
                 tapb[j] = crl[j] + crr[j];
     }
-    if (fxm || sir_amp > 0.0005f || ris_amp > 0.0005f)
+    if (fxm || tw_env > 1e-4f || fx_ph > 0.005f)
         render_fx(n);
     eg += (1.0f - eg) * fx_wash;                 /* Wash: everything into the echo */
     epk = en_echo_pk;
@@ -4813,18 +4805,8 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
         epk = fm_maxf(epk, fm_fabsf(el + er));   /* (the screen's ripples: the echo as it comes out) */
         rin = (rsend[j] * rg + (el + er) * 0.12f * rev_send) * 0.8f;   /* (the classics pass: less of the echo into
                                                   * the plate, 0.25 before: the repeats stay distinct) */
-        if (fx_vt + fx_wash > 0.001f || crash > 0.001f) {   /* Verb, Wash: the dry into the plate; Crash: a burst */
+        if (fx_vt + fx_wash > 0.001f)            /* Reverb, Wash: the dry into the plate */
             rin += (mixl[j] + mixr[j] + 2.0f * bassb[j]) * (0.35f * fx_vt + 0.3f * fx_wash);
-            if (crash > 0.001f) {
-                fx_noise = fx_noise * 1664525u + 1013904223u;
-                /* (1.3.0: it was white noise at x2, 15 dB over the music: now a darker wash, eased in over ~8 ms,
-                 * at the music's own level) */
-                crash_lp += 0.3f * ((float)(int32_t)fx_noise * (1.0f / 2147483648.0f) - crash_lp);
-                crash_att += (1.0f - crash_att) * 0.003f;
-                rin += crash_lp * crash * crash_att * 0.6f;
-                crash *= 0.99971f;               /* (~80 ms) */
-            }
-        }
         cloud(rin * ca * 2.5f * cl_in + pl_back * cloud_amt * 0.22f, &cl, &cr);   /* the grains, into the plate: they bloom;
                                                  * the plate's tail back into the line: the wash grows on itself */
         {   /* the plate, every other sample (its input the pair's mean, its output a line between) */
@@ -4871,26 +4853,9 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
                                                                                   * user's ear; the loop held, the
                                                                                   * level steadier) */
         r = (r + kickb[j] * (1.0f - 0.5f * fx_wash) + crr[j]) * 0.75f * gain;
-        if (mf_lp < 14.15f || mf_hp > 4.35f || mf_wah > 0.001f) {   /* the master filter */
+        if (mf_lp < 14.15f || mf_hp > 4.35f) {   /* the master filter */
             l = mfx(l, mf_s);
-            r = mfx(r, mf_s + 6);
-        }
-        if (stt_state) {                         /* Stutter: catch a sixteenth (mono), then loop it */
-            float m = 0.5f * (l + r), v = 0.0f, tg = 0.0f;
-            if (stt_state == 1) {
-                plex[stt_pos] = s16(m * 0.5f);
-                if (++stt_pos >= stt_len)
-                    stt_state = 2, stt_pos = 0;
-            } else {
-                int e = stt_pos < stt_len - stt_pos ? stt_pos : stt_len - stt_pos;
-                v = (float)plex[stt_pos] * (2.0f / 12000.0f) * fm_minf((float)e * (1.0f / 64.0f), 1.0f);
-                if (++stt_pos >= stt_len)
-                    stt_pos = 0;
-                tg = fxm >> EN_FX_STUTTER & 1u ? 1.0f : 0.0f;
-            }
-            stt_mix += (tg - stt_mix) * 0.005f;
-            l += stt_mix * (v - l);
-            r += stt_mix * (v - r);
+            r = mfx(r, mf_s + 4);
         }
 
         l = soft(l);                             /* (1.3.0: a rational curve, not tanh: the same below the clip,

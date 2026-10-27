@@ -1,5 +1,5 @@
-# the grid's Crash (REC held, white 10): a burst into the plate at about the music's own level, never far over it
-# (1.3.0: it was white noise 15 dB over the music)
+# the grid's Take-off (REC held, white 10: was DUB-1's Crash): the arc's Crash ending's noise falling into the echo, at
+# about the music's own level, never far over it (1.3.0: DUB-1's was white noise 15 dB over the music)
 listen
 wait 6000
 peakreset
@@ -11,7 +11,7 @@ key w9 down
 wait 200
 key w9 up
 release REC
-said Crash
+said Take-off
 peakreset
 wait 1500
 expect peak_db_max <-12

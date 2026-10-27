@@ -2,10 +2,13 @@
 /* The instrument on the host: the pure parts (Euclid, scales, chords, voicings, grooves, names, texts) and
  * the render (sound, no NaN, bounded; the kick on the floor, the chord drifts and holds, never on a
  * diminished fifth, freeze holds, the arrangement moves with Motion, throws, the loops evolve). */
+#define _POSIX_C_SOURCE 200809L                 /* (fork, for runs compared from one state) */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
+#include <unistd.h>
+#include <sys/wait.h>
 #include "amb.h"
 
 static int fails;
@@ -124,6 +127,51 @@ static void run(float secs)
             sum2 += x * x;
         }
     }
+}
+
+static uint32_t run_hash(float secs)            /* run, and an FNV hash of every sample */
+{
+    int blocks = (int)(secs * 44100.0f / 256.0f), b, j;
+    uint32_t h = 2166136261u;
+    for (b = 0; b < blocks; b++) {
+        en_render(buf, 256, 2048);
+        for (j = 0; j < 512; j++) {
+            float x = (float)buf[j] / 8388608.0f;
+            if (fabsf(x) > peak)
+                peak = fabsf(x);
+            sum2 += x * x;
+            h = (h ^ (uint32_t)buf[j]) * 16777619u;
+        }
+    }
+    return h;
+}
+
+/* from here, in a child process: the effects fx held for secs, the hash of what it plays (two of these start from
+ * the same state to the bit, whatever the tests before left) */
+static uint32_t hash_child(uint32_t fx, float secs)
+{
+    int fd[2];
+    pid_t pid;
+    uint32_t h = 0;
+    fflush(stdout);
+    if (pipe(fd))
+        return 0;
+    pid = fork();
+    if (pid == 0) {
+        close(fd[0]);
+        if (fx)
+            en_fx(fx);
+        h = run_hash(secs);
+        if (write(fd[1], &h, sizeof h) != (ssize_t)sizeof h)
+            _exit(1);
+        _exit(0);
+    }
+    close(fd[1]);
+    if (read(fd[0], &h, sizeof h) != (ssize_t)sizeof h)
+        h = 0;
+    close(fd[0]);
+    waitpid(pid, 0, 0);
+    return h;
 }
 
 /* a new engine, stopped, the count from the top (en_init leaves the transport, en_bars, as they were) */
@@ -656,6 +704,155 @@ int main(void)
         en_fx(0);
         run(4.0f);
         CHECK(!bad && peak > 0.02f && peak < 0.99f, "after all effects: %f", (double)peak);
+    }
+
+    /* (BERLIN) the grid's sixteen, in its order */
+    {
+        static const char *const FX[EN_NFX] = {"Repeat", "Time", "Tape stop", "Swell", "Low-pass", "High-pass", "Sweep",
+                                               "Phaser", "Reverb", "Take-off", "Freeze", "Wash", "Octave", "Return",
+                                               "Twitter", "Supernova"};
+        int e;
+        for (e = 0; e < EN_NFX; e++)
+            CHECK(!strcmp(EN_FX_NAME[e], FX[e]), "test_fx_names: effect %d is %s, not %s", e, EN_FX_NAME[e], FX[e]);
+    }
+
+    /* (BERLIN) Octave: a written pattern of eight, two passes as written, then two with Octave held: every step's note
+     * twelve over its own; let go: as written again. Return: held, only the first four steps' notes */
+    {
+        static const int8_t D[8] = {0, 2, 4, 1, 3, 5, 7, 6};
+        int want[8], i, k, ok = 1, n0, oct_ok = 1, ret_ok = 1, back_ok = 1;
+        uint32_t n_ret;
+        fresh();
+        en_set(P_TEMPO, 120);
+        en_set(P_SEQ2, 0);
+        en_set(P_TAPA, 0);
+        en_set(P_TAPB, 0);
+        en_set(P_DENSITY, 100);
+        seq_write(8, 0xFFu, D);
+        en_play(1);
+        run(4.0f);                               /* (two bars at 120: two passes of 16 sixteenths in 8ths) */
+        n0 = (int)sq_n;
+        for (i = 0; i < 8 && n0 >= 8; i++)
+            want[i] = sq_note[n0 - 8 + i];
+        CHECK(n0 >= 8, "test_fx_octave: %d Sequence notes in 4 s", n0);
+        for (i = 0; i < 8 && n0 >= 16; i++)
+            ok &= sq_note[n0 - 16 + i] == want[i];   /* (the passes alike: the test can trust the pattern) */
+        CHECK(ok, "test_fx_octave: the written pattern's passes differ");
+        en_fx(1u << EN_FX_OCTAVE);
+        run(4.0f);
+        for (k = n0 + 1; k < (int)sq_n; k++)     /* (the first note may be the one already on its way) */
+            oct_ok &= sq_note[k] == want[(k - n0) % 8] + 12;
+        CHECK(oct_ok && (int)sq_n - n0 >= 8, "test_fx_octave: held, not an octave over the pattern (%d notes)",
+              (int)sq_n - n0);
+        en_fx(0);
+        run(0.5f);
+        n0 = (int)sq_n;
+        run(4.0f);
+        for (k = n0; k < (int)sq_n; k++) {
+            int f = 0;
+            for (i = 0; i < 8; i++)
+                f |= sq_note[k] == want[i];
+            back_ok &= f;
+        }
+        CHECK(back_ok, "test_fx_octave: let go, not back to the pattern");
+        en_fx(1u << EN_FX_RETURN);
+        run(0.5f);
+        n0 = (int)sq_n;
+        run(4.0f);
+        for (k = n0; k < (int)sq_n; k++) {
+            int f = 0;
+            for (i = 0; i < 4; i++)
+                f |= sq_note[k] == want[i];
+            ret_ok &= f;
+        }
+        n_ret = sq_n - (uint32_t)n0;
+        CHECK(ret_ok && n_ret >= 8u, "test_fx_return: held, a note outside the first four steps (%u notes)", n_ret);
+        en_fx(0);
+    }
+
+    /* (BERLIN) Sweep moves the Sequence's filter (the Drone alone: the same to the bit; the Sequence alone: not);
+     * Phaser on everything (the Sequence alone: not the same) */
+    {
+        static const int OFF[5] = {P_CHORD, P_SEQ, P_LEAD, P_SEQ2, P_NCHAR};
+        int e, layer;
+        static const int FXS[2] = {EN_FX_SWEEP, EN_FX_PHASER};
+        for (e = 0; e < 2; e++)
+            for (layer = 0; layer < 2; layer++) {   /* 0: the Drone alone; 1: the Sequence alone */
+                uint32_t h[3];
+                int k;
+                fresh();
+                for (k = 0; k < 5; k++)
+                    en_set(OFF[k], 0);
+                en_set(layer ? P_SEQ : P_CHORD, 70);
+                en_play(1);
+                run(2.0f);
+                h[0] = hash_child(0, 4.0f);
+                h[1] = hash_child(1u << FXS[e], 4.0f);
+                h[2] = hash_child(0, 4.0f);      /* (the control: not held, again) */
+                CHECK(h[0] && h[0] == h[2], "test_fx_%s: two runs from one state differ (the control)",
+                      e ? "phaser" : "sweep");
+                if (FXS[e] == EN_FX_SWEEP && !layer)
+                    CHECK(h[0] == h[1], "test_fx_sweep: the Drone alone changed by Sweep");
+                else if (layer)
+                    CHECK(h[0] != h[1], "test_fx_%s: the Sequence alone unchanged", e ? "phaser" : "sweep");
+            }
+    }
+
+    /* (BERLIN) from silence (every layer at 0): Take-off (tapped) and Twitter (held) are heard; Supernova held, the
+     * echo's tail grows (the music stopped by its levels, the echo left ringing: louder than without) */
+    {
+        static const int OFF[5] = {P_CHORD, P_SEQ, P_LEAD, P_SEQ2, P_NCHAR};
+        static const int FXS[2] = {EN_FX_TAKEOFF, EN_FX_TWITTER};
+        float tail[2];
+        int e, k, held;
+        for (e = 0; e < 2; e++) {
+            float p0;
+            fresh();
+            for (k = 0; k < 5; k++)
+                en_set(OFF[k], 0);
+            en_play(1);
+            run(1.0f);                           /* (the short lines' last quarter second gone) */
+            peak = 0.0f;
+            run(1.0f);
+            p0 = peak;
+            peak = 0.0f;
+            en_fx(1u << FXS[e]);
+            run(e ? 2.0f : 0.1f);
+            en_fx(0);
+            run(e ? 0.1f : 2.0f);
+            CHECK(p0 < 1e-4f && peak > 0.01f, "test_fx_%s: from silence %.5f, then %.4f", e ? "twitter" : "takeoff",
+                  (double)p0, (double)peak);
+        }
+        for (held = 0; held < 2; held++) {
+            fresh();
+            en_set(P_ECHO, 80);
+            en_play(1);
+            run(10.0f);
+            for (k = 0; k < 5; k++)
+                en_set(OFF[k], 0);
+            if (held)
+                en_fx(1u << EN_FX_SUPERNOVA);
+            run(2.0f);
+            sum2 = 0.0f;
+            run(2.0f);
+            tail[held] = sqrtf(sum2 / (2.0f * 44100.0f * 2.0f));
+            en_fx(0);
+        }
+        printf("  the echo's tail, 2-4 s after the music stops: %.4f, Supernova held %.4f\n", (double)tail[0],
+               (double)tail[1]);
+        CHECK(tail[1] > 2.0f * tail[0], "test_fx_supernova: the tail %.4f held, %.4f not", (double)tail[1],
+              (double)tail[0]);
+        fresh();                                 /* (nothing in the echo: Supernova has nothing to grow, and adds none) */
+        for (k = 0; k < 5; k++)
+            en_set(OFF[k], 0);
+        en_set(P_ECHO, 0);
+        en_play(1);
+        run(1.0f);
+        peak = 0.0f;
+        en_fx(1u << EN_FX_SUPERNOVA);
+        run(3.0f);
+        en_fx(0);
+        CHECK(peak < 1e-4f, "test_fx_supernova: from silence, held: %.4f", (double)peak);
     }
 
     /* every voice of every layer: it sounds, without NaN, under full scale */
