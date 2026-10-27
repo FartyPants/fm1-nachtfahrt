@@ -38,12 +38,22 @@ static uint32_t dr_n, dr_at[SQN];
 static uint32_t ld_ons, ld_groups, ld_mono_bad, ld_outscale, ld_last_off = 0xFFFFFFFFu, ld_on_now, ld_pool = 0xFFFu;
 static int last_lead;                            /* (the Lead's last note-on) */
 static int sounding[16][128];
+/* (BERLIN, the filter motion) the sequences' velocities against the accent rule (vel_lo >= 0: 120 or vel_lo, else counted
+ * in vel_bad); the Sequence's note-ons by the arc's section, and all of them */
+static int vel_lo = -1;
+static uint32_t vel_bad, sec_ons[EN_NSEC], ch2_ons;
 void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2)
 {
     uint32_t b = en_bars / 16u;
     midi_count++;
     if ((st & 0xF0u) == 0x90u && d2 > 0u) {
         sounding[st & 15u][d1 & 127u]++;
+        if ((st & 15u) == 1u) {
+            ch2_ons++;
+            sec_ons[en_section < EN_NSEC ? en_section : 0]++;
+        }
+        if (vel_lo >= 0 && ((st & 15u) == 1u || (st & 15u) == 3u) && d2 != 120u && d2 != (uint32_t)vel_lo)
+            vel_bad++;
         if ((st & 15u) >= 9u)
             drum_ch_ons++;
         if ((st & 15u) == 1u && sq_n < SQN)
@@ -254,6 +264,52 @@ static void piece(int i)                         /* a piece, as the UI changes t
     en_regrow();
 }
 
+/* (BERLIN) the filter motion's parameters, by layer: the Drone, the Sequence, the Lead, Sequence 2, the Atmosphere */
+static const int FO_W[5] = {P_MW0, P_MW1, P_MW2, P_MW3, P_MW4}, FO_T[5] = {P_MT0, P_MT1, P_MT2, P_MT3, P_MT4},
+                 FO_R[5] = {P_MR0, P_MR1, P_MR2, P_MR3, P_MR4}, FO_I[5] = {P_MI0, P_MI1, P_MI2, P_MI3, P_MI4};
+static void fo_all(int w, int t, int r, int in)  /* every layer's Move page alike (-1: as it is) */
+{
+    int l;
+    for (l = 0; l < 5; l++) {
+        if (w >= 0)
+            en_set(FO_W[l], w);
+        if (t >= 0)
+            en_set(FO_T[l], t);
+        if (r >= 0)
+            en_set(FO_R[l], r);
+        if (in >= 0)
+            en_set(FO_I[l], in);
+    }
+}
+/* from here, in a child process: parameter p to v (p < 0: none), secs played; out: the Sequence's offset then and its
+ * last note's cutoff (two of these from one state, to the bit) */
+static void probe_child(int p, int v, float secs, float *out)
+{
+    int fd[2];
+    pid_t pid;
+    float r[2] = {0.0f, 0.0f};
+    fflush(stdout);
+    if (pipe(fd))
+        return;
+    pid = fork();
+    if (pid == 0) {
+        close(fd[0]);
+        if (p >= 0)
+            en_set(p, v);
+        run(secs);
+        r[0] = en_fo[1], r[1] = en_pluck_cut[0];
+        if (write(fd[1], r, sizeof r) != (ssize_t)sizeof r)
+            _exit(1);
+        _exit(0);
+    }
+    close(fd[1]);
+    if (read(fd[0], r, sizeof r) != (ssize_t)sizeof r)
+        r[0] = r[1] = -99.0f;
+    close(fd[0]);
+    waitpid(pid, 0, 0);
+    out[0] = r[0], out[1] = r[1];
+}
+
 static uint32_t chord_sig(void)
 {
     return (uint32_t)en_chord[0] | (uint32_t)en_chord[1] << 7 | (uint32_t)en_chord[2] << 14 |
@@ -388,6 +444,47 @@ int main(void)
             en_param_text(i, pi->hi, t);
             CHECK(strlen(t) < 10, "%s: text too long", pi->name);
         }
+    }
+
+    /* (BERLIN, spec 3) the filter motion at rest: Width, Rate, Intro and Bridge 0 (and Motion 0, Arc 0, Evolve 0),
+     * Timewind's first minute is to the bit what the engine without the filter motion played with Sweep 0, Emerge 0,
+     * Arc 0, Motion 0, Evolve 0 (build/tmp/fmzero_old.c on fd1d378: the first render of a process, as this one) */
+    {   /* (in a child: this process stays as it started, for the render's tests below) */
+        int k, fd[2];
+        pid_t pid;
+        struct {
+            uint32_t h;
+            float fo[5];
+        } r;
+        memset(&r, 0, sizeof r);
+        fflush(stdout);
+        if (pipe(fd) == 0 && (pid = fork()) >= 0) {
+            if (!pid) {
+                close(fd[0]);
+                en_init();
+                piece(0);
+                fo_all(0, -1, 0, 0);
+                en_set(P_BRIDGE, 0);
+                en_set(P_ARC, 0);
+                en_set(P_MOTION, 0);
+                en_set(P_EVOLVE, 0);
+                en_play(1);
+                r.h = run_hash(60.0f);
+                for (k = 0; k < 5; k++)
+                    r.fo[k] = en_fo[k];
+                if (write(fd[1], &r, sizeof r) != (ssize_t)sizeof r)
+                    _exit(1);
+                _exit(0);
+            }
+            close(fd[1]);
+            if (read(fd[0], &r, sizeof r) != (ssize_t)sizeof r)
+                r.h = 0;
+            close(fd[0]);
+            waitpid(pid, 0, 0);
+        }
+        CHECK(r.h == 0xaf050088u, "test_fm_zero: Timewind's first minute %08x, not af050088 (the engine before)", r.h);
+        for (k = 0; k < 5; k++)
+            CHECK(r.fo[k] == 0.0f, "test_fm_zero: layer %d's offset %f", k, (double)r.fo[k]);
     }
 
     /* the render: silent at rest, sound when playing, never NaN, bounded */
@@ -1330,44 +1427,54 @@ int main(void)
         CHECK(n0 && n1 == n0 + 12, "test_pattern_octaves: %d, with its octave %d", n0, n1);
     }
 
-    /* (BERLIN) the layers come in one by one: Seq2 in 0, Sequence 2 with the Sequence, from its first bar; Seq2 in 8,
-     * nothing in its first bar, then rising (its notes louder in bars 9 .. 12 than in 1 .. 3); Lead in 8: no Lead
-     * before bar 8, and some after */
+    /* (BERLIN) the layers come in one by one, by their filters (spec 3.3): Sequence 2's Intro 0, its notes from its
+     * first bar and its filter open; Intro 8, its notes from the first bar too (no hidden level) but its filter closed
+     * at first (4 octaves under its knob at least) and open from bar 8; Lead in 8: no Lead before bar 8, and some
+     * after */
     {
-        uint32_t i, first0 = 0xFFFFFFFFu, first8 = 0xFFFFFFFFu, n_lo = 0, n_hi = 0, v_lo = 0, v_hi = 0;
+        uint32_t i, first0 = 0xFFFFFFFFu, first8 = 0xFFFFFFFFu, lastb = 0xFFFFFFFFu;
+        int closed = 1, open = 1, k;
         fresh();
         en_set(P_SEQ2, 60);
-        en_set(P_S2IN, 0);
+        en_set(P_MI3, 0);
+        en_set(P_MW3, 0);
         en_play(1);
         run(10.0f);
         for (i = 0; i < s2_n; i++)
             first0 = s2_at[i] < first0 ? s2_at[i] : first0;
-        CHECK(first0 < 16u, "test_layer_entries: Seq2 in 0: first note at sixteenth %u", first0);
+        CHECK(first0 < 16u && en_fo[3] == 0.0f, "test_layer_entries: Intro 0: first note at sixteenth %u, offset %f",
+              first0, (double)en_fo[3]);
         fresh();
         en_set(P_SEQ2, 60);
-        en_set(P_S2IN, 8);
+        en_set(P_MI3, 8);
+        en_set(P_MW3, 0);
+        en_set(P_BRIDGE, 0);
         en_set(P_LDIN, 8);
         en_set(P_LEAD, 60);
         en_set(P_LDENS, 100);
         ld_first = 0xFFFFFFFFu;
         en_play(1);
-        run(120.0f);
-        for (i = 0; i < s2_n; i++) {
-            const uint32_t b = s2_at[i] / 16u;
-            first8 = s2_at[i] < first8 ? s2_at[i] : first8;
-            if (b >= 1u && b <= 3u)
-                n_lo++, v_lo += s2_vel[i];
-            if (b >= 9u && b <= 12u)
-                n_hi++, v_hi += s2_vel[i];
+        for (k = 0; k < 480; k++) {
+            uint32_t b;
+            run(0.25f);
+            b = (en_bars - 1u) / 16u;            /* (the bar playing: en_bars counts the sixteenth just struck) */
+            if (b == lastb)
+                continue;
+            lastb = b;
+            if (b < 1u && en_fo[3] > -4.0f)
+                closed = 0;
+            if (b >= 8u && fabsf(en_fo[3]) > 0.01f)
+                open = 0;
         }
-        CHECK(first8 >= 16u && n_lo && n_hi && v_lo * n_hi < v_hi * n_lo,
-              "test_layer_entries: Seq2 in 8: first at %u, bars 1-3 %u notes vel %u, bars 9-12 %u notes vel %u", first8, n_lo,
-              v_lo, n_hi, v_hi);
+        for (i = 0; i < s2_n; i++)
+            first8 = s2_at[i] < first8 ? s2_at[i] : first8;
+        CHECK(first8 < 16u && closed && open, "test_layer_entries: Intro 8: first note at %u, closed at first %d, open "
+              "from bar 8 %d", first8, closed, open);
         CHECK(ld_first != 0xFFFFFFFFu && ld_first >= 8u * 16u, "test_layer_entries: Lead in 8: first Lead note at %u",
               ld_first);
     }
 
-    /* (BERLIN) the sections: Motion 0 stays in Flow; Motion 100 goes through Solo and Drift too */
+    /* (BERLIN) the sections: Motion 0 stays in Flow; Motion 100 goes through Solo and the Bridge too */
     {
         int k, m, secs[EN_NSEC];
         static const int MOT[2] = {100, 0};
@@ -1380,64 +1487,66 @@ int main(void)
                 run(1.0f);
                 secs[en_section < EN_NSEC ? en_section : 0]++;
             }
-            printf("  10 min at Motion %d: Emerge %d s, Flow %d, Solo %d, Drift %d\n", MOT[m], secs[EN_SEC_EMERGE],
-                   secs[EN_SEC_FLOW], secs[EN_SEC_SOLO], secs[EN_SEC_DRIFT]);
+            printf("  10 min at Motion %d: Emerge %d s, Flow %d, Solo %d, Bridge %d\n", MOT[m], secs[EN_SEC_EMERGE],
+                   secs[EN_SEC_FLOW], secs[EN_SEC_SOLO], secs[EN_SEC_BRIDGE]);
             if (MOT[m])
-                CHECK(secs[EN_SEC_FLOW] > 0 && secs[EN_SEC_SOLO] > 0 && secs[EN_SEC_DRIFT] > 0,
-                      "test_sections: Motion 100: Flow %d s, Solo %d, Drift %d", secs[EN_SEC_FLOW], secs[EN_SEC_SOLO],
-                      secs[EN_SEC_DRIFT]);
+                CHECK(secs[EN_SEC_FLOW] > 0 && secs[EN_SEC_SOLO] > 0 && secs[EN_SEC_BRIDGE] > 0,
+                      "test_sections: Motion 100: Flow %d s, Solo %d, Bridge %d", secs[EN_SEC_FLOW], secs[EN_SEC_SOLO],
+                      secs[EN_SEC_BRIDGE]);
             else
                 CHECK(secs[EN_SEC_FLOW] == 600, "test_sections: Motion 0 left Flow (%d s in Flow)", secs[EN_SEC_FLOW]);
         }
     }
 
-    /* (BERLIN) the arc: at 160 BPM (a bar 1.5 s), Emerge 1 (33 bars): Emerge first, the Sequence silent through its
-     * first half; then not Emerge again until an ending; an Arc of 1 (134 bars) ends (the ending's 8 bars), and Emerge
-     * follows; over 30 minutes at Motion 70 every section is heard */
+    /* (BERLIN) the arc: at 160 BPM (a bar 1.5 s), the Sequence's Intro 32: Emerge for the first 32 bars, never again;
+     * the Sequence playing from the start (no hidden level) but its filter 4.5 octaves under its knob at least through
+     * the first quarter (it emerges late); over 30 minutes at Motion 70 every section is heard */
     {
-        uint32_t b, i, early = 0, lastb = 0xFFFFFFFFu;
-        int emerge_first = 1, emerge_after = 0, back = 0, seen[EN_NSEC] = {0, 0, 0, 0}, k;
+        uint32_t b, lastb = 0xFFFFFFFFu;
+        int emerge_first = 1, emerge_after = 0, closed = 1, seen[EN_NSEC] = {0, 0, 0, 0}, k;
         fresh();
         en_set(P_TEMPO, 160);
-        en_set(P_EMERGE, 1);
+        en_set(P_MI1, 32);
+        en_set(P_SWEEP, 0);
         en_set(P_ARC, 1);
         en_set(P_MOTION, 70);
         en_play(1);
-        for (k = 0; k < 1200; k++) {             /* 30 minutes, a second at a time */
+        for (k = 0; k < 1200; k++) {             /* 30 minutes */
             run(1.5f);
             b = en_bars / 16u;
             if (b == lastb)
                 continue;
             lastb = b;
             seen[en_section < EN_NSEC ? en_section : 0] = 1;
-            if (b < 33u && en_section != EN_SEC_EMERGE)
+            if (b < 32u && en_section != EN_SEC_EMERGE)
                 emerge_first = 0;
-            if (b > 34u && !en_endings && en_section == EN_SEC_EMERGE)
+            if (b > 33u && en_section == EN_SEC_EMERGE)
                 emerge_after = 1;
-            if (en_endings && en_section == EN_SEC_EMERGE)
-                back = 1;
+            if (b < 8u && en_fo[1] > -4.5f)
+                closed = 0;
         }
-        for (i = 0; i < sq_n; i++)
-            early += sq_at[i] < 16u * 16u;
-        CHECK(emerge_first && !emerge_after, "test_starts_emerge: Emerge for the first 33 bars %d, again too soon %d",
+        CHECK(emerge_first && !emerge_after, "test_starts_emerge: Emerge for the first 32 bars %d, again after %d",
               emerge_first, emerge_after);
-        CHECK(!early, "test_emerge_sequence_late: %u Sequence notes in Emerge's first half", early);
-        CHECK(en_endings > 0 && back, "test_arc_ends: %u endings, Emerge after %d", en_endings, back);
-        CHECK(seen[0] && seen[1] && seen[2] && seen[3], "test_sections_all: Emerge %d Flow %d Solo %d Drift %d", seen[0],
+        CHECK(closed && sq_n > 0u && sq_at[0] < 32u, "test_emerge_sequence_late: closed %d; its first note at %u",
+              closed, sq_n ? sq_at[0] : 0u);
+        CHECK(seen[0] && seen[1] && seen[2] && seen[3], "test_sections_all: Emerge %d Flow %d Solo %d Bridge %d", seen[0],
               seen[1], seen[2], seen[3]);
     }
 
-    /* (BERLIN) the Sweep: in Flow (Motion 0), Sweep 100, ten minutes: the Sequence's cutoff wanders over much of its
-     * range, slowly (no more than 0.05 of it a bar); Sweep 0: still */
+    /* (BERLIN) the Sequence's wander (its Width, Sweep): in Flow (Motion 0, no Arc, no Bridge), Sweep 100, ten
+     * minutes: its offset wanders over much of its +-2 octaves, eased (a bar's step, sampled, at most 1.25 octave at
+     * Time 50); Sweep 0: still, at 0 */
     {
         int k;
         static const int SW[2] = {100, 0};
         for (k = 0; k < 2; k++) {
-            float lo = 1.0f, hi = 0.0f, last = -1.0f, step = 0.0f;
+            float lo = 9.0f, hi = -9.0f, last = -99.0f, step = 0.0f;
             uint32_t lastb = 0xFFFFFFFFu;
             int j;
             fresh();
             en_set(P_MOTION, 0);
+            en_set(P_ARC, 0);
+            en_set(P_BRIDGE, 0);
             en_set(P_SWEEP, SW[k]);
             en_play(1);
             for (j = 0; j < 2400; j++) {
@@ -1445,23 +1554,23 @@ int main(void)
                 if (en_bars / 16u == lastb)
                     continue;
                 lastb = en_bars / 16u;
-                lo = fminf(lo, en_seq_cut), hi = fmaxf(hi, en_seq_cut);
-                if (last >= 0.0f)
-                    step = fmaxf(step, fabsf(en_seq_cut - last));
-                last = en_seq_cut;
+                lo = fminf(lo, en_fo[1]), hi = fmaxf(hi, en_fo[1]);
+                if (last > -99.0f)
+                    step = fmaxf(step, fabsf(en_fo[1] - last));
+                last = en_fo[1];
             }
-            printf("  10 min, Sweep %d: the cutoff's wander %.2f .. %.2f, a bar's step at most %.3f\n", SW[k], (double)lo,
-                   (double)hi, (double)step);
+            printf("  10 min, Sweep %d: the Sequence's offset %.2f .. %.2f octaves, a bar's step at most %.3f\n", SW[k],
+                   (double)lo, (double)hi, (double)step);
             if (SW[k])
-                CHECK(hi - lo >= 0.4f && step <= 0.05f, "test_sweep_moves: span %.2f, step %.3f", (double)(hi - lo),
-                      (double)step);
+                CHECK(hi - lo >= 1.5f && hi <= 2.0f && lo >= -2.0f && step <= 1.25f, "test_sweep_moves: %.2f .. %.2f, "
+                      "step %.3f", (double)lo, (double)hi, (double)step);
             else
-                CHECK(hi - lo < 0.01f, "test_sweep_moves: Sweep 0 moved (%.2f)", (double)(hi - lo));
+                CHECK(lo == 0.0f && hi == 0.0f, "test_sweep_moves: Sweep 0 moved (%.2f .. %.2f)", (double)lo, (double)hi);
         }
     }
 
-    /* (BERLIN) the swell: every return from Drift to Flow has the swell in the two bars before it (Motion 100, twenty
-     * minutes at 160) */
+    /* (BERLIN) the swell: every return from the Bridge to Flow has the swell in the two bars before it (Motion 100,
+     * twenty minutes at 160) */
     {
         uint32_t lastb = 0xFFFFFFFFu;
         int k, prev = -1, swell1 = 0, swell2 = 0, returns = 0, bad = 0;
@@ -1474,7 +1583,7 @@ int main(void)
             if (en_bars / 16u == lastb)
                 continue;
             lastb = en_bars / 16u;
-            if (prev == EN_SEC_DRIFT && en_section == EN_SEC_FLOW) {
+            if (prev == EN_SEC_BRIDGE && en_section == EN_SEC_FLOW) {
                 returns++;
                 bad += !(swell1 || swell2);
             }
@@ -1483,13 +1592,284 @@ int main(void)
         CHECK(returns > 0 && !bad, "test_swell_before_return: %d returns, %d without a swell", returns, bad);
     }
 
+    /* (BERLIN, spec 3) the filter motion: no hidden levels. Timewind with every Intro 16, Bridge 100, Motion 100, 20
+     * minutes at 160 (Sequence 2 heard, Repeat B off): every Sequence and Sequence 2 note-on's velocity is the accent
+     * rule's (120, or 120 - 86 Accent / 100: no arc factor), notes in every section; the Atmosphere's gain its level's */
+    {
+        int k, atm_bad = 0;
+        float atm_worst = 0.0f;
+        fresh();
+        piece(0);
+        fo_all(-1, -1, -1, 16);
+        en_set(P_BRIDGE, 100);
+        en_set(P_MOTION, 100);
+        en_set(P_TEMPO, 160);
+        en_set(P_SEQ2, 60);
+        en_set(P_TAPB, 0);
+        vel_lo = 120 - 86 * en_param_info(P_SACCENT)->def / 100;
+        vel_bad = 0;
+        memset(sec_ons, 0, sizeof sec_ons);
+        en_play(1);
+        for (k = 0; k < 1200; k++) {
+            run(1.0f);
+            if (k >= 5) {                         /* (once its gate has opened: Timewind's Atmosphere 30) */
+                const float want = 30.0f * 0.0035f, dif = fabsf(en_atm_gain - want);
+                atm_worst = fmaxf(atm_worst, dif);
+                atm_bad += dif > 1e-3f * want;
+            }
+        }
+        vel_lo = -1;
+        printf("  20 min, every Intro 16, Bridge 100: Sequence notes in Emerge %u, Flow %u, Solo %u, Bridge %u; %u off the "
+               "accent rule\n", sec_ons[EN_SEC_EMERGE], sec_ons[EN_SEC_FLOW], sec_ons[EN_SEC_SOLO], sec_ons[EN_SEC_BRIDGE],
+               vel_bad);
+        CHECK(!vel_bad && sec_ons[EN_SEC_EMERGE] && sec_ons[EN_SEC_FLOW] && sec_ons[EN_SEC_SOLO] &&
+                  sec_ons[EN_SEC_BRIDGE] && s2_n,
+              "test_fm_no_hidden_level: %u velocities not 120 or %d; notes by section %u %u %u %u, Sequence 2 %u", vel_bad,
+              120 - 86 * en_param_info(P_SACCENT)->def / 100, sec_ons[0], sec_ons[1], sec_ons[2], sec_ons[3], s2_n);
+        CHECK(!atm_bad, "test_fm_no_hidden_level: the Atmosphere's gain off its level %d times (by %.5f)", atm_bad,
+              (double)atm_worst);
+    }
+
+    /* (BERLIN) at rest, all arc long: Width, Rate, Intro and Bridge 0, no Arc, Motion 100 (every section), ten minutes
+     * at 160: every layer's offset exactly 0 (the filters at their knobs) */
+    {
+        int k, l, moved = 0, bridge = 0;
+        fresh();
+        piece(0);
+        fo_all(0, -1, 0, 0);
+        en_set(P_BRIDGE, 0);
+        en_set(P_ARC, 0);
+        en_set(P_MOTION, 100);
+        en_set(P_TEMPO, 160);
+        en_play(1);
+        for (k = 0; k < 2400; k++) {
+            run(0.25f);
+            bridge |= en_section == EN_SEC_BRIDGE;
+            for (l = 0; l < 5; l++)
+                moved += en_fo[l] != 0.0f || en_fo_dir[l] != 0;
+        }
+        CHECK(!moved && bridge, "test_fm_zero: %d offsets not 0 (a Bridge heard %d)", moved, bridge);
+    }
+
+    /* (BERLIN) relative (spec 3.1): during an intro and during a bridge, the Sequence's Cutoff turned up 10: its offset
+     * the same as without the turn (two runs from one state), its notes' cutoff up by the knob's own step (x2^0.55) */
+    {
+        int k, at;
+        for (at = 0; at < 2; at++) {
+            float a[2], b[2];
+            const float want = powf(2.0f, 0.55f);
+            fresh();
+            piece(0);                             /* (Timewind: the Sequence's Intro 32) */
+            en_set(P_TEMPO, 160);
+            en_set(P_CUTOFF, 45);
+            if (at) {                             /* (a bridge: Motion 100, Bridge 100; its move well in) */
+                en_set(P_MI1, 0);
+                en_set(P_MOTION, 100);
+                en_set(P_BRIDGE, 100);
+            }
+            en_play(1);
+            if (at) {
+                for (k = 0; k < 4000 && en_section != EN_SEC_BRIDGE; k++)
+                    run(0.05f);
+                run(9.0f);                        /* (six bars in: its move eased in) */
+            } else {
+                run(9.0f);                        /* (six bars into the 32 of the intro) */
+            }
+            probe_child(-1, 0, 3.0f, a);
+            probe_child(P_CUTOFF, 55, 3.0f, b);
+            printf("  relative, %s: offset %.3f / %.3f, the cutoff %.1f -> %.1f Hz (x%.4f)\n", at ? "a bridge" : "an intro",
+                   (double)a[0], (double)b[0], (double)a[1], (double)b[1], (double)(b[1] / a[1]));
+            CHECK(a[0] == b[0] && (at ? en_section == EN_SEC_BRIDGE && fabsf(a[0]) > 0.3f : a[0] < -2.0f) &&
+                      fabsf(b[1] / a[1] - want) < 1e-3f * want,
+                  "test_fm_relative (%s): offset %f with the turn, %f without; cutoff x%f, the knob's x%f",
+                  at ? "bridge" : "intro", (double)b[0], (double)a[0], (double)(b[1] / a[1]), (double)want);
+        }
+    }
+
+    /* (BERLIN) the intro: the Sequence's Intro 16 (no wander, no Bridge, no Arc): 4 octaves under at least at the first
+     * bar, open (within 0.01) from bar 16 */
+    {
+        uint32_t lastb = 0xFFFFFFFFu, b;
+        int k, closed = 1, open = 1, seen16 = 0;
+        fresh();
+        en_set(P_TEMPO, 160);
+        en_set(P_MI1, 16);
+        en_set(P_SWEEP, 0);
+        en_set(P_BRIDGE, 0);
+        en_set(P_ARC, 0);
+        en_set(P_MOTION, 0);
+        en_play(1);
+        for (k = 0; k < 400; k++) {
+            run(0.1f);
+            b = (en_bars - 1u) / 16u;            /* (the bar playing: en_bars counts the sixteenth just struck) */
+            if (b == lastb)
+                continue;
+            lastb = b;
+            if (b < 1u && en_fo[1] > -4.0f)
+                closed = 0;
+            if (b >= 16u)
+                seen16 = 1, open &= fabsf(en_fo[1]) <= 0.01f;
+        }
+        CHECK(closed && open && seen16, "test_fm_intro: closed at first %d, open from bar 16 %d", closed, open);
+    }
+
+    /* (BERLIN) the Lead's cap: its Width 100, Rate 100, the quickest Time, Bridge 100, Motion 100, 30 minutes at 160:
+     * its offset within +-3/4 octave (and near it at times) */
+    {
+        int k;
+        float hi = 0.0f;
+        fresh();
+        en_set(P_TEMPO, 160);
+        en_set(P_MW2, 100);
+        en_set(P_MR2, 100);
+        en_set(P_MT2, 0);
+        en_set(P_BRIDGE, 100);
+        en_set(P_MOTION, 100);
+        en_play(1);
+        for (k = 0; k < 7200; k++) {
+            run(0.25f);
+            hi = fmaxf(hi, fabsf(en_fo[2]));
+        }
+        printf("  30 min, the Lead at Width 100, Bridge 100: its offset at most %.3f octave\n", (double)hi);
+        CHECK(hi <= 0.75f + 1e-4f && hi > 0.5f, "test_fm_lead_cap: the Lead's offset reached %f", (double)hi);
+    }
+
+    /* (BERLIN) divergence: every layer Width 50, Rate 50 (no Bridge, no Arc), ten minutes: in a fifth of the bars at
+     * least, they are not all moving the same way */
+    {
+        uint32_t lastb = 0xFFFFFFFFu;
+        int k, l, bars = 0, apart = 0;
+        fresh();
+        fo_all(50, -1, 50, 0);
+        en_set(P_BRIDGE, 0);
+        en_set(P_ARC, 0);
+        en_set(P_MOTION, 0);
+        en_play(1);
+        for (k = 0; k < 2400; k++) {
+            run(0.25f);
+            if (en_bars / 16u == lastb)
+                continue;
+            lastb = en_bars / 16u;
+            bars++;
+            for (l = 1; l < 5; l++)
+                if (en_fo_dir[l] != en_fo_dir[0]) {
+                    apart++;
+                    break;
+                }
+        }
+        printf("  10 min, every layer Width 50, Rate 50: %d of %d bars not all moving alike\n", apart, bars);
+        CHECK(bars > 100 && apart * 5 >= bars, "test_fm_diverge: %d of %d bars apart", apart, bars);
+    }
+
+    /* (BERLIN) a new start restarts the intros: Timewind mid-intro, Stratosfear, then Timewind again: its Sequence from
+     * 4 octaves under at least; once open, no layer beyond its Width's range, the Bridge's and (the Sequence) the rise */
+    {
+        int16_t pp[P_NPARAMS];
+        uint16_t pl;
+        int k, l, beyond = 0;
+        float worst = 0.0f;
+        fresh();
+        piece(0);
+        en_play(1);
+        run(10.0f);
+        piece(4);
+        run(5.0f);
+        piece(0);
+        run(0.1f);
+        CHECK(en_fo[1] <= -4.0f && en_section == EN_SEC_EMERGE, "test_fm_restart: Timewind again: the Sequence at %f "
+              "(section %d)", (double)en_fo[1], en_section);
+        en_piece(0, pp, &pl);
+        run(100.0f);                              /* (past its 32 bars at 96) */
+        for (k = 0; k < 1200; k++) {
+            run(0.25f);
+            for (l = 0; l < 5; l++) {
+                const float lim = l == 2 ? 0.75f
+                                  : 2.0f * (float)pp[FO_W[l]] * 0.01f + 3.0f * (float)pp[P_BRIDGE] * 0.01f + (l == 1 ? 1.0f : 0.0f);
+                if (fabsf(en_fo[l]) > lim + 1e-4f)
+                    beyond++, worst = fmaxf(worst, fabsf(en_fo[l]) - lim);
+            }
+        }
+        CHECK(!beyond, "test_fm_restart: %d offsets beyond their range (by %f)", beyond, (double)worst);
+    }
+
+    /* (BERLIN) the clock: every layer Width 100, Time 10, Rate 100, Bridge 100, Motion 100, at 60 BPM, then 160 mid-move:
+     * no offset changes by more than 0.05 octave from one 10 ms to the next; stopped, they stay still */
+    {
+        static int32_t b10[2 * 441];
+        float last[5], jump = 0.0f, held[5];
+        int k, l, still = 1;
+        fresh();
+        fo_all(100, 10, 100, 0);
+        en_set(P_BRIDGE, 100);
+        en_set(P_MOTION, 100);
+        en_set(P_TEMPO, 60);
+        en_play(1);
+        run(20.0f);
+        for (l = 0; l < 5; l++)
+            last[l] = en_fo[l];
+        for (k = 0; k < 9000; k++) {             /* (90 s, the tempo changed after 2) */
+            if (k == 200)
+                en_set(P_TEMPO, 160);
+            en_render(b10, 441, 2048);
+            for (l = 0; l < 5; l++) {
+                jump = fmaxf(jump, fabsf(en_fo[l] - last[l]));
+                last[l] = en_fo[l];
+            }
+        }
+        en_play(0);
+        run(0.1f);
+        for (l = 0; l < 5; l++)
+            held[l] = en_fo[l];
+        run(10.0f);
+        for (l = 0; l < 5; l++)
+            still &= en_fo[l] == held[l];
+        printf("  the clock: 60 -> 160 BPM, an offset's step at most %.4f octave in 10 ms\n", (double)jump);
+        CHECK(jump <= 0.05f && jump > 0.0f, "test_fm_clock: a step of %f octave in 10 ms", (double)jump);
+        CHECK(still, "test_fm_clock: stopped, the offsets moved");
+    }
+
+    /* (BERLIN) no ending (spec 3.5): the shortest Arc (134 bars), two hours at 160: never Emerge again once it has left
+     * it, the Sequence playing in every ten minutes, its long rise repeating (its peak, +1 octave, reached again and
+     * again: no wander, no Bridge) */
+    {
+        uint32_t ons = 0;
+        int k, left = 0, back = 0, silent = 0, peaks = 0, high = 0;
+        fresh();
+        en_set(P_TEMPO, 160);
+        en_set(P_ARC, 1);
+        en_set(P_MI1, 8);
+        en_set(P_SWEEP, 0);
+        en_set(P_BRIDGE, 0);
+        en_set(P_MOTION, 70);
+        en_play(1);
+        ch2_ons = 0;
+        for (k = 0; k < 7200; k++) {
+            run(1.0f);
+            if (en_section != EN_SEC_EMERGE)
+                left = 1;
+            else if (left)
+                back = 1;
+            if (en_fo[1] > 0.9f && !high)
+                peaks++;
+            high = en_fo[1] > 0.9f ? 1 : en_fo[1] < 0.0f ? 0 : high;
+            if (k % 600 == 599) {
+                silent += ch2_ons == ons;
+                ons = ch2_ons;
+            }
+        }
+        printf("  2 h at the shortest Arc: Emerge again %d, ten minutes without the Sequence %d, %d peaks\n", back, silent,
+               peaks);
+        CHECK(left && !back && !silent && peaks >= 30, "test_no_ending: Emerge again %d, silent windows %d, peaks %d", back,
+              silent, peaks);
+    }
+
     /* (BERLIN) the eight pieces: their names; no two alike (at least 4 of Tempo, Root, Mode, the Sequence's voice, the
-     * Drone's, Sequence 2 on, Repeat B on, the Ending, the Atmosphere differ: the "samey" anti-goal); not every piece
+     * Drone's, the Lead's, Sequence 2 on, Repeat B on, the Atmosphere differ: the "samey" anti-goal); not every piece
      * has an Atmosphere (three at least None, the user); the Lead dreamy in all of them (its reverb and echo 90) */
     {
         static const char *const NAME[EN_NPIECES] = {"Timewind", "Wahnfried", "Phaedra", "Rubycon", "Stratosfear",
                                                      "Sunrain", "Mirage", "Cyborg"};
-        static const int KEY[] = {P_TEMPO, P_ROOT, P_MODE, P_SVOICE, P_CVOICE, P_ENDING, P_NCHAR};
+        static const int KEY[] = {P_TEMPO, P_ROOT, P_MODE, P_SVOICE, P_CVOICE, P_LVOICE, P_NCHAR};
         int16_t pa[EN_NPIECES][P_NPARAMS];
         uint16_t pl;
         int a, b, k, none = 0, worst = 99, wa = 0, wb = 0, dreamy = 1;
@@ -1573,7 +1953,6 @@ int main(void)
     {
         uint32_t before;
         fresh();
-        en_set(P_EMERGE, 0);
         en_set(P_LDIN, 0);
         en_set(P_MOTION, 0);
         en_set(P_LDENS, 100);
@@ -1589,8 +1968,8 @@ int main(void)
         CHECK(ld_ons > before, "test_panic_frees_lead_key: no Lead note in 90 s after PANIC");
     }
 
-    /* (BERLIN) a piece changed while playing starts its own arc: Timewind (a long Emerge) playing, then Stratosfear (no
-     * Emerge): in Flow within two bars; and back to Timewind: in Emerge */
+    /* (BERLIN) a piece changed while playing starts its own arc: Timewind (a long intro: Emerge) playing, then
+     * Stratosfear (no intro): in Flow within two bars; and back to Timewind: in Emerge */
     {
         fresh();
         piece(0);

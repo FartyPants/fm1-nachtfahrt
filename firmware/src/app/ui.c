@@ -91,9 +91,9 @@ static const uint16_t VIEW_KNOB[NVIEWS][4] = {
     {P_CUTOFF, P_DECAY, P_SQREV, P_SQECHO},      /* the Sequence's sound */
     {P_LTONE, P_LATT, P_LDREV, P_LDECHO},        /* the Lead's sound */
     {P_S2CUT, P_S2DEC, P_S2REV, P_S2ECHO},       /* Sequence 2's sound */
-    {P_CALG, P_CFRAT, P_CFB, P_CFDEC},
+    {P_MW0, P_MT0, P_MR0, P_MI0},                /* (V_CFM, unreachable: the Drone's Move, Task 4's) */
     {P_TAPA, P_TAPAT, P_TAPB, P_TAPBT},          /* the Sequence's repeats (its third page) */
-    {P_BALG, P_LATT, P_BFB, P_BFDEC},
+    {P_MW2, P_MT2, P_MR2, P_MI2},                /* (V_BFM, unreachable: the Lead's Move, Task 4's) */
     {K_SLOT, K_CQ, K_CX, K_PLAY},
     {K_LANE, P_SACCENT, K_LCH, P_SMODE},
     {K_FILTER, K_DUB, K_ENERGY, P_SWEEP},         /* (Wet, Energy: offsets for playing; Sweep the piece's own) */
@@ -101,8 +101,8 @@ static const uint16_t VIEW_KNOB[NVIEWS][4] = {
     {P_NGRAIN, P_NWIDTH, P_NDRIFT, P_NROOM},       /* the Atmosphere */
     {P_EBLUR, P_ETONE, P_EWIDTH, P_SIZE},
     {P_NCOL, P_NTUNE, P_NPLATE, P_NECHO},      /* its space */
-    {P_EMERGE, P_S2IN, P_LDIN, P_ARC},         /* the Arc (GLO again): how the piece builds (the arc's Emerge and Ending
-                                                  * to come, in Sweep's and Motion's places) */
+    {P_LDIN, P_BRIDGE, P_ARC, K_NONE},         /* the Arc (GLO again): how the piece builds (the intros are each
+                                                  * layer's, on its Move page) */
 };
 static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Filter", "Evolve", "Motion", "Drift"},
@@ -117,9 +117,9 @@ static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Cutoff", "Decay", "Reverb", "Echo"},
     {"Tone", "Attack", "Reverb", "Echo"},
     {"Cutoff", "Decay", "Reverb", "Echo"},
-    {"Algo", "Ratio", "Feedback", "LFO"},
+    {"Width", "Time", "Rate", "Intro"},
     {"Repeat A", "A time", "Repeat B", "B time"},
-    {"Algo", "Ratio", "Feedback", "LFO"},
+    {"Width", "Time", "Rate", "Intro"},
     {"Slot", "Chord", "Type", "Play"},
     {"Lane", "Accent", "Chance", "Play"},
     {"Filter", "Wet", "Energy", "Sweep"},
@@ -127,7 +127,7 @@ static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Density", "Width", "Drift", "Air"},
     {"Blur", "Tone", "Width", "Size"},
     {"Colour", "Ring", "Reverb", "Echo"},
-    {"Emerge", "Seq2 in", "Lead in", "Arc"},
+    {"Lead in", "Bridge", "Arc", ""},
 };
 /* what each knob does, a line: on the rule above the knobs while it's being turned (in capitals; each fits the
  * rule's 228 px, and every view has its row: the host's expect helpfit) */
@@ -155,7 +155,7 @@ static const char *const KNOB_HELP[NVIEWS][4] = {   /* (BERLIN's, a row a view, 
     {"How busy it is", "Mono, to wide", "How quickly it changes", "The air under it"},
     {"Clean repeats, to a dissolving wash", "The repeats darker, or brighter", "The echo mono, to wide", "How long the plate rings"},
     {"Darker, or brighter", "How much it rings", "How much goes into the plate", "How much goes into the echo"},
-    {"Bars the piece takes to emerge", "Bars Sequence 2 takes to come in", "Bars before the Lead may start", "How long before it ends: 0 never"},
+    {"Bars before the Lead may start", "How far the bridge moves filters", "The Sequence's long rise: 0 none", ""},
 };
 
 /* (BERLIN) the screen's colours: Cosmic, on black (spec 15): lavender text, a cyan accent; the layers in their own
@@ -1171,8 +1171,6 @@ static void nudge(int layer, int how)
         int w = nrand(np), p = pick[w], lo = en_param_info(p)->lo, hi = en_param_info(p)->hi;
         int st = (hi - lo) / (p == P_DECAY || p == P_CUTOFF || p == P_FEEDBACK ? 16 : 8), v = proj.par[p], d;
         pick[w] = pick[--np];                    /* (not twice in one nudge) */
-        if (p == P_ENDING)
-            st = 2;                              /* (the kick's tune: semitones) */
         if (how == NUDGE_EVOLVE)
             st = (st + 1) / 2;
         else if (how == NUDGE_SHAKE)

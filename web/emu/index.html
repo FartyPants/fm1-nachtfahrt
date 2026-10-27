@@ -197,7 +197,7 @@ kbd { font: 600 .85em ui-monospace, Menlo, monospace; background: var(--card); b
       <div>
         <h3>Arc <span>GLO again</span></h3>
         <dl>
-          <dt>Emerge, Seq2 in</dt><dd>How long the piece takes to emerge from the drone (0: straight in); over how many bars Sequence 2 comes in.</dd><dt>Lead in, Arc</dt><dd>How many bars after the sequence the Lead may start; how long the whole arc is before it ends and begins again (0: never).</dd>
+          <dt>Lead in</dt><dd>How many bars from the piece's start before the Lead may play.</dd><dt>Bridge</dt><dd>How far each layer's filter moves, darker or brighter, in the arc's Bridge (0: none).</dd><dt>Arc</dt><dd>How long the Sequence's slow rise to a peak and back takes; it repeats (0: none). A piece never ends by itself.</dd>
         </dl>
       </div>
     </div>
@@ -345,7 +345,7 @@ function hit(c, cls, attrs, parent = controls) {
 // what each control does (the Buttons list below says the same); a page button's light is its page, PLAY's
 // playing, REC's dub hold: those are toggle buttons (aria-pressed), the others plain ones
 const TIP = { FX: "The Space page; again, the Echo page (Blur, Tone, Width, Size).", SEL: "PERFORM: the knobs are Filter, Wet, Energy and Sweep (hold white 6: the levels); the white keys 1 to 5 mute the layers, the black keys 1 to 5 solo them, and white 7 to 11, held: Sweep, Open, Shut, Drop, Echo. Held: Lock, the sequences keeping their steps.", ENV: "The Drone page; again, its sound. Held: a nudge.", LFO: "The Lead page; again, its sound. Held: a nudge.", EDIT: "A tap: the Chords page, eight slots (KNOB 1 the slot, the keys its root, KNOB 2 its kind, KNOB 3 its type, KNOB 4 Play: Endless, the walk writing slot 8 as they move up, or Loop, the eight in turn). Held: the next chord.",
-  GLO: "The Setup page; again, the Arc page (Emerge, Seq2 in, Lead in, Arc). Held: saves all eight pieces; held on: the piece back to its recipe.", HOME: "The Berlin page; again, the Key page (tempo, root, mode, transpose). Held on (1.5 s): a shake of everything. Hold it and turn SELECT for the tempo.", SAVE: "The Atmosphere page: Density, Width, Drift, Air; ALGORITHM its character. Again: its sound (Colour, Ring, Reverb, Echo).",
+  GLO: "The Setup page; again, the Arc page (Lead in, Bridge, Arc). Held: saves all eight pieces; held on: the piece back to its recipe.", HOME: "The Berlin page; again, the Key page (tempo, root, mode, transpose). Held on (1.5 s): a shake of everything. Hold it and turn SELECT for the tempo.", SAVE: "The Atmosphere page: Density, Width, Drift, Air; ALGORITHM its character. Again: its sound (Colour, Ring, Reverb, Echo).",
   ARP: "The Sequence page; again, its sound; again, its Repeats. Held: a nudge.", SEQ: "The Sequence 2 page. Again: its sound; again: the Pattern page (the steps on the white keys). Held: a nudge.", PLAY: "Play or rest.", REC: "Tap: hold (the echo and the cloud repeat what they hold). Hold: the effects grid, played on the white keys.",
   "OCT-": "On a layer's page, its level down (held: on). With OCT+, quickly: the layer muted or back.", "OCT+": "On a layer's page, its level up (held: on). With OCT-, quickly: the layer muted or back.", SELECT: "The previous or next page, in the panel's order; with HOME held, the tempo.",
   ALGORITHM: "On a layer's page, its voice; on the Chords page, the walk.", PRESETS: "The piece.", KNOB1: "The first value on the screen.", KNOB2: "The second value on the screen.",

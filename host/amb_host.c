@@ -226,6 +226,9 @@ static void orph_run(int p, int v, float *e, uint32_t *mh)
     en_set(P_TAPB, 60);                          /* (Repeat B heard: its time can be) */
     en_set(P_NCHAR, 1);                          /* (an Atmosphere heard: Wind; the default is None) */
     en_set(P_LDIN, 0);                           /* (the Lead heard from the start) */
+    if (p == P_BRIDGE)                           /* (the arc's Bridge within the 40 s: Motion 100, 16 bars of Flow at
+                                                  * 160, then its first section, a Bridge from en_init's dice) */
+        en_set(P_TEMPO, 160), en_set(P_MOTION, 100);
     en_set(p, v);
     en_regrow();
     en_play(1);

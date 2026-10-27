@@ -72,12 +72,12 @@ said Setup page: Tune 0, MIDI out On
 tap GLO
 wait 300
 expect view 22
-said Arc page: Emerge 10, Seq2 in 8, Lead in 32, Arc 25
+said Arc page: Lead in 32, Bridge 40, Arc 25
 # a knob on the Arc page: its help line shown as it turns (the review: the Arc's row was missing, NULL)
-turn K3 1
+turn K1 1
 wait 300
 said Lead in 33
-turn K3 -1
+turn K1 -1
 wait 300
 # the voices: ALGORITHM on a layer's page
 tap ENV

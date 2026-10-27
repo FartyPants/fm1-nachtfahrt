@@ -59,12 +59,15 @@ enum {
     P_CATT, P_CCOL, P_CRES, P_DREL,                   /* the chord: attack, colour, resonance, the filter's envelope */
     P_PEDAL, P_SQREV, P_SQECHO, P_LDREV,                  /* the pings: tone, ratio, length, bend */
     P_LOCT, P_VIB, P_LDECHO, P_GLIDE,              /* the bass: bite, shape, length, slide */
-    P_ENDING, P_DRREV, P_DRECHO, P_S2ECHO,               /* the drums: the kick's tune, length, punch; the hats' tone */
-    /* the FM pages (an FM voice): the algorithm (0: the voice's; 1..9), the upper operators' ratio, op 4's
-     * feedback, the modulators' decay: relative, -50 .. +50 */
-    P_CALG, P_CFRAT, P_CFB, P_CFDEC,
-    P_S2DEC, P_PFRAT, P_PFB, P_PFDEC,
-    P_BALG, P_LATT, P_BFB, P_BFDEC,
+    P_MT4, P_DRREV, P_DRECHO, P_S2ECHO,               /* the Atmosphere's Time (below); the Drone's sends, Sequence 2's echo */
+    /* (BERLIN, format 7) the filter motion (spec 3): each layer's Move page, Width (0..100: how far its filter wanders,
+     * +-2 octaves at 100, the Lead's +-3/4), Time (0..100: a move's length, 1 .. 32 bars), Rate (0..100: how often a
+     * move starts, 0 never .. every ~2 bars) and Intro (0..64: bars its filter takes to open at the piece's start). In
+     * DUB-1's FM pages' slots and others freed: the Drone's (MW0 .. MI0), the Sequence's (its Width is Sweep: P_MW1),
+     * the Lead's (its attack, P_LATT, among them), Sequence 2's and the Atmosphere's further on; Bridge at the end */
+    P_MW0, P_MT0, P_MR0, P_MI0,
+    P_S2DEC, P_MT1, P_MR1, P_MI1,
+    P_MW2, P_LATT, P_MT2, P_MR2,
     /* the chords (EDIT's page): eight slots. A slot is one of three: a chord written (a kind, EN_CQ_*, not 0: its root
      * 0..11, absolute, and its type, EN_CX_*); the walk's (kind 0, root 1..7: a degree of the scale, plus one, so it
      * follows the key and the mode; type: its voicing, 0 or 1); or a gap (kind 0, root 0: the chord before it held).
@@ -78,8 +81,8 @@ enum {
     /* the drums' pattern page: each lane's sixteen steps (bit i: step i, as int16) and its accents, its chance (%);
      * the accents' strength; Play: Auto (generated, as ever) or Pattern (these) */
     P_SGATE0, P_SGATE1, P_SOCT0, P_SOCT1, P_SSKIP0,
-    P_SACC0, P_SACC1, P_S2IN, P_DACC3, P_DACC4,
-    P_SCH0, P_SCH1, P_LDIN, P_DCH3, P_DCH4,
+    P_SACC0, P_SACC1, P_MI3, P_MI2, P_MW3,
+    P_SCH0, P_SCH1, P_LDIN, P_MT3, P_MR3,
     P_SACCENT, P_SMODE,
     /* the noise (SAVE's Noise page, 1.3.0): Colour, Grain, Room, Drift, -50..+50 around the piece's own (0), and a
      * character (EN_NCHAR_NAME: Vinyl, Tape, Dust, Room, Machine); Crackle (the Noise page's Level) is its level.
@@ -98,11 +101,14 @@ enum {
     P_LTONE, P_SEQ2LEN, P_EBLUR, P_ETONE, P_EWIDTH, P_NTUNE,
     /* (format 15) the Noise page's second (SAVE again): its width (0 mono, 50 as it was, 100 wide), how much of it
      * into the plate and into the echo (50 as it was, 0 none, 100 twice); the hats' length (-50..+50 around the kit's) */
-    P_NWIDTH, P_NPLATE, P_NECHO, P_EMERGE,
+    P_NWIDTH, P_NPLATE, P_NECHO, P_MW4,
     P_NLFO,                                           /* (1.3.0, format 16) the noise's LFO: its rings' tone, over a bar */
-    P_ARC,                                         /* (BERLIN) the arc's length (it was the kick's rumble, format 17) */
+    P_ARC,                                         /* (BERLIN) the Sequence's long rise, its bars (repeating; 0 none) */
+    P_MR4, P_MI4,                                  /* (BERLIN, format 7) the Atmosphere's Rate and Intro */
+    P_BRIDGE,                                      /* (format 7) the bridge's move on every filter, 0..100 (+-3 octaves) */
     P_NPARAMS
 };
+#define P_MW1 P_SWEEP                              /* (the Sequence's Width is its Sweep: one parameter) */
 typedef struct {
     const char *name;
     int16_t lo, hi, def;
@@ -170,12 +176,16 @@ void en_seq_set(int layer, const seq_t *s);   /* a pattern written into a sequen
                                                * Sequence 2): played as written, from its first step */
 extern const char *const EN_CV_NAME[EN_NCV], *const EN_BV_NAME[EN_NBV];
 
-/* (BERLIN) the arc's sections (en_section) */
-enum { EN_SEC_EMERGE, EN_SEC_FLOW, EN_SEC_SOLO, EN_SEC_DRIFT, EN_NSEC };
+/* (BERLIN) the arc's sections (en_section): Emerge while an Intro is still opening, then Flow, Solo and Bridge for ever */
+enum { EN_SEC_EMERGE, EN_SEC_FLOW, EN_SEC_SOLO, EN_SEC_BRIDGE, EN_NSEC };
 extern const char *const EN_SEC_NAME[EN_NSEC];
-extern volatile uint8_t en_swell;               /* the arc's swell into Flow (its two bars) */
-extern volatile uint32_t en_endings;            /* the arc's endings so far */
-extern volatile float en_seq_cut;               /* the Sweep's wander, 0..1 */
+extern volatile uint8_t en_swell;               /* the arc's swell into Flow (the Bridge's last two bars) */
+/* (BERLIN) the filter motion, by layer (the Drone, the Sequence, the Lead, Sequence 2, the Atmosphere): each one's
+ * offset from its brightness knob now, in octaves, and which way it moves (-1 darker, 0 still, +1 brighter) */
+extern volatile float en_fo[5];
+extern volatile int8_t en_fo_dir[5];
+extern volatile float en_atm_gain;              /* (for tests) the Atmosphere's gain now: its level's, nothing more */
+extern volatile float en_pluck_cut[2];          /* (for tests) each sequence's last note's cutoff, Hz */
 
 /* state for the screen (UI) */
 extern volatile uint8_t en_playing, en_frozen, en_ext;
