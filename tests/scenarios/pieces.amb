@@ -12,17 +12,17 @@ expect piece 7
 turn PRESET 1
 wait 300
 expect piece 0
-# piece 0's Sequence Length to 12, then to piece 2 and back: kept
+# piece 0's Sequence Length (Timewind's 16) to 12, then to piece 3 (Rubycon's 8) and back: kept
 tap ARP
 wait 300
-spin K3 4
+spin K3 -4
 wait 300
 expect par28 12
-turn PRESET 2
+turn PRESET 3
 wait 300
-expect piece 2
+expect piece 3
 expect par28 8
-turn PRESET -2
+turn PRESET -3
 wait 300
 expect par28 12
 # saved (GLO held half a second), the flash read back at boot
@@ -33,7 +33,7 @@ wait 300
 expect dirty 0
 reboot
 wait 1000
-expect format 5
+expect format 6
 expect piece 0
 expect par28 12
 # GLO held on (1.5 s): back to its recipe
@@ -41,4 +41,4 @@ press GLO
 wait 1700
 release GLO
 wait 300
-expect par28 8
+expect par28 16

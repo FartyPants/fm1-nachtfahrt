@@ -469,7 +469,7 @@ int main(void)
         uint32_t w0, w1, w2;
         float p_shed;
         fresh();
-        en_piece(7, pp, &pl);                    /* (Haze: Dust, the cloud, the widest load on the FM-1) */
+        en_piece(6, pp, &pl);                    /* (Mirage: Space, the phaser, the long reverb: a wide load) */
         for (k = 0; k < P_NPARAMS; k++)
             en_set(k, pp[k]);
         en_pool(pl);
@@ -1288,6 +1288,79 @@ int main(void)
             swell2 = swell1, swell1 = en_swell, prev = en_section;
         }
         CHECK(returns > 0 && !bad, "test_swell_before_return: %d returns, %d without a swell", returns, bad);
+    }
+
+    /* (BERLIN) the eight pieces: their names; no two alike (at least 4 of Tempo, Root, Mode, the Sequence's voice, the
+     * Drone's, Sequence 2 on, Repeat B on, the Ending, the Atmosphere differ: the "samey" anti-goal); not every piece
+     * has an Atmosphere (three at least None, the user); the Lead dreamy in all of them (its reverb and echo 90) */
+    {
+        static const char *const NAME[EN_NPIECES] = {"Timewind", "Wahnfried", "Phaedra", "Rubycon", "Stratosfear",
+                                                     "Sunrain", "Mirage", "Cyborg"};
+        static const int KEY[] = {P_TEMPO, P_ROOT, P_MODE, P_SVOICE, P_CVOICE, P_ENDING, P_NCHAR};
+        int16_t pa[EN_NPIECES][P_NPARAMS];
+        uint16_t pl;
+        int a, b, k, none = 0, worst = 99, wa = 0, wb = 0, dreamy = 1;
+        for (a = 0; a < EN_NPIECES; a++) {
+            en_piece(a, pa[a], &pl);
+            CHECK(!strcmp(en_piece_name(a), NAME[a]), "test_pieces_names: piece %d is %s", a, en_piece_name(a));
+            none += pa[a][P_NCHAR] == 0;
+            dreamy &= pa[a][P_LDREV] == 90 && pa[a][P_LDECHO] == 90;
+        }
+        for (a = 0; a < EN_NPIECES; a++)
+            for (b = a + 1; b < EN_NPIECES; b++) {
+                int d = (pa[a][P_SEQ2] > 0) != (pa[b][P_SEQ2] > 0);
+                d += (pa[a][P_TAPB] > 0) != (pa[b][P_TAPB] > 0);
+                for (k = 0; k < (int)(sizeof KEY / sizeof KEY[0]); k++)
+                    d += pa[a][KEY[k]] != pa[b][KEY[k]];
+                if (d < worst)
+                    worst = d, wa = a, wb = b;
+            }
+        CHECK(worst >= 4, "test_pieces_distinct: %s and %s differ in only %d", en_piece_name(wa), en_piece_name(wb),
+              worst);
+        CHECK(none >= 3, "test_pieces_atmos_none: %d pieces without an Atmosphere", none);
+        CHECK(dreamy, "test_pieces_lead_dreamy: a piece's Lead reverb or echo not 90");
+    }
+
+    /* (BERLIN) every piece, three minutes from its start: nothing broken, below clipping (-0.5 dBFS) and heard (RMS
+     * above -40 dBFS) */
+    {
+        int i;
+        for (i = 0; i < EN_NPIECES; i++) {
+            float rms;
+            fresh();
+            piece(i);
+            en_play(1);
+            peak = 0.0f, sum2 = 0.0f, bad = 0;
+            run(180.0f);
+            rms = sqrtf(sum2 / (180.0f * 44100.0f * 2.0f));
+            printf("  %-11s 3 min: peak %.3f (%.1f dBFS), rms %.4f (%.1f dBFS)\n", en_piece_name(i), (double)peak,
+                   20.0 * log10((double)peak + 1e-9), (double)rms, 20.0 * log10((double)rms + 1e-9));
+            CHECK(!bad && peak < 0.944f && rms > 0.01f, "test_pieces_render: %s: bad %d, peak %.3f, rms %.4f",
+                  en_piece_name(i), bad, (double)peak, (double)rms);
+        }
+    }
+
+    /* (BERLIN) Timewind has one sequence (Schulze's): ten minutes, no Sequence 2 note */
+    {
+        fresh();
+        piece(0);
+        en_play(1);
+        run(600.0f);
+        CHECK(s2_n == 0 && sq_n > 0, "test_timewind_one_sequence: %u Sequence 2 notes (%u Sequence)", s2_n, sq_n);
+    }
+
+    /* (BERLIN) Wahnfried and Cyborg are beatless: ten minutes, no note of either sequence */
+    {
+        static const int BEATLESS[2] = {1, 7};
+        int k;
+        for (k = 0; k < 2; k++) {
+            fresh();
+            piece(BEATLESS[k]);
+            en_play(1);
+            run(600.0f);
+            CHECK(sq_n == 0 && s2_n == 0, "test_beatless: %s: %u Sequence notes, %u Sequence 2", en_piece_name(BEATLESS[k]),
+                  sq_n, s2_n);
+        }
     }
 
     /* (BERLIN) every note-on has its note-off: two minutes of piece changes, tempo changes, freeze, mutes, PANIC and

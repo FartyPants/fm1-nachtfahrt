@@ -3138,7 +3138,7 @@ static void sp_garden(void)
 }
 
 
-static void sp_piece_text(void)                /* "PIECE Chamber, A Aeolian, tempo 118" */
+static void sp_piece_text(void)                /* "PIECE Timewind, D Minor, tempo 96" */
 {
     sp_n = 0;
     sp_buf[0] = 0;

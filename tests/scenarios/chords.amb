@@ -11,12 +11,12 @@ expect view 15
 tap EDIT
 wait 200
 expect view 15
-# slot 1: the walk's home chord, Fm7 in F Dorian, as it would be written
-said Chords page, walk Wander: Slot 1, Chord Minor, Type 7, Play Endless
+# slot 1: the walk's home chord, Dm7 in D Aeolian (Timewind), as it would be written
+said Chords page, walk Home: Slot 1, Chord Minor, Type 7, Play Endless
 expect par64 1
 expect par72 0
 expect progpos 0
-# a key on it: written, its root F, its kind and type kept
+# a key on it: written, its root F (the keys here are the notes, not the scale), its kind and type kept
 tapkey w0
 wait 200
 said Fm7
@@ -44,16 +44,16 @@ expect par65 0
 spin K4 1
 wait 200
 said Play Loop
-expect par88 5
+expect par88 4
 spin K4 -1
 wait 200
 said Play Endless
-expect par88 1
-# ALGORITHM: the walk Free, its chords walked again; slot 1 (yours, Fm9) and slot 2 (a gap) kept; back to Wander
+expect par88 0
+# ALGORITHM: the walk Wander, its chords walked again; slot 1 (yours, Fm9) and slot 2 (a gap) kept; back to Home
 turn ALGO 1
 wait 200
-said WALK Free: goes anywhere
-expect par88 2
+said WALK Wander: roams wider
+expect par88 1
 expect par64 5
 expect par72 2
 expect par80 4
@@ -61,8 +61,8 @@ expect par65 0
 expect par73 0
 turn ALGO -1
 wait 200
-said WALK Wander: roams wider
-expect par88 1
+said WALK Home: stays near home
+expect par88 0
 tap HOME
 wait 300
 expect view 0
@@ -84,7 +84,7 @@ press EDIT
 wait 1800
 release EDIT
 wait 200
-said NEW CHORDS Wander
+said NEW CHORDS Home
 said_none NEXT CHORD
 expect progpos 0
 expect par64 0
@@ -97,7 +97,7 @@ wait 1000
 expect par64 0
 expect par72 0
 expect par71 >0
-expect par88 1
+expect par88 0
 # REC held on the Chords page and the Pattern page: the effects grid alone, drawn once (they used to draw over each
 # other, flickering)
 tap EDIT

@@ -3,10 +3,10 @@
 wait 200
 listen
 wait 300
-said Berlin page: Filter Off, Evolve 55, Motion 30, Drift 64 bars. Piece
+said Berlin page: Filter Off, Evolve 40, Motion 45, Drift 16 bars. Piece
 listen
 where
-said Scale F, G, Ab, Bb, C, D, Eb
+said Scale D, E, F, G, A, Bb, C
 tap SAVE
 wait 300
 said Atmosphere page, character Wind

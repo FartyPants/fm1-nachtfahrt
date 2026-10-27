@@ -1,6 +1,10 @@
 # PERFORM (SEL): white 1-5 mute the Drone, the Sequence, the Lead, Sequence 2, the Atmosphere (their levels kept);
 # white 7-11 held: Sweep, Open, Shut, Drop (both sequences out), Push; SEL or a page's button leaves
+# (on Stratosfear: no Emerge, both sequences from the first bar)
 wait 500
+turn PRESET 4
+wait 300
+expect piece 4
 listen
 tap SEL
 wait 300

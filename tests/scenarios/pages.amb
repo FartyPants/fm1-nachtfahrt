@@ -5,15 +5,15 @@ wait 200
 listen
 wait 300
 expect view 0
-said Berlin page: Filter Off, Evolve 55, Motion 30, Drift
+said Berlin page: Filter Off, Evolve 40, Motion 45, Drift
 tap HOME
 wait 300
 expect view 18
-said Key page: Tempo 122, Root F, Mode Dorian, Transpose Parallel
+said Key page: Tempo 96, Root D, Mode Minor, Transpose Parallel
 tap ENV
 wait 300
 expect view 1
-said Drone page, voice Organ: Pedal 70, Reso 0, Phaser 40, Attack 40
+said Drone page, voice Organ: Pedal 70, Reso 0, Phaser 60, Attack 40
 tap ENV
 wait 300
 expect view 8
@@ -21,15 +21,15 @@ said Drone sound page, voice Organ: Colour 0, Release 50, Reverb 50, Echo 50
 tap ARP
 wait 300
 expect view 2
-said Sequence page, voice 2600: Density 60, Octave 0, Length 8, Grid 8ths
+said Sequence page, voice 2600: Density 65, Octave 0, Length 16, Grid 16ths
 tap ARP
 wait 300
 expect view 9
-said Seq sound page, voice 2600: Cutoff 40, Decay 25, Reverb 50, Echo 50
+said Seq sound page, voice 2600: Cutoff 45, Decay 35, Reverb 50, Echo 50
 tap ARP
 wait 300
 expect view 13
-said Repeats page, voice 2600: Repeat A 100, A time 1/8., Repeat B 0, B time 1/4
+said Repeats page, voice 2600: Repeat A 100, A time 1/8., Repeat B 50, B time 1/4
 tap ARP
 wait 300
 expect view 2
@@ -44,7 +44,7 @@ said Lead sound page, voice Odyssey: Tone 50, Attack 10, Reverb 90, Echo 90
 tap SEQ
 wait 300
 expect view 4
-said Sequence 2 page, voice Moog: Chance 100, Octave -1, Length 7, Level 60
+said Sequence 2 page, voice Moog: Chance 100, Octave -1, Length 7, Level 0
 tap SEQ
 wait 300
 expect view 11
@@ -72,7 +72,7 @@ said Setup page: Tune 0, MIDI out On
 tap GLO
 wait 300
 expect view 22
-said Arc page: Emerge 0, Seq2 in 8, Lead in 16, Arc 0
+said Arc page: Emerge 10, Seq2 in 8, Lead in 32, Arc 25
 # the voices: ALGORITHM on a layer's page
 tap ENV
 wait 300
@@ -88,7 +88,7 @@ said VOICE Mini
 # a knob: its value said once it settles
 tap ARP
 wait 300
-spin K3 4
+spin K3 -4
 wait 300
 said Length 12
 expect par28 12

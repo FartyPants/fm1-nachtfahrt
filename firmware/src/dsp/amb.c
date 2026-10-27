@@ -70,135 +70,96 @@ static const en_param_t PARAMS[P_NPARAMS] = {
 };
 const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PARAMS[i] : &PARAMS[0]; }
 
-/* the pieces: eight recipes for the whole machine (the FM-1's PRESETS, the web app's cards). Tune and
- * MIDI out are taken from here by neither: they belong to the player, not the piece */
-/*                  Cho Pin Bas Dru  Den Evo Dri Hit  Ech ET Rev Fdb  Cut Dec PTo Mot  Tun MI Tem Rt Md Oc
- *                  CV BO Grv Fif Swi Hat  Stb Crk Dck Siz  Clo PV BV Kit
- *                  then the sound pages' sixteen, all 0: the voices as they are; then the noise's five (its controls, its character);
- *                  then Throws, Ghost, Notes, Hats level (50, 50, 100, 50: the pieces as they were);
- *                  then the chord's Ghost, the kick's density, the echo's Blur, Tone and Width, the noise's Decay;
- *                  then the noise's Width, Plate and Echo, the hats' length; then the noise's LFO, the kick's rumble
- * (Dri: Drift, 2 4 8 16 32 64 bars or Hold; ET: Echo time, 1/8 1/8. 1/4 1/4. 1/2 1 bar; Grv: the knob's, Drone,
- *  Offbeat, Dotted, Sync, Roller (GROOVE_NAME); CV, PV, BV, Kit: the voices, EN_CV_NAME ...) */
+/* (BERLIN) the pieces: eight recipes for the whole machine (the FM-1's PRESETS, the web app's cards), each what it
+ * sets over the defaults (PARAMS), in pairs, to -1. Tune and MIDI out are never set here: they belong to the player.
+ * Keys and tempos are starting points (spec 6: from analysis sites, to tune by ear); the Lead is dreamy in all of them
+ * (its reverb and echo 90, the defaults: the user); an Atmosphere only where it suits, of the four the user likes.
+ * (Voices: the Sequence's 2600 Moog Synthi Pulse Glass, Sequence 2's and Sub; the Drone's Organ Strings Choir Saws
+ *  Glass; the Lead's Odyssey Mini Flute Theremin Synthi. Modes: 0 Ionian, 1 Dorian, 2 Phrygian, 5 Aeolian. Repeat
+ *  times: 1/8 1/8. 1/4 1/4. 1/2 1 bar. Drift: 2 4 8 16 32 64 bars, Hold. Play: the walk Home, Wander, Free. Grid:
+ *  8ths, 16ths. Atmosphere: None Wind Surf Space Air Tape. Ending: Crash Supernova Fade) */
+static const int16_t PC_TIMEWIND[] = {        /* Schulze, Bayreuth Return: one sequence, an organ through the phaser */
+    P_TEMPO, 96, P_ROOT, 2, P_MODE, MODE_AEOLIAN,
+    P_SVOICE, 0, P_SEQLEN, 16, P_SEQGRID, 1, P_DENSITY, 65, P_SEQ2, 0,
+    P_TAPB, 50, P_TAPBT, 2,
+    P_CVOICE, 0, P_PHASER, 60, P_DRIFT, 3, P_PMODE, EN_WALK_HOME,
+    P_LVOICE, 0, P_LDIN, 32,
+    P_NCHAR, 1, P_CRACKLE, 30,
+    P_EMERGE, 10, P_ARC, 25, P_ENDING, 0, P_MOTION, 45, -1};
+static const int16_t PC_WAHNFRIED[] = {       /* Schulze, Wahnfried 1883: beatless, roots walking with no home */
+    P_TEMPO, 80, P_ROOT, 10, P_MODE, MODE_DORIAN,
+    P_SEQ, 0, P_SEQ2, 0,
+    P_CHORD, 60, P_CVOICE, 2, P_PEDAL, 85, P_PHASER, 50, P_CRES, 25, P_DRIFT, 2, P_PMODE, EN_WALK_FREE,
+    P_LEAD, 45, P_LVOICE, 4, P_LTONE, 75, P_VIB, 55, P_LDENS, 60, P_LDIN, 8,
+    P_FEEDBACK, 75, P_REVERB, 45,
+    P_ARC, 20, P_ENDING, 1, P_MOTION, 55, -1};
+static const int16_t PC_PHAEDRA[] = {         /* Tangerine Dream, Phaedra: a Moog bass line, Mellotron flutes */
+    P_TEMPO, 149, P_ROOT, 2, P_MODE, MODE_AEOLIAN,
+    P_SVOICE, 1, P_SEQOCT, -1, P_SEQLEN, 16, P_DENSITY, 70, P_SWEEP, 85,
+    P_SEQ2, 40, P_S2VOICE, 1, P_SEQ2OCT, 0, P_SEQ2LEN, 15, P_S2IN, 0,
+    P_CVOICE, 2, P_DRIFT, 4,
+    P_LVOICE, 2, P_LDIN, 24,
+    P_NCHAR, 5, P_CRACKLE, 25,
+    P_EMERGE, 5, P_ARC, 30, P_ENDING, 1, P_MOTION, 55, -1};
+static const int16_t PC_RUBYCON[] = {         /* Tangerine Dream, Rubycon: dark, two sequences out of the drone */
+    P_TEMPO, 144, P_ROOT, 5, P_MODE, MODE_AEOLIAN,
+    P_SVOICE, 2, P_SEQOCT, -1, P_SEQLEN, 8, P_CUTOFF, 32, P_SWEEP, 60,
+    P_SEQ2, 55, P_S2VOICE, 5, P_SEQ2LEN, 7, P_S2IN, 16,
+    P_TAPB, 40, P_TAPBT, 4,
+    P_CHORD, 65, P_CVOICE, 0, P_CCOL, -20, P_PEDAL, 85, P_DRIFT, 4,
+    P_LVOICE, 1, P_LDIN, 32,
+    P_EMERGE, 15, P_ARC, 40, P_ENDING, 2, P_MOTION, 65, -1};
+static const int16_t PC_STRATOSFEAR[] = {     /* Tangerine Dream, Stratosfear: brighter, driving, the Lead forward */
+    P_TEMPO, 138, P_ROOT, 4, P_MODE, MODE_AEOLIAN,
+    P_SVOICE, 3, P_SEQLEN, 16, P_DENSITY, 70, P_CUTOFF, 55,
+    P_SEQ2, 60, P_S2VOICE, 0, P_SEQ2LEN, 15, P_S2IN, 0,
+    P_CVOICE, 1, P_DRIFT, 3,
+    P_LEAD, 52, P_LVOICE, 1, P_LDENS, 65, P_LDIN, 12,
+    P_ARC, 20, P_ENDING, 0, P_MOTION, 50, -1};
+static const int16_t PC_SUNRAIN[] = {         /* Ashra, New Age of Earth: major, the strongest repeats, bright strings */
+    P_TEMPO, 130, P_ROOT, 2, P_MODE, MODE_IONIAN,
+    P_SVOICE, 3, P_SEQLEN, 8, P_CUTOFF, 55,
+    P_SEQ2, 50, P_S2VOICE, 4, P_SEQ2OCT, 0, P_SEQ2LEN, 6, P_S2IN, 8,
+    P_TAPA, 100, P_TAPB, 100, P_TAPBT, 3, P_ECHO, 65, P_FEEDBACK, 65,
+    P_CVOICE, 1, P_DRIFT, 3,
+    P_LVOICE, 0, P_LDIN, 16,
+    P_NCHAR, 2, P_CRACKLE, 25,
+    P_ARC, 25, P_ENDING, 1, P_MOTION, 45, -1};
+static const int16_t PC_MIRAGE[] = {          /* Schulze, Mirage: icy, a glass sequence, sparse, a long reverb */
+    P_TEMPO, 95, P_ROOT, 6, P_MODE, MODE_AEOLIAN,
+    P_SVOICE, 4, P_SEQLEN, 12, P_SEQGRID, 1, P_DENSITY, 40, P_SWEEP, 30,
+    P_SEQ2, 45, P_S2VOICE, 4, P_SEQ2OCT, 0, P_SEQ2LEN, 9, P_S2IN, 24,
+    P_TAPB, 60, P_TAPBT, 4,
+    P_CVOICE, 4, P_PHASER, 85, P_DRIFT, 4,
+    P_LVOICE, 3, P_LDIN, 24,
+    P_REVERB, 55, P_SIZE, 90,
+    P_NCHAR, 3, P_CRACKLE, 25,
+    P_EMERGE, 5, P_ARC, 20, P_ENDING, 2, P_MOTION, 40, -1};
+static const int16_t PC_CYBORG[] = {          /* Schulze, Cyborg: early, raw, deep organ drones beating, no sequence */
+    P_TEMPO, 70, P_ROOT, 0, P_MODE, MODE_PHRYGIAN,
+    P_SEQ, 0, P_SEQ2, 0,
+    P_CHORD, 70, P_CVOICE, 0, P_CCOL, 25, P_PEDAL, 90, P_PHASER, 20, P_DRIFT, 4, P_PMODE, EN_WALK_WANDER,
+    P_LVOICE, 3, P_LDENS, 30, P_LOCT, -1, P_LDIN, 8,
+    P_ARC, 15, P_ENDING, 2, P_MOTION, 35, -1};
 static const struct {
     const char *name;
-    int16_t v[P_NPARAMS];
+    const int16_t *set;
 } PIECES[EN_NPIECES] = {
-    {"Basic",      {52, 30, 68, 80, 30, 55, 5, 10, 55, 1, 35, 62, 40, 25, 40, 30, 0, 1, 122, 5, 1, 0,
-                    0, 0, 1, 20, 5, 50, 30, 8, 50, 55, 30, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 25, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 100, 100, 100, 5, 50, 0,
-                    0, 0, 0, 0, 0,
-                    70, 70, 90, 40,
-                    45, 97, 25, 50, 40, 50,
-                    50, 50, 50, 0,
-                    25, 20}},
-    {"Chamber",    {55, 20, 62, 72, 20, 35, 6, 40, 70, 4, 45, 72, 50, 55, 30, 30, 0, 1, 128, 9, 5, 0,
-                    2, 0, 0, 10, 0, 40, 5, 12, 45, 70, 45, 2, 0, 1,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 30, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 100, 100, 100, 5, 50, 0,
-                    -5, -10, 10, 0, 3,
-                    70, 60, 100, 55,
-                    35, 96, 50, 50, 60, 50,
-                    50, 50, 50, 0,
-                    30, 15}},
-    {"Steppers",   {52, 35, 80, 82, 35, 35, 6, 45, 50, 1, 30, 50, 55, 25, 50, 25, 0, 1, 126, 2, 1, 0,
-                    0, 0, 2, 35, 45, 60, 25, 5, 60, 50, 20, 1, 1, 2,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 20, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 100, 100, 100, 5, 50, 0,
-                    5, 10, -10, 0, 0,
-                    70, 70, 90, 60,
-                    50, 97, 30, 50, 45, 50,
-                    50, 50, 50, 0,
-                    30, 25}},
-    {"Fog",        {50, 34, 58, 62, 40, 55, 5, 42, 75, 2, 55, 72, 46, 80, 25, 72, 0, 1, 120, 7, 5, 0,
-                    3, -1, 0, 15, 0, 30, 5, 30, 35, 80, 60, 0, 0, 3,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 30, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 100, 100, 100, 5, 50, 0,
-                    -10, 0, 30, 10, 1,
-                    70, 65, 100, 50,
-                    55, 70, 50, 50, 85, 50,
-                    85, 50, 50, 0,
-                    35, 30}},
-    {"Concrete",   {58, 45, 70, 85, 25, 50, 4, 55, 50, 1, 25, 62, 60, 20, 60, 35, 0, 1, 136, 0, 7, 0,
-                    6, 0, 4, 30, 10, 75, 30, 5, 50, 45, 15, 2, 3, 2,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 45, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 100, 100, 100, 5, 50, 0,
-                    0, 0, 0, 10, 0,
-                    70, 65, 85, 65,
-                    50, 97, 20, 50, 55, 50,
-                    50, 50, 50, 0,
-                    45, 40}},
-    {"Night Drive", {48, 45, 68, 78, 45, 60, 3, 35, 60, 3, 35, 65, 50, 40, 45, 45, 0, 1, 120, 10, 1, 0,
-                    1, 0, 1, 25, 13, 55, 20, 15, 50, 60, 35, 4, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 40, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 100, 100, 100, 5, 50, 0,
-                    0, -10, 0, 0, 1,
-                    80, 75, 90, 58,
-                    55, 94, 50, 50, 85, 50,
-                    50, 50, 50, 0,
-                    40, 25}},
-    {"Pressure",   {55, 20, 75, 92, 20, 45, 6, 38, 55, 1, 20, 55, 48, 30, 35, 25, 0, 1, 126, 4, 2, 0,
-                    5, 0, 1, 10, 5, 65, 25, 30, 70, 40, 40, 3, 4, 1,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 20, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 100, 100, 100, 5, 50, 0,
-                    -10, -30, 20, -10, 1,
-                    70, 70, 90, 55,
-                    60, 98, 50, 50, 75, 50,
-                    85, 50, 50, 0,
-                    20, 35}},
-    {"Haze",       {45, 42, 58, 55, 50, 60, 4, 35, 80, 3, 60, 70, 45, 80, 25, 62, 0, 1, 116, 3, 0, 1,
-                    3, 0, 0, 20, 10, 35, 5, 20, 30, 85, 70, 2, 0, 4,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 30, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 100, 100, 100, 5, 50, 0,
-                    5, 10, 10, 15, 2,
-                    70, 70, 100, 50,
-                    50, 60, 50, 50, 70, 50,
-                    50, 50, 50, 0,
-                    30, 10}},
+    {"Timewind", PC_TIMEWIND}, {"Wahnfried", PC_WAHNFRIED}, {"Phaedra", PC_PHAEDRA},   {"Rubycon", PC_RUBYCON},
+    {"Stratosfear", PC_STRATOSFEAR}, {"Sunrain", PC_SUNRAIN}, {"Mirage", PC_MIRAGE}, {"Cyborg", PC_CYBORG},
 };
 
 const char *en_piece_name(int i) { return PIECES[(unsigned)i < EN_NPIECES ? i : 0].name; }
 void en_piece(int i, int16_t *par, uint16_t *pool)
 {
+    const int16_t *s;
     int p;
     i = (unsigned)i < EN_NPIECES ? i : 0;
-    /* (BERLIN, until its own recipes: DUB-1's, with the parameters that mean something new at their defaults and the
-     * dub's chord and bass silent) */
-    static const uint8_t NEW[] = {P_SEQ, P_SEQ2, P_DENSITY, P_TAPA, P_TAPAT, P_TAPB, P_TAPBT, P_SEQLEN, P_SEQ2LEN, P_SEQGRID,
-                                  P_TRANS, P_SEQOCT, P_SEQ2OCT, P_SVOICE, P_S2VOICE, P_SWEEP, P_SACCENT, P_SGATE0,
-                                  P_SGATE1, P_SOCT0, P_SOCT1, P_SSKIP0, P_SACC0, P_SACC1, P_SCH0, P_SCH1, P_SMODE,
-                                  P_CVOICE, P_CATT, P_DREL, P_PHASER, P_LEAD, P_LVOICE, P_GLIDE, P_VIB, P_LDENS, P_LOCT,
-                                  P_CRACKLE, P_NCHAR, P_PEDAL, P_SQREV, P_SQECHO, P_LDREV, P_LDECHO, P_DRREV, P_DRECHO,
-                                  P_S2REV, P_S2ECHO, P_LTONE, P_S2CUT, P_S2DEC, P_LATT, P_NWIDTH, P_NPLATE, P_NECHO, P_NTUNE,
-                                  P_NROOM, P_NGRAIN, P_NCOL, P_NDRIFT, P_S2IN, P_LDIN, P_EMERGE, P_ARC, P_ENDING};
-    unsigned k;
     for (p = 0; p < P_NPARAMS; p++)
-        par[p] = PIECES[i].v[p];
-    for (k = 0; k < sizeof NEW; k++)
-        par[NEW[k]] = PARAMS[NEW[k]].def;
-    {   /* (until BERLIN's own recipes: an Atmosphere in half of them, of the four the user likes: Wind, Tape, Space,
-         * Surf; the rest None) */
-        static const uint8_t ATM[EN_NPIECES] = {1, 0, 5, 0, 3, 0, 2, 0};
-        par[P_NCHAR] = ATM[i];
-    }
-    *pool = EN_MODE_POOL[PIECES[i].v[P_MODE]];
+        par[p] = PARAMS[p].def;
+    for (s = PIECES[i].set; s[0] >= 0; s += 2)
+        par[s[0]] = s[1];
+    *pool = EN_MODE_POOL[par[P_MODE]];
 }
 
 const char *const EN_CV_NAME[EN_NCV] = {"Organ", "Strings", "Choir", "Saws", "Glass"};   /* (BERLIN: the Drone's) */

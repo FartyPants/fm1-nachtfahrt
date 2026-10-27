@@ -1,0 +1,65 @@
+# the eight pieces, three minutes of each from its start (PRESETS turned a step each time), a shot each:
+# for the ear and tools/analyze_wav.py (levels, bands)
+wait 300
+expect piece 0
+# Timewind
+wav pieces_0_timewind.wav
+wait 180000
+wavstop
+shot pieces_0_timewind.png
+turn PRESET 1
+wait 300
+expect piece 1
+# Wahnfried
+wav pieces_1_wahnfried.wav
+wait 180000
+wavstop
+shot pieces_1_wahnfried.png
+turn PRESET 1
+wait 300
+expect piece 2
+# Phaedra
+wav pieces_2_phaedra.wav
+wait 180000
+wavstop
+shot pieces_2_phaedra.png
+turn PRESET 1
+wait 300
+expect piece 3
+# Rubycon
+wav pieces_3_rubycon.wav
+wait 180000
+wavstop
+shot pieces_3_rubycon.png
+turn PRESET 1
+wait 300
+expect piece 4
+# Stratosfear
+wav pieces_4_stratosfear.wav
+wait 180000
+wavstop
+shot pieces_4_stratosfear.png
+turn PRESET 1
+wait 300
+expect piece 5
+# Sunrain
+wav pieces_5_sunrain.wav
+wait 180000
+wavstop
+shot pieces_5_sunrain.png
+turn PRESET 1
+wait 300
+expect piece 6
+# Mirage
+wav pieces_6_mirage.wav
+wait 180000
+wavstop
+shot pieces_6_mirage.png
+turn PRESET 1
+wait 300
+expect piece 7
+# Cyborg
+wav pieces_7_cyborg.wav
+wait 180000
+wavstop
+shot pieces_7_cyborg.png

@@ -3,7 +3,7 @@ wav first.wav
 wait 200
 expect playing 1
 expect piece 0
-expect pool 0x6AD
+expect pool 0x5AD
 wait 6000
 shot dub.png
 # the grid runs (122 BPM is about 8 sixteenths a second; any tempo of 90..140 is over 6)
