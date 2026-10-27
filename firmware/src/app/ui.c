@@ -1409,8 +1409,13 @@ static void input(void)
             }
             if (ui.perf)
                 perf_key(i, (int)(keys >> i & 1u));
-            else if (keys >> i & 1u)
-                toggle_note((int)((5u + i) % 12u));   /* key 0 is F3 */
+            else {                               /* (BERLIN) the white keys: the Lead, in the scale; the black: nothing */
+                int st;
+                for (st = 0; st < 16 && STEP_KEY[st] != i; st++)
+                    ;
+                if (st < 16)
+                    en_lead_key(st, (int)(keys >> i & 1u));
+            }
         }
     if (btn || keys || ch)
         ui.act_t = plat_ms();
@@ -2929,10 +2934,11 @@ static void leds(void)
                 k |= 1u << PERF_KEY[10 + i];
         }
 
-    } else if (proj.leds) {
-        for (i = 0; i < NKEYS; i++)
-            if (ap >> ((5u + i) % 12u) & 1u)
-                k |= 1u << i;
+    } else if (proj.leds) {                      /* (BERLIN) the white key of the note the Lead sounds */
+        const int d = en_lead_deg;
+        (void)ap;
+        if (d >= 0 && d < 16)
+            k |= 1u << STEP_KEY[d];
     }
     plat_glow(proj.leds == 1);
     plat_leds(b, k);

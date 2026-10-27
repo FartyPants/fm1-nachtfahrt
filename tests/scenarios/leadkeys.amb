@@ -1,0 +1,17 @@
+# the white keys play the Lead in the scale (key i: degree i from the root up, in its register): the first piece, F
+# Dorian, the fourth white key (w3, key 6): degree 3, Bb4 (70); its key lit while it sounds; the black keys do nothing;
+# the scale is never changed from the keys (F Dorian: 0 2 3 5 7 9 10 from the root, 1709)
+wait 500
+expect pool 1709
+key w3 down
+wait 300
+expect lastnote_ch3 70
+expect litkey6 1
+key w3 up
+wait 300
+expect litkey6 0
+key b1 down
+wait 300
+key b1 up
+wait 300
+expect pool 1709

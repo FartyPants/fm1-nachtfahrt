@@ -33,6 +33,7 @@ static uint8_t sq_note[SQN], sq_vel[SQN], s2_note[SQN], s2_vel[SQN], dr_note[SQN
 static uint32_t ld_first = 0xFFFFFFFFu;          /* (the Lead's first note-on, its sixteenth) */
 static uint32_t dr_n, dr_at[SQN];
 static uint32_t ld_ons, ld_groups, ld_mono_bad, ld_outscale, ld_last_off = 0xFFFFFFFFu, ld_on_now, ld_pool = 0xFFFu;
+static int last_lead;                            /* (the Lead's last note-on) */
 static int sounding[16][128];
 void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2)
 {
@@ -51,6 +52,7 @@ void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2)
             if (ld_last_off == 0xFFFFFFFFu || en_bars - ld_last_off >= 16u)
                 ld_groups++;
             ld_outscale += !(ld_pool >> ((d1 + 120u - 2u) % 12u) & 1u);
+            last_lead = (int)d1;
         }
         if ((st & 15u) == 0u && dr_n < SQN)
             dr_at[dr_n] = en_bars, dr_note[dr_n] = (uint8_t)d1, dr_n++;
@@ -1088,6 +1090,43 @@ int main(void)
             else
                 CHECK(!bad && peak > 0.01f && peak < 0.8f, "test_atmos_chars: %s: peak %f", EN_NCHAR_NAME[c], (double)peak);
         }
+    }
+
+    /* (BERLIN) the white keys play the Lead: degree d of D Aeolian (from D4 up), rising, in the scale, one at a time,
+     * let go with its note-off; the Lead's own phrases wait while a key is held and two bars after */
+    {
+        int d, last = 0, rising = 1, before;
+        const uint32_t pl = EN_MODE_POOL[MODE_AEOLIAN];
+        fresh();
+        ld_pool = pl;
+        en_set(P_ROOT, 2);
+        en_pool(pl);
+        en_set(P_LDIN, 0);
+        en_set(P_LDENS, 100);
+        en_play(1);
+        run(0.5f);
+        ld_ons = ld_outscale = ld_mono_bad = ld_on_now = 0;
+        for (d = 0; d < 16; d++) {
+            en_lead_key(d, 1);
+            run(0.3f);
+            if (en_lead_deg != d)
+                rising = 0;
+            if (d && last_lead <= last)
+                rising = 0;
+            last = last_lead;
+            en_lead_key(d, 0);
+            run(0.1f);
+        }
+        CHECK(ld_ons == 16u && rising && !ld_outscale && !ld_mono_bad && !ld_on_now,
+              "test_lead_keys: %u notes, rising %d, %u off the scale, %u over another, %u still on", ld_ons, rising,
+              ld_outscale, ld_mono_bad, ld_on_now);
+        en_lead_key(0, 1);
+        run(0.3f);                               /* (the key's own note in first) */
+        before = (int)ld_ons;
+        run(8.0f);
+        CHECK((int)ld_ons == before, "test_lead_keys: the Lead's own phrases played while a key was held");
+        en_lead_key(0, 0);
+        ld_pool = 0xFFFu;
     }
 
     /* (BERLIN) Pattern: the Octaves lane puts its step an octave up */

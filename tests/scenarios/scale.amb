@@ -1,20 +1,16 @@
-# the keys are the scale: toggles, the root stays, three notes at least; modes and the root
+# the scale: on the Key page's knobs (Root, Mode: once a song, the user), not the keys (they play the Lead); MIDI in
+# still edits it (a note in or out, the root stays, three notes at least)
 wait 300
-# the first piece is in Dorian; its root to C (HOME on the Dub page, the Key page: KNOB 2, down to its lowest)
+# the first piece is in Dorian; its root to C (HOME on the Berlin page, the Key page: KNOB 2, down to its lowest)
 expect par20 1
 tap HOME
 wait 200
 expect view 18
 spin K2 -12
 expect par19 0
-# C Dorian: C D Eb F G A Bb. E4 is key 11: add E (relative 4)
+# C Dorian: C D Eb F G A Bb; the keys leave it be (E4, key 11, plays the Lead)
 expect pool 0x6AD
 tapkey 11
-expect pool 0x6BD
-tapkey 11
-expect pool 0x6AD
-# key 7 is C4: the root stays
-tapkey 7
 expect pool 0x6AD
 # the next mode: Mixolydian (the Key page's KNOB 3; the modes the most common first: Aeolian, Ionian,
 # Dorian, Mixolydian, pentatonic minor and major, Phrygian, Lydian)
@@ -30,20 +26,19 @@ expect par19 2
 expect pool 0x6AD
 wait 300
 shot d_dorian.png
-# pentatonic minor (two on from Dorian), then strip it down to three notes and try a fourth removal
+# pentatonic minor (two on from Dorian)
 spin K3 2
 expect par20 7
 expect pool 0x4A9
-# D pent min: D F G A C. Remove F (key 0 = F3) and G (key 2 = G3)
-tapkey 0
-tapkey 2
+# MIDI in, channel 1: D pent min (D F G A C); F (note 53) out, G (55) out, A (57) would leave two: stays
+midi 90 35 64
+midi 90 37 64
+wait 20
 expect pool 0x481
-# A (key 4 = A3): would leave two
-tapkey 4
+midi 90 39 64
+wait 20
 expect pool 0x481
-wait 300
-shot three.png
-# MIDI in, channel 1: G (note 55) back in
+# G back in
 midi 90 37 64
 wait 20
 expect pool 0x4A1

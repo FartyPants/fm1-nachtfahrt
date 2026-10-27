@@ -464,7 +464,7 @@ const char *en_chord_name(const int *pcs, int n, char *buf)
 }
 
 /* ------------------------------------------------------------ commands --- */
-enum { C_SET, C_POOL, C_PLAY, C_NEXT, C_FREEZE, C_SEED, C_PANIC, C_CLOCK, C_REGROW, C_MUTE, C_PERF, C_FX, C_SEQ, C_MACRO, C_PROT, C_REWALK, C_PNUDGE, C_LOCK, C_SEQSET };
+enum { C_SET, C_POOL, C_PLAY, C_NEXT, C_FREEZE, C_SEED, C_PANIC, C_CLOCK, C_REGROW, C_MUTE, C_PERF, C_FX, C_SEQ, C_MACRO, C_PROT, C_REWALK, C_PNUDGE, C_LOCK, C_SEQSET, C_LKEY };
 #define QN 512u                                 /* (a piece is every parameter at once: room for twice over and more) */
 _Static_assert(QN >= 2u * (P_NPARAMS + 8), "the command queue can't hold a piece's parameters twice over");
 static uint32_t q[QN];
@@ -1698,6 +1698,8 @@ static struct {
 } lead;
 static float lead_vol, ld_gk = 0.004f, ld_tone = 1.0f, ld_att = 0.0009f, ld_rev = 1.0f, ld_echo = 1.0f;
 static uint8_t ld_note[8], ld_dur[8], ld_n, ld_i, ld_left, ld_rest;
+static int8_t ld_dg[8], ld_key = -1;             /* (the phrase's degrees; the degree held on the keys, -1: none) */
+volatile int8_t en_lead_deg = -1;                /* (the degree the Lead sounds, for the keys' light; -1: none) */
 static uint32_t ld_rng = 0x3C6EF372u;
 
 static int ld_audible(void) { return lead_vol > 0.0f && !(mutes & EN_M_BASS); }
@@ -1708,7 +1710,9 @@ static void lead_off(void)                       /* the note let go */
         lead.on = 0;
         midi(0x82, lead.note, 0);
     }
+    en_lead_deg = -1;
 }
+void en_lead_key(int d, int on) { post(C_LKEY, d, on); }
 
 static int ld_deg_note(int d)                    /* scale degree d (any) as a note, in the Lead's register */
 {
@@ -1727,12 +1731,14 @@ static void lead_phrase(void)                    /* a new phrase: its notes and 
         const int dir = seq_rand(&ld_rng) & 1u ? 1 : -1;
         ld_n = (uint8_t)(3 + seq_rand(&ld_rng) % 4u);
         for (i = 0; i < ld_n; i++) {
+            ld_dg[i] = (int8_t)(d + dir * i);
             ld_note[i] = (uint8_t)ld_deg_note(d + dir * i);
             ld_dur[i] = (uint8_t)(i + 1 < ld_n ? 2 + seq_rand(&ld_rng) % 3u : 8 + seq_rand(&ld_rng) % 9u);
         }
     } else {                                     /* long notes: 1 to 3, a beat to a bar each, on chord tones */
         ld_n = (uint8_t)(1 + seq_rand(&ld_rng) % 3u);
         for (i = 0; i < ld_n; i++) {
+            ld_dg[i] = (int8_t)d;
             ld_note[i] = (uint8_t)ld_deg_note(d);
             ld_dur[i] = (uint8_t)(4 + seq_rand(&ld_rng) % 13u);
             d += (seq_rand(&ld_rng) & 1u ? 2 : -2) * (1 + (int)(seq_rand(&ld_rng) % 2u));   /* (a third or a fifth away) */
@@ -1760,6 +1766,8 @@ static void lead_note(int n)                     /* the next note: legato (it gl
 
 static void lead_tick(void)                      /* a sixteenth: the phrase goes on, or the breath */
 {
+    if (ld_key >= 0)                             /* (the keys play it: its own phrases wait) */
+        return;
     if (!(sixteenth & 15u) && !ld_n) {           /* a bar line, between phrases */
         if (ld_rest)
             ld_rest--;
@@ -1775,6 +1783,7 @@ static void lead_tick(void)                      /* a sixteenth: the phrase goes
     }
     if (ld_i < ld_n) {
         lead_note(ld_note[ld_i]);
+        en_lead_deg = lead.on ? ld_dg[ld_i] : -1;
         ld_left = ld_dur[ld_i++];
         return;
     }
@@ -3107,6 +3116,7 @@ void en_init(void)
     walk_prev = 0;
     memset(pluck, 0, sizeof pluck);              /* (BERLIN's voices from rest: none sounding, none to let go) */
     memset(&lead, 0, sizeof lead);
+    ld_key = -1;
     dr_on[0] = dr_on[1] = 0;
     dr_lvl[0] = dr_lvl[1] = 0.0f;
     plate_init();
@@ -3289,6 +3299,18 @@ static void drain(void)
             }
             break;
         case C_PANIC: quiet(); break;
+        case C_LKEY:                             /* (the white keys: the Lead, in the scale) */
+            if (b) {
+                ld_n = 0;                        /* (its own phrase let go) */
+                ld_key = (int8_t)a;
+                lead_note(ld_deg_note(a));
+                en_lead_deg = lead.on ? (int8_t)a : -1;
+            } else if (a == ld_key) {
+                ld_key = -1;
+                lead_off();
+                ld_rest = 2;                     /* (its own phrases back after two bars) */
+            }
+            break;
         case C_SEQSET:                           /* a pattern written: played as written, from its first step */
             sq[a & 1] = sq_pend[a & 1];
             sq_written[a & 1] = 1;

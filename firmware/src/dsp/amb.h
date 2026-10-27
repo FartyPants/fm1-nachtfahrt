@@ -163,6 +163,9 @@ extern const char *const EN_SV_NAME[EN_NS2V];
 extern volatile uint16_t en_seq_lane[5], en_seq_acc[2];   /* the Pattern page's lanes as Auto plays them: the
                                                           * Sequence's and Sequence 2's steps, their octaves, the
                                                           * Sequence's skips; their accents */
+void en_lead_key(int degree, int on);           /* the white keys: the Lead plays scale degree `degree` (0: the
+                                                 * root) from the root up, in its register; on 0 lets it go */
+extern volatile int8_t en_lead_deg;             /* the degree the Lead sounds (played or its own): -1 none */
 void en_seq_set(int layer, const seq_t *s);   /* a pattern written into a sequence (0: the Sequence, 1:
                                                * Sequence 2): played as written, from its first step */
 #define EN_NKIT 5
