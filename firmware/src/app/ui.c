@@ -2039,34 +2039,6 @@ static void draw_orbits(void)                    /* the ping loops, around the r
 }
 
 
-/* a sound page: its layer's envelope (its level; the chord's filter envelope, the pings' bend, the kick's
- * pitch, dimmer), over the time it lasts */
-static void draw_env(int layer_view)
-{
-    float lv[48], ax[48], secs;
-    int i, layer = layer_view == V_CHORD ? 0 : layer_view == V_TEXTURE ? 1 : layer_view == V_BASS ? 2 : 3;
-    int32_t x0 = 58, w = 124, y0 = 8, h = 76;
-    char t[12];
-    en_env_shape(layer, lv, ax, 48, &secs);
-    cv_rect(x0, y0 + h, w + 4, 1, K_LINE);
-    cv_rect(x0, y0, 1, h, K_LINE);
-    for (i = 0; i < 48; i++) {
-        int32_t x = x0 + 2 + i * w / 47, ya = y0 + h - (int32_t)(ax[i] * (float)h), yl = y0 + h - (int32_t)(lv[i] * (float)h);
-        if (ax[i] > 0.01f)
-            cv_rect(x, ya, 2, 2, K_LINE);
-        cv_rect(x, yl, 2, y0 + h - yl, mix(K_BG, K_PAD, 5));
-        cv_rect(x, yl, 2, 2, K_PAD);
-    }
-    itoa_u((uint32_t)(secs * 1000.0f + 0.5f), t);
-    {
-        uint32_t k = 0;
-        while (t[k])
-            k++;
-        t[k++] = ' ', t[k++] = 'm', t[k++] = 's', t[k] = 0;
-    }
-    cv_text(x0 + w - text_w(&FONT_XS, t), y0 + h + 1, &FONT_XS, t, K_DIM);
-}
-
 /* an FM page: the voice's algorithm, as the FM synths draw it: the operators as boxes, each modulator above
  * the one it modulates, the carriers on the bottom line (they're heard), op 4's feedback a loop */
 static const int8_t ALG_XY[EN_FM_NALG][4][2] = {   /* each op's place (x in half steps from the middle, y up) */

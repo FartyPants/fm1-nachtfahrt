@@ -2881,57 +2881,6 @@ int en_fm_alg(int layer)
     return FM_ALG2;
 }
 
-/* a layer's envelope, for a sound page (computed from the values, as the render would play them) */
-void en_env_shape(int layer, float *lvl, float *aux, int n, float *secs)
-{
-    int i;
-    float T = 1.0f, a = 0.035f, t60 = 0.3f, ft = 0.1f, fe = 0.0f, rel_s = 0.02f, hold = 0.0f;
-    switch (layer) {
-    case 0: {                                   /* the chord: the strike (or swell), the decay; the filter's envelope */
-        float xa = (float)par[P_CATT] * 0.01f;   /* (1.3.0: 0 the voice's strike, 100 a swell) */
-        a = fm_clampf(CV[cvoice].att * fm_exp2f(-(xa > 0.0f ? 9.0f : 3.0f) * xa), 0.00004f, 0.3f);
-        t60 = st_t60;
-        ft = 0.25f * st_t60 + 0.02f;
-        fe = fm_clampf(CV[cvoice].fenv * 1.0f / 3.4f, 0.0f, 1.0f);
-        T = fm_clampf(t60 * 1.2f, 0.25f, 4.0f);
-        break;
-    }
-    case 1: {
-        int pv = 0;
-        t60 = 0.8f * PV[pv].t60 * fm_exp2f(1.5f * 0.0f);
-        a = 0.004f + 0.02f * fm_minf(btone * 2.0f, 1.0f);
-        fe = fm_clampf(PV[pv].drop + 0.015f * 0.0f, 0.0f, 3.0f) / 3.0f;   /* the bend */
-        ft = 0.035f;
-        T = fm_clampf(t60 * 1.2f, 0.25f, 4.0f);
-        break;
-    }
-    case 2: {                                   /* the bass: in, held for its gate, out */
-        hold = fm_minf(GROOVE_GATE[gpat()] * fm_exp2f(0.0f), 15.8f) * step_len / EN_SR;
-        a = 0.02f;
-        T = fm_clampf(hold * 1.5f + 0.1f, 0.25f, 4.0f);
-        break;
-    }
-    default: {                                  /* the kick: its decay; its pitch falling */
-        t60 = KIT[kit].t60 * fm_exp2f(1.2f * 0.0f);
-        a = 0.05f;
-        ft = 1.0f / (KIT[kit].fall * EN_SR);
-        fe = fm_clampf(KIT[kit].start * fm_exp2f(0.8f * 0.0f) / 10.0f, 0.0f, 1.0f);
-        T = fm_clampf(t60 * 1.2f, 0.25f, 2.0f);
-        break;
-    }
-    }
-    for (i = 0; i < n; i++) {
-        float t = T * (float)i / (float)(n - 1), up = 1.0f - fm_expf(-a * EN_SR * t), v;
-        if (layer == 2)
-            v = t < hold ? up : up * fm_expf(-(t - hold) / rel_s);
-        else
-            v = up * fm_expf(-6.9f * t / t60);
-        lvl[i] = fm_clampf(v, 0.0f, 1.0f);
-        aux[i] = fe > 0.0f ? fe * fm_expf(-t / ft) : 0.0f;
-    }
-    *secs = T;
-}
-
 /* ------------------------------------------------------------ parameters --- */
 static int pulse;
 /* (1.3.0) the FM pages' fourth knob, an LFO synced to the bar: the chord's filter over two bars (+-1.5 octaves at
