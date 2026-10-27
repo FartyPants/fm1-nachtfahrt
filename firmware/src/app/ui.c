@@ -1131,7 +1131,7 @@ static void midi_in(void)
 
 #define RESET_HOLD 1500u                 /* SAVE held: the piece back to its recipe */
 
-/* NUDGE: a layer's button held (ENV the chord, ARP the pings, LFO the bass, SEQ the drums): its sound a small step
+/* NUDGE: a layer's button held (ENV the Drone, ARP the Sequence, LFO the Lead, SEQ Sequence 2): its sound a small step
  * further, a few of its values each a few units, a walk pulled back to the piece's recipe (the further a value has
  * gone, the likelier it steps back), so nudges explore round the piece's sound and never wander off. The biggest
  * change said, and the layer's sound page shown, that knob lit. Evolve nudges by itself: now and then on a phrase's
@@ -1141,11 +1141,13 @@ static void midi_in(void)
 #define NNUDGE 6
 static const uint8_t NUDGE_BTN[NNUDGE] = {B_ENV, B_ARP, B_LFO, B_SEQ, B_FX, B_SAVE};
 static const char *const NUDGE_NAME[NNUDGE] = {"DRONE", "SEQ", "LEAD", "SEQ 2", "SPACE", "ATMOS"};
-static const uint8_t NUDGE_PAR[NNUDGE][8] = {   /* (the FM ones, the last two of the first three, on an FM voice only) */
-    {P_CATT, P_CCOL, P_CRES, P_DECAY, P_CATT, P_CUTOFF, P_CFRAT, P_CFB},   /* (Env, on no page now, left be) */
-    {P_PEDAL, P_SQREV, P_SQECHO, P_LDREV, P_S2CUT, P_SQECHO, P_PFRAT, P_PFB},   /* (Ghost: the dry against the echo) */
-    {P_LOCT, P_VIB, P_LDECHO, P_GLIDE, P_TRANS, P_LDECHO, P_LATT, P_BFB},
-    {P_ENDING, P_DRREV, P_DRECHO, P_S2ECHO, P_DRREV, P_S2REV, P_S2ECHO, P_ENDING},   /* (Hats: their level, against the kick) */
+static const uint8_t NUDGE_PAR[NNUDGE][8] = {   /* (the FM ones, the last two of the first three, on an FM voice only)
+                                                  * (BERLIN) each layer its own sound, never its sends, octave or the
+                                                  * piece's frame (the Lead's reverb and echo stay where set: the user) */
+    {P_CATT, P_CCOL, P_CRES, P_DREL, P_PHASER, P_PEDAL, P_CCOL, P_CRES},   /* the Drone */
+    {P_CUTOFF, P_DECAY, P_SACCENT, P_CUTOFF, P_DECAY, P_SACCENT, P_CUTOFF, P_DECAY},   /* the Sequence */
+    {P_LTONE, P_LATT, P_VIB, P_GLIDE, P_LTONE, P_VIB, P_LTONE, P_LATT},   /* the Lead */
+    {P_S2CUT, P_S2DEC, P_S2CUT, P_S2DEC, P_S2CUT, P_S2DEC, P_S2CUT, P_S2DEC},   /* Sequence 2 */
     {P_ECHO, P_FEEDBACK, P_REVERB, P_SIZE, P_CLOUD, P_ECHO, P_ECHO, P_ECHO},   /* (the space: FX; its shake, a new echo time) */
     {P_NCOL, P_NGRAIN, P_NTUNE, P_NROOM, P_NCOL, P_NGRAIN, P_NTUNE, P_NCOL},   /* (the noise: SAVE; its shake, a new character) */
 };
@@ -1154,17 +1156,6 @@ static int nrand(int n)
 {
     nudge_seed = nudge_seed * 1664525u + 1013904223u;
     return n > 0 ? (int)((nudge_seed >> 8) % (uint32_t)n) : 0;
-}
-/* the bass's groove, a step to a neighbour (Drone, Offbeat, Dotted, Sync, Roller, the knob's row): back towards the
- * piece's own as often as not (pull: 0..100, how likely back when it isn't the piece's) */
-static void groove_step(int recipe, int pull)
-{
-    int g = proj.par[P_SEQGRID], hi = en_param_info(P_SEQGRID)->hi, d;
-    if (g != recipe && nrand(100) < pull)
-        d = g > recipe ? -1 : 1;
-    else
-        d = g == 0 ? 1 : g == hi ? -1 : nrand(2) ? 1 : -1;
-    knob_set(P_SEQGRID, g + d);
 }
 enum { NUDGE_EVOLVE, NUDGE_HAND, NUDGE_SHAKE };
 /* how a nudge goes: EVOLVE (Evolve's, 1-2 values, half steps, nothing said), HAND (the button held: 3-4 values, steps
@@ -1197,23 +1188,6 @@ static void nudge(int layer, int how)
     }
     fm = layer < 3 && en_voice_fm(layer);
     en_piece(proj.piece, rec, &pool);
-    if (how == NUDGE_SHAKE && layer == 2) {      /* the bass's shake: a new groove too, a neighbour */
-        int k = 0;
-        groove_step(rec[P_SEQGRID], 50);
-        while (vn[k] && k < 10)
-            k++;
-        vn[k++] = ',';
-        vn[k++] = ' ';
-        vn[k] = 0;
-        {
-            char gn[12];
-            int i;
-            en_param_text(P_SEQGRID, proj.par[P_SEQGRID], gn);
-            for (i = 0; gn[i] && k < 23; i++)
-                vn[k++] = gn[i];
-            vn[k] = 0;
-        }
-    }
     for (j = 0; j < (fm ? 8 : 6); j++) {         /* (the values to choose from, each once) */
         int q, dup = 0;
         for (q = 0; q < np; q++)
@@ -1302,13 +1276,6 @@ static void nudge_tick(void)                     /* Evolve's nudges: on a phrase
         return;
     if (nrand(100) < (ev - 40) * 2 / 3)          /* (Evolve 100: 40% of the phrases; 70: 20%; 40 and under: none) */
         nudge(nrand(NNUDGE), NUDGE_EVOLVE);
-    if (ev > 60 && nrand(400) < (ev - 60) * 7 / 10) {   /* the bass's groove, rarely, to a neighbour and back (Evolve
-                                                  * 100: 7% of the phrases, every few minutes; 60 and under: never) */
-        int16_t rec[P_NPARAMS];
-        uint16_t pool;
-        en_piece(proj.piece, rec, &pool);
-        groove_step(rec[P_SEQGRID], 70);
-    }
 }
 static void input(void)
 {

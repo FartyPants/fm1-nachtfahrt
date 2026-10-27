@@ -1,0 +1,82 @@
+# (BERLIN) a layer's button held (ENV, ARP, LFO, SEQ): a nudge to its own sound; HOME held on: every layer shaken.
+# Never the piece's frame: the Lead's reverb and echo (90: the user), its octave, the Ending, Transpose, the Grid
+# (Timewind: 90, 90, 0, Crash, Parallel, 16ths)
+wait 500
+press ENV
+wait 700
+release ENV
+wait 300
+press ARP
+wait 700
+release ARP
+wait 300
+press LFO
+wait 700
+release LFO
+wait 300
+press SEQ
+wait 700
+release SEQ
+wait 300
+press ENV
+wait 700
+release ENV
+wait 300
+press ARP
+wait 700
+release ARP
+wait 300
+press LFO
+wait 700
+release LFO
+wait 300
+press SEQ
+wait 700
+release SEQ
+wait 300
+press ENV
+wait 700
+release ENV
+wait 300
+press ARP
+wait 700
+release ARP
+wait 300
+press LFO
+wait 700
+release LFO
+wait 300
+press SEQ
+wait 700
+release SEQ
+wait 300
+press ENV
+wait 700
+release ENV
+wait 300
+press ARP
+wait 700
+release ARP
+wait 300
+press LFO
+wait 700
+release LFO
+wait 300
+press SEQ
+wait 700
+release SEQ
+wait 300
+press HOME
+wait 1800
+release HOME
+wait 300
+press LFO
+wait 1800
+release LFO
+wait 300
+expect par43 90
+expect par46 90
+expect par44 0
+expect par48 0
+expect par25 0
+expect par24 1
