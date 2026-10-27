@@ -41,7 +41,7 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Seq voice", 0, EN_NSV - 1, 0}, {"Lead voice", 0, EN_NBV - 1, 0}, {"Seq2 voice", 0, EN_NS2V - 1, 1},
     {"Attack", 0, 100, 40},   {"Colour", -50, 50, 0},   {"Resonance", -50, 50, 0}, {"Release", 0, 100, 50},
     {"Tone", -50, 50, 0},     {"Ratio", -50, 50, 0},    {"Ping len", -50, 50, 0}, {"Bend", 0, 100, 0},
-    {"Lead oct", -1, 2, 0},   {"Vibrato", 0, 100, 40},  {"Bass len", -50, 50, 0}, {"Glide", 0, 100, 35},
+    {"Lead oct", -1, 2, 0},   {"Vibrato", 0, 100, 40},  {"Bass len", -50, 50, 0}, {"Glide", 0, 100, 25},
     {"Kick tune", -12, 12, 0}, {"Kick len", -50, 50, 0}, {"Punch", -50, 50, 0},   {"Hat tone", -50, 50, 0},
     {"Chord alg", 0, 9, 0},   {"Chord ratio", -50, 50, 0}, {"Chord fb", 0, 100, 0}, {"Chord LFO", 0, 100, 0},
     {"Ping alg", 0, 9, 0},    {"Ping ratio", -50, 50, 0}, {"Ping fb", 0, 100, 0}, {"Ping LFO", 0, 100, 0},
@@ -2810,7 +2810,8 @@ static void apply(int p, int v)
     case P_CHORD: chord_vol = (float)(v * v) * 0.0001f; lanes(); break;
     case P_SEQ: seq_vol = (float)(v * v) * 0.0001f; break;
     case P_LEAD: lead_vol = (float)(v * v) * 0.0001f; break;
-    case P_GLIDE: ld_gk = 1.0f - fm_expf(-1.0f / ((0.001f + 0.006f * (float)v) * EN_SR)); break;   /* ~1 .. 600 ms */
+    case P_GLIDE: ld_gk = 1.0f - fm_expf(-1.0f / ((0.001f + 0.0015f * (float)v) * EN_SR)); break;   /* ~1 .. 150 ms (the
+                                                  * user: 37 .. 49 ms sounds right, more is a theremin) */
     case P_SEQ2: seq2_vol = (float)(v * v) * 0.0001f; break;
     case P_SMODE: case P_SGATE0: case P_SGATE1: case P_SOCT0: case P_SOCT1: case P_SSKIP0: lanes(); break;
     case P_SEQLEN: seq_regrow(0); break;
