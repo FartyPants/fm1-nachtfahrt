@@ -1480,6 +1480,8 @@ static float s2_gain = 1.0f;                    /* (Sequence 2 coming in: 0 .. 1
 static float sw_v, sw_t, sw_mul = 1.0f;          /* the Sweep: where its wander is, where it goes; the cutoff's factor */
 static int sw_bars = 16, sw_len = 16;            /* (a first aim on the first bar) */
 volatile float en_seq_cut;                       /* (the Sweep's wander, 0..1, for the screen and the tests) */
+volatile uint16_t en_seq_lane[5], en_seq_acc[2];   /* (the Pattern page's lanes as Auto plays them: each sequence's
+                                                  * steps (as Density thins them), octaves; the Sequence's skips; accents) */
 const char *const EN_SV_NAME[EN_NS2V] = {"2600", "Moog", "Synthi", "Pulse", "Glass", "Sub"};
 
 /* a piece's patterns, kept (en_seq_get, en_seq: EN_SEQ_N bytes): each one's degrees (16 + 16), steps, octaves and
@@ -1558,6 +1560,21 @@ static void pluck_voice(int l, int n, int vel, int rep)   /* rep: a repeat, pann
     midi(l ? 0x93u : 0x91u, (uint32_t)n, (uint32_t)vel);
 }
 
+static void seq_publish(void)                    /* the lanes as Auto plays them, for the Pattern page */
+{
+    int l, i;
+    for (l = 0; l < 2; l++) {
+        uint16_t g = 0;
+        for (i = 0; i < SEQ_MAX && i < sq[l].len; i++)
+            if ((sq[l].gate >> i & 1u) && (sq_written[l] || sq_prio[l][i] < 25 + 3 * pe(P_DENSITY) / 4))
+                g |= (uint16_t)(1u << i);
+        en_seq_lane[l] = g;
+        en_seq_lane[2 + l] = sq[l].oct;
+        en_seq_acc[l] = sq[l].acc;
+    }
+    en_seq_lane[4] = sq[0].skip;
+}
+
 static void seq_regrow(int l)                    /* a pattern grown afresh: every step, Density thins it as it plays */
 {
     int i;
@@ -1569,6 +1586,7 @@ static void seq_regrow(int l)                    /* a pattern grown afresh: ever
     sq_pos[l] = 0;
     sq_bars[l] = sq_wrap[l] = 0;
     seq_hist_clear(&sq_hist[l]);
+    seq_publish();
 }
 
 static void seq_take(void)                      /* a piece's kept patterns, back (its lengths as it has them) */
@@ -1619,6 +1637,8 @@ static void seq_tick(void)                       /* a sixteenth: the sequences' 
         sw_mul = fm_exp2f(1.5f * (float)pe(P_SWEEP) * 0.01f * sw_v);
         en_seq_cut = 0.5f + 0.5f * (float)pe(P_SWEEP) * 0.01f * sw_v;
     }
+    if (!(sixteenth & 15u))
+        seq_publish();
     if (!(sixteenth & 15u))                      /* a bar line: the performer, when a pass ended on it (at most every
                                                   * 4 bars), or every 16 */
         for (l = 0; l < 2; l++)

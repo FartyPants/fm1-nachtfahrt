@@ -1,47 +1,35 @@
-# the drums' Pattern page: the Drums button three times; KNOB 1 the lane, the white keys its steps, a black key
-# held: an accent; the first edit takes Auto's pattern over (Play: Pattern); kept by the piece
+# the Pattern page (SEQ three times): five lanes on the white keys, the Sequence's and Sequence 2's steps, their
+# octaves, the Sequence's skips; the first edit takes the pattern over from Auto (Play: Pattern); a black key held with a
+# white one: an accent; a lane's chance and accents are its sequence's
+wait 300
 listen
-wait 3000
 tap SEQ
 tap SEQ
-tap SEQ
-wait 400
-expect view 16
-said Pattern page, kit Tight: Lane Kick, Accent 50, Chance 100%, Play Auto
-tapkey w3
-wait 200
-said Step 4 on
-expect par105 1
-expect par89 4377
-key b0 down
-tapkey w2
-key b0 up
-wait 200
-said Step 3 accented
-expect par94 4
-spin K1 3
-wait 200
-said Lane Rim
-tapkey w4
-tapkey w12
-wait 200
-expect par92 4112
-spin K3 -50
-wait 200
-expect par102 50
-spin K4 -1
-wait 200
-expect par105 0
-said Play Auto
-spin K4 1
 tap SEQ
 wait 300
-expect view 4
-tap PLAY
-wait 6000
-expect store_writes >0
-reboot
-wait 1000
+expect view 16
+said Pattern page, voice Moog: Lane Steps, Accent 50, Chance 100%, Play Auto
+expect par105 0
+tapkey w1
+wait 300
 expect par105 1
-expect par92 4112
-expect par94 4
+said Step 2
+tapkey w1
+wait 300
+said Step 2
+# the Skips lane: empty in Auto (the performer hasn't moved yet), one step skipped
+spin K1 4
+wait 300
+said Lane Skips
+expect par93 0
+tapkey w2
+wait 300
+expect par93 4
+# a lane's chance is its sequence's: Octaves 2 is Sequence 2's (par100), not a slot of its own
+spin K1 -1
+wait 300
+said Lane Octaves 2
+spin K3 -30
+wait 300
+expect par100 70
+expect par99 100

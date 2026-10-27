@@ -1090,6 +1090,36 @@ int main(void)
         }
     }
 
+    /* (BERLIN) Pattern: the Octaves lane puts its step an octave up */
+    {
+        int n0 = 0, n1 = 0, v;
+        uint32_t i;
+        fresh();
+        en_set(P_TAPA, 0);
+        en_set(P_DRIFT, 6);
+        en_set(P_SGATE0, 0x0001);
+        en_set(P_SOCT0, 0);
+        en_set(P_SMODE, 1);
+        en_play(1);
+        run(3.0f);
+        for (i = 0; i < sq_n; i++)
+            if (sq_at[i] == 16u)
+                n0 = sq_note[i];
+        fresh();
+        en_set(P_TAPA, 0);
+        en_set(P_DRIFT, 6);
+        en_set(P_SGATE0, 0x0001);
+        en_set(P_SOCT0, 0x0001);
+        en_set(P_SMODE, 1);
+        en_play(1);
+        run(3.0f);
+        for (i = 0; i < sq_n; i++)
+            if (sq_at[i] == 16u)
+                n1 = sq_note[i];
+        (void)v;
+        CHECK(n0 && n1 == n0 + 12, "test_pattern_octaves: %d, with its octave %d", n0, n1);
+    }
+
     /* (BERLIN) the layers come in one by one: Seq2 in 0, Sequence 2 with the Sequence, from its first bar; Seq2 in 8,
      * nothing in its first bar, then rising (its notes louder in bars 9 .. 12 than in 1 .. 3); Lead in 8: no Lead
      * before bar 8, and some after */

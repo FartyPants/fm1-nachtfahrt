@@ -85,7 +85,9 @@ enum { K_LEDS = 200, K_CPU, K_NONE, K_SLOT, K_CQ, K_CX,    /* (the Chords page: 
        K_MODE,                                               /* (the Key page: the mode, as ALGORITHM sets it) */
        K_PLAY,                                               /* (the Chords page: Endless or Loop, P_PMODE's bit 2) */
        K_SAVE };                                             /* (Setup: a turn saves; it shows whether it's saved) */
-static const char *const LANE_NAME[EN_NDRUM] = {"Kick", "Shaker", "Open", "Rim", "Clap"};
+static const char *const LANE_NAME[EN_NDRUM] = {"Steps", "Steps 2", "Octaves", "Octaves 2", "Skips"};   /* (BERLIN:
+                                                  * the Sequence's and Sequence 2's) */
+static int lane_seq(int d) { return d == 1 || d == 3; }   /* (a lane's sequence: its accents, its chance) */
 _Static_assert(P_NPARAMS <= K_LEDS, "the knobs' own codes must come after the parameters");
 static const uint16_t VIEW_KNOB[NVIEWS][4] = {
     {K_FILTER, P_EVOLVE, P_MOTION, P_DRIFT},
@@ -412,7 +414,7 @@ static int knob_get(int k)
     if (k == K_LANE)
         return ui.lane;
     if (k == K_LCH)
-        return proj.par[P_SCH0 + ui.lane];
+        return proj.par[P_SCH0 + lane_seq(ui.lane)];
     if (k >= K_FILTER && k <= K_SPACE)
         return ui.mac[k - K_FILTER];
     if (k == K_MODE)
@@ -548,7 +550,7 @@ static void knob_set(int k, int v)
         ui.lane = (uint8_t)v;
         return;
     } else if (k == K_LCH) {
-        knob_set(P_SCH0 + ui.lane, v);
+        knob_set(P_SCH0 + lane_seq(ui.lane), v);
         return;
     } else if (k >= K_FILTER && k <= K_SPACE) {
         ui.mac[k - K_FILTER] = (int8_t)v;
@@ -888,7 +890,7 @@ static void edit_released(uint32_t held)
  * the accents' strength, KNOB 3 the lane's chance, KNOB 4 Play: Auto (generated, as ever) or Pattern. The first
  * edit takes the pattern over from what Auto plays. The arrangement still takes lanes out (a Break, a fill) */
 static const uint8_t STEP_KEY[16] = {0, 2, 4, 6, 7, 9, 11, 12, 14, 16, 18, 19, 21, 23, 24, 26};   /* the white keys */
-static uint32_t lane_steps(int d) { return proj.par[P_SMODE] ? (uint32_t)(uint16_t)proj.par[P_SGATE0 + d] : en_drum_pat[d]; }
+static uint32_t lane_steps(int d) { return proj.par[P_SMODE] ? (uint32_t)(uint16_t)proj.par[P_SGATE0 + d] : en_seq_lane[d]; }
 static void pattern_key(uint32_t key, uint32_t keys)
 {
     int st, d = ui.lane, acc;
@@ -904,13 +906,15 @@ static void pattern_key(uint32_t key, uint32_t keys)
     if (!proj.par[P_SMODE]) {                    /* the first edit: Auto's pattern, taken over */
         int k;
         for (k = 0; k < EN_NDRUM; k++)
-            knob_set(P_SGATE0 + k, (int)(int16_t)(uint16_t)en_drum_pat[k]);
+            knob_set(P_SGATE0 + k, (int)(int16_t)(uint16_t)en_seq_lane[k]);
+        knob_set(P_SACC0, (int)(int16_t)en_seq_acc[0]);
+        knob_set(P_SACC1, (int)(int16_t)en_seq_acc[1]);
         knob_set(P_SMODE, 1);
     }
     m = (uint32_t)(uint16_t)proj.par[P_SGATE0 + d];
-    acc = (int)((uint32_t)(uint16_t)proj.par[P_SACC0 + d] >> st & 1u);
-    if (black) {                                 /* accent it (on, too), or not */
-        knob_set(P_SACC0 + d, (int)(int16_t)(uint16_t)((uint32_t)(uint16_t)proj.par[P_SACC0 + d] ^ (1u << st)));
+    acc = (int)((uint32_t)(uint16_t)proj.par[P_SACC0 + lane_seq(d)] >> st & 1u);
+    if (black) {                                 /* accent it (on, too), or not: the lane's sequence's accents */
+        knob_set(P_SACC0 + lane_seq(d), (int)(int16_t)(uint16_t)((uint32_t)(uint16_t)proj.par[P_SACC0 + lane_seq(d)] ^ (1u << st)));
         knob_set(P_SGATE0 + d, (int)(int16_t)(uint16_t)(m | 1u << st));
         acc = !acc;
     } else {
@@ -2474,9 +2478,9 @@ static void draw_pattern(void)
     if (en_playing)
         cv_round(37 + pos * 12, 15, 11, 86, 2, K_PANEL);   /* (five lanes, 17 px apart) */
     for (l = 0; l < EN_NDRUM; l++) {
-        uint32_t p = lane_steps(l), a = proj.par[P_SMODE] ? (uint32_t)(uint16_t)proj.par[P_SACC0 + l] : 0u;
+        uint32_t p = lane_steps(l), a = proj.par[P_SMODE] ? (uint32_t)(uint16_t)proj.par[P_SACC0 + lane_seq(l)] : 0u;
         int32_t y = 17 + l * 17, sel = l == ui.lane;
-        int maybe = proj.par[P_SMODE] ? proj.par[P_SCH0 + l] < 50 : l == 4;   /* (a chance under half: rings) */
+        int maybe = proj.par[P_SMODE] && proj.par[P_SCH0 + lane_seq(l)] < 50;   /* (a chance under half: rings) */
         if (sel)
             cv_round(2, y - 2, 236, 17, 4, mix(K_BG, K_PANEL, 10));
         cv_text(5, y + 1, &FONT_XS, SH[l], sel ? K_TEXT : K_DIM);
@@ -2623,7 +2627,7 @@ static void draw_main(void)
     if (ui.view == V_PAT) {                      /* the Pattern page: the steps */
         h = hash(hash(0x50415454u, ui.lane | (uint32_t)proj.par[P_SMODE] << 4 | (uint32_t)en_drum_pos[0] << 8), en_playing);
         for (i = 0; i < EN_NDRUM; i++)
-            h = hash(hash(h, lane_steps((int)i)), (uint32_t)(uint16_t)proj.par[P_SACC0 + i]);
+            h = hash(hash(h, lane_steps((int)i)), (uint32_t)(uint16_t)proj.par[P_SACC0 + lane_seq((int)i)]);
         h = hash(h, (uint32_t)oct_ring_on(now));
         if (h != ui.sig[1] || oct_ring_on(now)) {
             ui.sig[1] = h;
@@ -3270,7 +3274,7 @@ static void speak_dump(void)
                 else if (k == K_LANE)
                     ui.lane = (uint8_t)x;
                 else if (k == K_LCH)
-                    proj.par[P_SCH0 + ui.lane] = (int16_t)x;
+                    proj.par[P_SCH0 + lane_seq(ui.lane)] = (int16_t)x;
                 else
                     proj.leds = (uint8_t)x;
                 sp_n = 0;
