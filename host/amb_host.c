@@ -120,7 +120,12 @@ void plat_midi_out(uint32_t pkt)
         fprintf(midi_log, "%u ms: %02X %02X %02X\n", now_ms, (pkt >> 8) & 0xFF, (pkt >> 16) & 0xFF, (pkt >> 24) & 0xFF);
 }
 /* the engine's MIDI out, as the device's glue sends it (USB-MIDI packet, cable 0) */
-void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2) { plat_midi_out(st >> 4 | st << 8 | d1 << 16 | d2 << 24); }
+static uint32_t orph_midi, orph_out;             /* (orphans: the MIDI out and the samples, as hashes) */
+void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2)
+{
+    orph_midi = (orph_midi ^ (st | d1 << 8 | d2 << 16)) * 16777619u;
+    plat_midi_out(st >> 4 | st << 8 | d1 << 16 | d2 << 24);
+}
 
 /* flash: one buffer per object, kept across a simulated reboot */
 static uint8_t store[OBJ_NOBJ][PLAT_STORE_MAX];
@@ -193,6 +198,78 @@ static int ann_wire_send(const uint8_t *p, uint32_t n)
 }
 #include "../firmware/src/app/project.c"
 #include "../firmware/src/app/ui.c"
+
+/* (BERLIN) orphans: the engine alone from a reset, 40 s with one knob at v and everything heard and moving (the
+ * chord every 2 bars, Sequence 2 on): the energy and the high energy (first differences: brighter, higher) in eight
+ * stretches, and the MIDI out as a hash */
+#ifndef EN_WEB
+#include <unistd.h>
+#include <sys/wait.h>
+#define ORPH_B (40 * 44100 / 256)
+static void orph_run(int p, int v, float *e, uint32_t *mh)
+{
+    static int32_t ob[2 * 256];
+    float last = 0.0f;
+    int i, b, j;
+    en_init();
+    for (i = 0; i < P_NPARAMS; i++)
+        en_set(i, en_param_info(i)->def);
+    en_pool(EN_MODE_POOL[MODE_AEOLIAN]);
+    en_set(P_DRIFT, 0);
+    en_set(P_SEQ2, 60);
+    en_set(P_TAPB, 60);                          /* (Repeat B heard: its time can be) */
+    en_set(p, v);
+    en_regrow();
+    en_play(1);
+    orph_midi = orph_out = 2166136261u;
+    for (i = 0; i < 16; i++)
+        e[i] = 0.0f;
+    for (b = 0; b < ORPH_B; b++) {
+        en_render(ob, 256, 2048);
+        for (j = 0; j < 512; j++) {
+            const float x = (float)ob[j] * (1.0f / 8388608.0f);
+            e[b * 8 / ORPH_B] += x * x;
+            e[8 + b * 8 / ORPH_B] += (x - last) * (x - last);
+            last = x;
+            orph_out = (orph_out ^ (uint32_t)ob[j]) * 16777619u;   /* (every sample: any change at all) */
+        }
+    }
+    *mh = orph_midi ^ orph_out * 2654435761u;
+}
+static void orph_render(int p, int v, float *e, uint32_t *mh)   /* (in a copy of this process: each from the same state,
+                                                                  * whatever an earlier render left) */
+{
+    struct {
+        float e[16];
+        uint32_t m;
+    } r;
+    int fd[2];
+    pid_t pid;
+    memset(&r, 0, sizeof r);
+    if (pipe(fd) == 0 && (pid = fork()) >= 0) {
+        if (!pid) {
+            close(fd[0]);
+            orph_run(p, v, r.e, &r.m);
+            if (write(fd[1], &r, sizeof r) != (ssize_t)sizeof r)
+                _exit(1);
+            _exit(0);
+        }
+        close(fd[1]);
+        if (read(fd[0], &r, sizeof r) != (ssize_t)sizeof r)
+            memset(&r, 0, sizeof r);
+        close(fd[0]);
+        waitpid(pid, 0, 0);
+    }
+    memcpy(e, r.e, sizeof r.e);
+    *mh = r.m;
+}
+static int orph_same(const float *a, const float *b, uint32_t ma, uint32_t mb)
+{
+    int i;
+    (void)a, (void)b, (void)i;                   /* (the same: not a sample, not a message changed) */
+    return ma == mb;
+}
+#endif
 
 /* ---------------------------------------------------------- outputs --- */
 static void png_write(const char *path)
@@ -733,6 +810,41 @@ int main(int argc, char **argv)
                 return 2;
             }
             plat_store_save(OBJ_PROJ, fb, (uint32_t)got);
+        } else if (!strcmp(cmd, "orphans")) {   /* (BERLIN) every knob on every page the buttons reach changes the
+                                                  * sound or the MIDI, its lowest against its highest (alone in a
+                                                  * scenario: it leaves the engine reset) */
+            static const uint8_t REACH[] = {V_DUB, V_KEY, V_CHORD, V_CSND, V_TEXTURE, V_PSND, V_PFM, V_BASS, V_BSND,
+                                            V_DRUMS, V_DSND, V_PAT, V_SPACE, V_ESND, V_SETUP, V_MIX, V_PERF, V_NSND,
+                                            V_NSND2};
+            float e0[16], e1[16];
+            uint32_t m0, m1;
+            unsigned k;
+            int i, n = 0;
+            orph_render(P_TUNE, 0, e0, &m0);     /* (the same twice: repeatable, or nothing can be told) */
+            orph_render(P_TUNE, 0, e1, &m1);
+            if (!orph_same(e0, e1, m0, m1)) {
+                printf("FAIL orphans: the engine is not repeatable from a reset (MIDI %s; energy by stretch:",
+                       m0 == m1 ? "the same" : "differs");
+                for (i = 0; i < 16; i++)
+                    printf(" %.3g/%.3g", (double)e0[i], (double)e1[i]);
+                printf(")\n");
+                fails++;
+            } else
+                for (k = 0; k < sizeof REACH; k++)
+                    for (i = 0; i < 4; i++) {
+                        const int p = VIEW_KNOB[REACH[k]][i];
+                        if (p >= P_NPARAMS)
+                            continue;
+                        orph_render(p, en_param_info(p)->lo, e0, &m0);
+                        orph_render(p, en_param_info(p)->hi, e1, &m1);
+                        n++;
+                        if (orph_same(e0, e1, m0, m1)) {
+                            printf("FAIL orphan: %s page, knob %d (%s) changes nothing\n", VIEW_NAME[REACH[k]], i + 1,
+                                   en_param_info(p)->name);
+                            fails++;
+                        }
+                    }
+            printf("  orphans: %d knobs checked\n", n);
         } else if (!strcmp(cmd, "pingmark")) {
             ping_mark = ping_hash();
         } else if (!strcmp(cmd, "splashrun")) {

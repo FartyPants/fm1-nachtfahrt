@@ -57,14 +57,14 @@ enum {
     P_SVOICE, P_LVOICE, P_S2VOICE,                        /* the pings' voice, the bass's, the drums' kit */
     /* the sound pages: each relative to the voice as it is (0), -50 .. +50 (the kick's tune: semitones) */
     P_CATT, P_CCOL, P_CRES, P_DREL,                   /* the chord: attack, colour, resonance, the filter's envelope */
-    P_PTON, P_PRAT, P_PLEN, P_PBEND,                  /* the pings: tone, ratio, length, bend */
-    P_LOCT, P_VIB, P_BLEN, P_GLIDE,              /* the bass: bite, shape, length, slide */
-    P_KTUNE, P_KLEN, P_KPUNCH, P_HTONE,               /* the drums: the kick's tune, length, punch; the hats' tone */
+    P_PEDAL, P_SQREV, P_SQECHO, P_LDREV,                  /* the pings: tone, ratio, length, bend */
+    P_LOCT, P_VIB, P_LDECHO, P_GLIDE,              /* the bass: bite, shape, length, slide */
+    P_KTUNE, P_DRREV, P_DRECHO, P_S2ECHO,               /* the drums: the kick's tune, length, punch; the hats' tone */
     /* the FM pages (an FM voice): the algorithm (0: the voice's; 1..9), the upper operators' ratio, op 4's
      * feedback, the modulators' decay: relative, -50 .. +50 */
     P_CALG, P_CFRAT, P_CFB, P_CFDEC,
-    P_PALG, P_PFRAT, P_PFB, P_PFDEC,
-    P_BALG, P_BFRAT, P_BFB, P_BFDEC,
+    P_S2DEC, P_PFRAT, P_PFB, P_PFDEC,
+    P_BALG, P_LATT, P_BFB, P_BFDEC,
     /* the chords (EDIT's page): eight slots. A slot is one of three: a chord written (a kind, EN_CQ_*, not 0: its root
      * 0..11, absolute, and its type, EN_CX_*); the walk's (kind 0, root 1..7: a degree of the scale, plus one, so it
      * follows the key and the mode; type: its voicing, 0 or 1); or a gap (kind 0, root 0: the chord before it held).
@@ -90,12 +90,12 @@ enum {
      * sound pass left it; 0: +6 dB; 100: about -20 dB, almost all echo); the bass's notes in its groove (100: every
      * note; less, left out at random, the bar's first kept); the shaker and open hat against the kick (50: x1,
      * about +-12 dB at the ends) */
-    P_PHASER, P_PGHOST, P_LDENS, P_HATSLVL,
+    P_PHASER, P_S2CUT, P_LDENS, P_S2REV,
     /* 1.3.0's echo and density (format 14), 0..100: the chord's dry against its sends (as the pings' Ghost; 50: -6 dB,
      * its echo x1.35); the kick's density (its shapes by phrase: 0 none .. 100 four on the floor, always); the echo's
      * blur (0 clean copies .. 50 each repeat a little more dissolved .. 100 a wash), its tone (darker .. brighter),
      * its width (0 mono .. 100 wide); the noise's Decay (how long its hits ring: 0 a knock .. 100 a hum) */
-    P_CGHOST, P_SEQ2LEN, P_EBLUR, P_ETONE, P_EWIDTH, P_NTUNE,
+    P_LTONE, P_SEQ2LEN, P_EBLUR, P_ETONE, P_EWIDTH, P_NTUNE,
     /* (format 15) the Noise page's second (SAVE again): its width (0 mono, 50 as it was, 100 wide), how much of it
      * into the plate and into the echo (50 as it was, 0 none, 100 twice); the hats' length (-50..+50 around the kit's) */
     P_NWIDTH, P_NPLATE, P_NECHO, P_HLEN,
@@ -260,7 +260,7 @@ void en_prog_rewalk(void);                     /* the walk's character turned (b
                                                 * the one playing (yours and the gaps kept) */
 enum { EN_WALK_HOME, EN_WALK_WANDER, EN_WALK_FREE, EN_NWALK, EN_PLOOP = 4 };
 extern const char *const EN_WALK_NAME[EN_NWALK];
-#define EN_NNCHAR 5
+#define EN_NNCHAR 6                      /* (BERLIN) the Atmosphere's: None, Wind, Surf, Space, Air, Tape */
 extern const char *const EN_NCHAR_NAME[EN_NNCHAR];   /* the noise's characters */
 extern volatile int8_t en_chord_slot;          /* the slot whose chord sounds, -1: a chord of the scale */
 int en_deg_of(uint32_t pool, int rel);         /* the scale degree for a note above the root (nearest in the pool) */

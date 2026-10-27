@@ -28,25 +28,26 @@ enum { V_DUB, V_CHORD, V_TEXTURE, V_BASS, V_DRUMS, V_SPACE, V_SETUP, NPAGES, V_M
 /* (V_PERF: PERFORM's knobs, the master actions; V_MIX while white 6 is held. V_KEY: HOME again, the key and the
  * tempo, the Dub page's second) */
 static const char *const VIEW_NAME[NVIEWS] = {"Berlin", "Drone", "Sequence", "Lead", "Sequence 2", "Space", "Setup",
-                                              "Mix", "Drone sound", "Repeats", "Seq shape", "Seq2 sound",
-                                              "Drone FM", "Seq FM", "Lead FM", "Chords", "Pattern", "Perform", "Key", "Atmosphere",
+                                              "Mix", "Drone sound", "Seq sound", "Lead sound", "Seq2 sound",
+                                              "Drone FM", "Repeats", "Lead FM", "Chords", "Pattern", "Perform", "Key", "Atmosphere",
                                               "Echo", "Atmos space"};
 #define B_NONE 0xFFu
 static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_ENV, B_ARP, B_LFO, B_SEQ, B_FX, B_GLO, B_NONE, B_NONE, B_NONE, B_NONE,
                                          B_NONE, B_NONE, B_NONE, B_NONE, B_NONE, B_NONE, B_NONE, B_NONE, B_SAVE, B_NONE, B_NONE};
 static int sound_of(int v) { return v == V_CHORD ? V_CSND : v == V_TEXTURE ? V_PSND : v == V_BASS ? V_BSND : v == V_DRUMS ? V_DSND : -1; }
-static int fm_of(int v) { return v == V_CHORD ? V_CFM : v == V_TEXTURE ? V_PFM : v == V_BASS ? V_BFM : -1; }
+static int fm_of(int v) { return v == V_TEXTURE ? V_PFM : -1; }   /* (BERLIN: no FM pages; the Sequence's third, its
+                                                                   * Repeats, in the Ping FM page's place) */
 static int parent_of(int v)
 {
     return v == V_CSND || v == V_CFM ? V_CHORD : v == V_PSND || v == V_PFM ? V_TEXTURE : v == V_BSND || v == V_BFM ? V_BASS
          : v == V_DSND || v == V_PAT ? V_DRUMS : -1;
 }
 static int layer_of(int v) { v = parent_of(v) >= 0 ? parent_of(v) : v; return v == V_CHORD ? 0 : v == V_TEXTURE ? 1 : v == V_BASS ? 2 : 3; }
-static int fm_off(int v) { return v >= V_CFM && v <= V_BFM && !en_voice_fm(v - V_CFM); }   /* an FM page, not FM */
+static int fm_off(int v) { return (v == V_CFM || v == V_BFM) && !en_voice_fm(v - V_CFM); }   /* an FM page, not FM */
 static int fm_knob_off(int v, int i)             /* a knob there doing nothing: the voice not FM (but the LFO), or Ratio
                                                   * (operators 3 and 4) on a two-operator algorithm */
 {
-    if (v < V_CFM || v > V_BFM)
+    if ((v != V_CFM && v != V_BFM))
         return 0;
     if (!en_voice_fm(v - V_CFM))
         return i != 3;
@@ -86,51 +87,51 @@ static const char *const LANE_NAME[EN_NDRUM] = {"Kick", "Shaker", "Open", "Rim",
 _Static_assert(P_NPARAMS <= K_LEDS, "the knobs' own codes must come after the parameters");
 static const uint16_t VIEW_KNOB[NVIEWS][4] = {
     {K_FILTER, P_EVOLVE, P_MOTION, P_DRIFT},
-    {P_CATT, P_DREL, P_CCOL, P_PHASER},          /* (BERLIN, until its own pages: the Drone) */
-    {P_DENSITY, P_SEQOCT, P_CUTOFF, P_DECAY},    /* (the Sequence) */
+    {P_CATT, P_DREL, P_CCOL, P_PHASER},          /* (BERLIN) the Drone */
+    {P_DENSITY, P_SEQOCT, P_SEQLEN, P_SEQGRID},  /* the Sequence */
     {P_LDENS, P_GLIDE, P_VIB, P_LOCT},           /* (the Lead) */
     {P_SEQ2, P_SEQ2LEN, P_SEQ2OCT, P_SCH1},      /* (Sequence 2) */
     {P_ECHO, P_ETIME, P_FEEDBACK, P_REVERB},
     {P_TUNE, P_MIDI, K_LEDS, K_SAVE},
     {P_CHORD, P_SEQ, P_LEAD, P_SEQ2},
-    {P_CCOL, P_CRES, P_CATT, P_DREL},            /* (the Drone's sound) */
-    {P_TAPA, P_TAPAT, P_TAPB, P_TAPBT},          /* (the Sequence's repeats) */
-    {P_SEQGRID, P_TRANS, P_SEQLEN, P_SWEEP},     /* (LFO again: the Sequence's shape, for now) */
-    {P_KTUNE, P_KLEN, P_KPUNCH, P_HLEN},         /* (1.4.0: the kick's rumble here, in Hat len's place: EN_RUMBLE) */
+    {P_CRES, P_PEDAL, P_DRREV, P_DRECHO},        /* the Drone's sound */
+    {P_CUTOFF, P_DECAY, P_SQREV, P_SQECHO},      /* the Sequence's sound */
+    {P_LTONE, P_LATT, P_LDREV, P_LDECHO},        /* the Lead's sound */
+    {P_S2CUT, P_S2DEC, P_S2REV, P_S2ECHO},       /* Sequence 2's sound */
     {P_CALG, P_CFRAT, P_CFB, P_CFDEC},
-    {P_PALG, P_PFRAT, P_PFB, P_PFDEC},
-    {P_BALG, P_BFRAT, P_BFB, P_BFDEC},
+    {P_TAPA, P_TAPAT, P_TAPB, P_TAPBT},          /* the Sequence's repeats (its third page) */
+    {P_BALG, P_LATT, P_BFB, P_BFDEC},
     {K_SLOT, K_CQ, K_CX, K_PLAY},
     {K_LANE, P_SACCENT, K_LCH, P_SMODE},
     {K_FILTER, K_DUB, K_ENERGY, P_SWEEP},         /* (Wet, Energy: offsets for playing; Sweep the piece's own) */
     {P_TEMPO, P_ROOT, K_MODE, P_TRANS},
-    {P_NGRAIN, P_NROOM, P_NCOL, P_NTUNE},     /* (the level on OCT- / OCT+, as the layers'; Drift the recipes') */
+    {P_NGRAIN, P_NCOL, P_NDRIFT, P_NROOM},       /* the Atmosphere */
     {P_EBLUR, P_ETONE, P_EWIDTH, P_SIZE},
-    {P_NWIDTH, P_NPLATE, P_NECHO, P_NLFO},       /* (the Noise page's second: SAVE again; its Change the recipes') */
+    {P_NWIDTH, P_NPLATE, P_NECHO, P_NTUNE},      /* its space */
 };
 static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Filter", "Evolve", "Motion", "Drift"},
     {"Attack", "Release", "Colour", "Phaser"},
-    {"Density", "Octave", "Cutoff", "Decay"},
+    {"Density", "Octave", "Length", "Grid"},
     {"Phrases", "Glide", "Vibrato", "Octave"},
     {"Level", "Length", "Octave", "Chance"},
     {"Echo", "Echo time", "Feedback", "Reverb"},
     {"Tune", "MIDI out", "Lights", "Save"},
     {"Drone", "Seq", "Lead", "Seq 2"},
-    {"Colour", "Reso", "Attack", "Release"},
+    {"Reso", "Pedal", "Reverb", "Echo"},
+    {"Cutoff", "Decay", "Reverb", "Echo"},
+    {"Tone", "Attack", "Reverb", "Echo"},
+    {"Cutoff", "Decay", "Reverb", "Echo"},
+    {"Algo", "Ratio", "Feedback", "LFO"},
     {"Repeat A", "A time", "Repeat B", "B time"},
-    {"Grid", "Transpose", "Length", "Sweep"},
-    {"Kick tune", "Kick len", "Punch", "Hat len"},
-    {"Algo", "Ratio", "Feedback", "LFO"},
-    {"Algo", "Ratio", "Feedback", "LFO"},
     {"Algo", "Ratio", "Feedback", "LFO"},
     {"Slot", "Chord", "Type", "Play"},
     {"Lane", "Accent", "Chance", "Play"},
     {"Filter", "Wet", "Energy", "Sweep"},
     {"Tempo", "Root", "Mode", "Transpose"},
-    {"Density", "Air", "Tone", "Decay"},
+    {"Density", "Colour", "Drift", "Air"},
     {"Blur", "Tone", "Width", "Size"},
-    {"Width", "Plate", "Echo", "LFO"},
+    {"Width", "Reverb", "Echo", "Ring"},
 };
 /* what each knob does, a line: on the rule above the knobs while it's being turned (in capitals; each fits the
  * rule's 228 px: the host's expect helpfit) */
@@ -1128,9 +1129,9 @@ static const uint8_t NUDGE_BTN[NNUDGE] = {B_ENV, B_ARP, B_LFO, B_SEQ, B_FX, B_SA
 static const char *const NUDGE_NAME[NNUDGE] = {"DRONE", "SEQ", "LEAD", "SEQ 2", "SPACE", "ATMOS"};
 static const uint8_t NUDGE_PAR[NNUDGE][8] = {   /* (the FM ones, the last two of the first three, on an FM voice only) */
     {P_CATT, P_CCOL, P_CRES, P_DECAY, P_CATT, P_CUTOFF, P_CFRAT, P_CFB},   /* (Env, on no page now, left be) */
-    {P_PTON, P_PRAT, P_PLEN, P_PBEND, P_PGHOST, P_PLEN, P_PFRAT, P_PFB},   /* (Ghost: the dry against the echo) */
-    {P_LOCT, P_VIB, P_BLEN, P_GLIDE, P_TRANS, P_BLEN, P_BFRAT, P_BFB},
-    {P_KTUNE, P_KLEN, P_KPUNCH, P_HTONE, P_KLEN, P_HATSLVL, P_HTONE, P_KTUNE},   /* (Hats: their level, against the kick) */
+    {P_PEDAL, P_SQREV, P_SQECHO, P_LDREV, P_S2CUT, P_SQECHO, P_PFRAT, P_PFB},   /* (Ghost: the dry against the echo) */
+    {P_LOCT, P_VIB, P_LDECHO, P_GLIDE, P_TRANS, P_LDECHO, P_LATT, P_BFB},
+    {P_KTUNE, P_DRREV, P_DRECHO, P_S2ECHO, P_DRREV, P_S2REV, P_S2ECHO, P_KTUNE},   /* (Hats: their level, against the kick) */
     {P_ECHO, P_FEEDBACK, P_REVERB, P_SIZE, P_CLOUD, P_ECHO, P_ECHO, P_ECHO},   /* (the space: FX; its shake, a new echo time) */
     {P_NCOL, P_NGRAIN, P_NTUNE, P_NROOM, P_NCOL, P_NGRAIN, P_NTUNE, P_NCOL},   /* (the noise: SAVE; its shake, a new character) */
 };
@@ -2658,7 +2659,7 @@ static void draw_main(void)
         return;
     ui.sig[1] = h;
     cv_begin(240, MAIN_H, K_BG);
-    if (ui.view >= V_CFM && ui.view <= V_BFM) {  /* an FM page: the algorithm */
+    if (ui.view == V_CFM || ui.view == V_BFM) {  /* an FM page: the algorithm */
         draw_alg(layer_of(ui.view));
         moving = 0;
     } else if (ui.view == V_NSND || ui.view == V_NSND2) {   /* the Noise pages: the spectrum, its colour as it moves */

@@ -324,6 +324,10 @@ int main(void)
         CHECK(!strcmp(t, "2600"), "seq voice 0: %s", t);
         en_param_text(P_CATT, 40, t);
         CHECK(!strcmp(t, "40"), "attack 40, unsigned: %s", t);
+        en_param_text(P_LOCT, 1, t);
+        CHECK(!strcmp(t, "+1") && en_param_info(P_LOCT)->lo == -2 && en_param_info(P_LOCT)->hi == 1, "lead oct: %s", t);
+        en_param_text(P_LOCT, -2, t);
+        CHECK(!strcmp(t, "-2"), "lead oct -2: %s", t);
         en_param_text(P_SEQ2OCT, 1, t);
         CHECK(!strcmp(t, "+1"), "seq2 oct: %s", t);
         en_param_text(P_MODE, MODE_DORIAN, t);
@@ -1073,7 +1077,10 @@ int main(void)
             en_play(1);
             peak = 0.0f;
             run(30.0f);
-            CHECK(!bad && peak > 0.01f && peak < 0.8f, "test_atmos_chars: %s: peak %f", EN_NCHAR_NAME[c], (double)peak);
+            if (!c)                              /* (None: silence) */
+                CHECK(!bad && peak < 0.005f, "test_atmos_chars: None: peak %f (no atmosphere: under -46 dB)", (double)peak);
+            else
+                CHECK(!bad && peak > 0.01f && peak < 0.8f, "test_atmos_chars: %s: peak %f", EN_NCHAR_NAME[c], (double)peak);
         }
     }
 

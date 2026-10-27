@@ -40,12 +40,12 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Cloud", 0, 100, 30},
     {"Seq voice", 0, EN_NSV - 1, 0}, {"Lead voice", 0, EN_NBV - 1, 0}, {"Seq2 voice", 0, EN_NS2V - 1, 1},
     {"Attack", 0, 100, 40},   {"Colour", -50, 50, 0},   {"Resonance", -50, 50, 0}, {"Release", 0, 100, 50},
-    {"Tone", -50, 50, 0},     {"Ratio", -50, 50, 0},    {"Ping len", -50, 50, 0}, {"Bend", 0, 100, 0},
-    {"Lead oct", -1, 2, 0},   {"Vibrato", 0, 100, 40},  {"Bass len", -50, 50, 0}, {"Glide", 0, 100, 25},
-    {"Kick tune", -12, 12, 0}, {"Kick len", -50, 50, 0}, {"Punch", -50, 50, 0},   {"Hat tone", -50, 50, 0},
+    {"Pedal", 0, 100, 70},    {"Seq reverb", 0, 100, 50}, {"Seq echo", 0, 100, 50}, {"Lead reverb", 0, 100, 50},
+    {"Lead oct", -2, 1, 0},   {"Vibrato", 0, 100, 40},  {"Lead echo", 0, 100, 50}, {"Glide", 0, 100, 25},
+    {"Kick tune", -12, 12, 0}, {"Drone reverb", 0, 100, 50}, {"Drone echo", 0, 100, 50}, {"Seq2 echo", 0, 100, 50},
     {"Chord alg", 0, 9, 0},   {"Chord ratio", -50, 50, 0}, {"Chord fb", 0, 100, 0}, {"Chord LFO", 0, 100, 0},
-    {"Ping alg", 0, 9, 0},    {"Ping ratio", -50, 50, 0}, {"Ping fb", 0, 100, 0}, {"Ping LFO", 0, 100, 0},
-    {"Bass alg", 0, 9, 0},    {"Bass ratio", -50, 50, 0}, {"Bass fb", 0, 100, 0}, {"Bass LFO", 0, 100, 0},
+    {"Decay 2", 0, 100, 35},    {"Ping ratio", -50, 50, 0}, {"Ping fb", 0, 100, 0}, {"Ping LFO", 0, 100, 0},
+    {"Bass alg", 0, 9, 0},    {"Lead attack", 0, 100, 10}, {"Bass fb", 0, 100, 0}, {"Bass LFO", 0, 100, 0},
     {"Root 1", 0, 11, 0}, {"Root 2", 0, 11, 0}, {"Root 3", 0, 11, 0}, {"Root 4", 0, 11, 0},
     {"Root 5", 0, 11, 0}, {"Root 6", 0, 11, 0}, {"Root 7", 0, 11, 0}, {"Root 8", 0, 11, 0},
     {"Kind 1", 0, EN_NCQ - 1, 0}, {"Kind 2", 0, EN_NCQ - 1, 0}, {"Kind 3", 0, EN_NCQ - 1, 0}, {"Kind 4", 0, EN_NCQ - 1, 0},
@@ -61,10 +61,10 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Clap chance", 0, 100, 5},
     {"Accent", 0, 100, 50}, {"Seq play", 0, 1, 0},
     {"Noise tone", -50, 50, 0}, {"Noise density", -50, 50, 0}, {"Air", -50, 50, 0}, {"Noise drift", -50, 50, 0},
-    {"Noise", 0, EN_NNCHAR - 1, 0},
-    {"Phaser", 0, 100, 40},   {"Wet", 0, 100, 50},    {"Phrases", 0, 100, 50},   {"Hats level", 0, 100, 50},
-    {"Chord wet", 0, 100, 50}, {"Length 2", 3, 16, 7}, {"Blur", 0, 100, 50}, {"Echo tone", 0, 100, 50},
-    {"Width", 0, 100, 50},    {"Noise decay", 0, 100, 50},
+    {"Noise", 0, EN_NNCHAR - 1, 1},
+    {"Phaser", 0, 100, 40},   {"Cutoff 2", 0, 100, 40},  {"Phrases", 0, 100, 50},   {"Seq2 reverb", 0, 100, 50},
+    {"Lead tone", 0, 100, 50}, {"Length 2", 3, 16, 7}, {"Blur", 0, 100, 50}, {"Echo tone", 0, 100, 50},
+    {"Width", 0, 100, 50},    {"Ring", 0, 100, 50},
     {"Noise width", 0, 100, 50}, {"Noise plate", 0, 100, 50}, {"Noise echo", 0, 100, 50}, {"Hat len", -50, 50, 0},
     {"Noise LFO", 0, 100, 0}, {"Rumble", 0, 100, 0},
 };
@@ -185,7 +185,9 @@ void en_piece(int i, int16_t *par, uint16_t *pool)
                                   P_TRANS, P_SEQOCT, P_SEQ2OCT, P_SVOICE, P_S2VOICE, P_SWEEP, P_SACCENT, P_SGATE0,
                                   P_SGATE1, P_SOCT0, P_SOCT1, P_SSKIP0, P_SACC0, P_SACC1, P_SCH0, P_SCH1, P_SMODE,
                                   P_CVOICE, P_CATT, P_DREL, P_PHASER, P_LEAD, P_LVOICE, P_GLIDE, P_VIB, P_LDENS, P_LOCT,
-                                  P_CRACKLE, P_NCHAR};
+                                  P_CRACKLE, P_NCHAR, P_PEDAL, P_SQREV, P_SQECHO, P_LDREV, P_LDECHO, P_DRREV, P_DRECHO,
+                                  P_S2REV, P_S2ECHO, P_LTONE, P_S2CUT, P_S2DEC, P_LATT, P_NWIDTH, P_NPLATE, P_NECHO, P_NTUNE,
+                                  P_NROOM, P_NGRAIN, P_NCOL, P_NDRIFT};
     unsigned k;
     for (p = 0; p < P_NPARAMS; p++)
         par[p] = PIECES[i].v[p];
@@ -307,7 +309,7 @@ void en_param_text(int i, int v, char *b)
         *b = 0;
         return;
     }
-    if ((i == P_CALG || i == P_PALG || i == P_BALG)) {
+    if ((i == P_CALG || i == P_BALG)) {
         if (!v) {
             b[0] = 'V', b[1] = 'o', b[2] = 'i', b[3] = 'c', b[4] = 'e', b[5] = 0;   /* the voice's own */
         } else if (v == 9) {
@@ -548,6 +550,7 @@ typedef struct {
 } noise_ctl_t;
 static noise_ctl_t nctl;
 static uint8_t atm_char;                        /* (BERLIN) the Atmosphere's character (render_atmos) */
+static uint32_t atm_rng;                        /* (its random: en_init's seed) */
 static float throw_mul = 1.0f, ping_dry = 0.5f, hats_lvl = 1.0f;   /* Throws, Ghost, Hats level (apply) */
 static float chord_dry = 0.5f, chord_snd = 1.5f;   /* the chord's Ghost: its dry, its sends (apply) */
 static int ec_pp;                               /* (BERLIN) the echo ping-pongs (twice its time fits the tape) */
@@ -979,7 +982,8 @@ typedef struct {
 static drv_t drv[2][NDR];
 static uint8_t dr_bank, dr_on[2];
 static float dr_lvl[2], dr_up = 0.0001f, dr_down = 0.00005f, ph_depth, ph_lfo, phz[2][6], ph_last[2];
-static uint32_t dr_rng = 0x6A09E667u;          /* (its own: the voices' phases leave the music's draws alone) */
+static uint32_t dr_rng = 0x6A09E667u;
+static float dr_pedal = 0.7f, dr_rev = 1.0f, dr_echo = 1.0f;   /* (the pedal's level; the sends, x1 at 50) */          /* (its own: the voices' phases leave the music's draws alone) */
 
 static void drone_off(int b)                     /* a bank dies away: its notes off */
 {
@@ -1409,10 +1413,10 @@ static void bell_voice(int l, int n, float vel, int32_t wait)
     v->loop = (uint8_t)l;
     pv = 0;
     ri = (int)(btone * 100.0f + 0.5f) * 5 / 101 + LOOP_RAT[l];
-    v->drop = fm_clampf(PV[pv].drop + 0.015f * (float)par[P_PBEND], 0.0f, 3.0f);   /* Bend: from up to four times its note */
+    v->drop = fm_clampf(PV[pv].drop + 0.015f * 0.0f, 0.0f, 3.0f);   /* Bend: from up to four times its note */
     v->amp = vel * PV[pv].gain;
     t60 = fm_clampf(0.9f - (float)(n - 60) * 0.02f, 0.25f, 1.1f) * LOOP_DEC[l] * PV[pv].t60   /* short: a ping */
-          * fm_exp2f(1.5f * rel(P_PLEN));
+          * fm_exp2f(1.5f * 0.0f);
     v->adec = fm_expf(-6.9f / (t60 * EN_SR));
     /* its patch: a carrier, the modulator (Ping tone: 0 a round blip, 100 a metallic clank: its index, in radians
      * as turns, and its decay; Ratio, the sound page's: its ratio), and two more operators for the 4-op algorithms
@@ -1424,13 +1428,13 @@ static void bell_voice(int l, int n, float vel, int32_t wait)
         pt->alg = pv == 2 ? 4 : FM_ALG2;
         pt->fb = 0.0f;
         pt->op[0] = (fmop_t){1.0f, 1.0f, 0.0f, 1.0f};
-        pt->op[1] = (fmop_t){(PV[pv].ratio > 0.0f ? PV[pv].ratio : RATIO[ri < 0 ? 0 : ri > 4 ? 4 : ri]) * fm_exp2f(0.8f * rel(P_PRAT)),
+        pt->op[1] = (fmop_t){(PV[pv].ratio > 0.0f ? PV[pv].ratio : RATIO[ri < 0 ? 0 : ri > 4 ? 4 : ri]) * fm_exp2f(0.8f * 0.0f),
                              idx, td, 0.0f};
         pt->op[2] = (fmop_t){2.0f, 0.45f, 0.0f, 1.0f};
         pt->op[3] = (fmop_t){pv == 2 ? 5.0f : 3.0f, idx * 0.3f, td * 0.6f, 0.0f};
         fm_note(&v->fm, pt, mtof((float)n), 1.0f, fm_q(P_PFRAT), fm_d(P_PFDEC));
         v->fm.ph[0] = v->fm.ph[1] = v->fm.ph[2] = v->fm.ph[3] = 0.0f;
-        fm_ctl(&v->fm, pt, fm_alg_of(P_PALG, pt), 1.0f);
+        fm_ctl(&v->fm, pt, pt->alg, 1.0f);
     }
     v->att = 0.0f;
     p = (LOOP_PAN[l] + 1.0f) * (FM_PI / 4.0f);
@@ -1466,6 +1470,10 @@ static int sq_pos[2];
 static uint8_t sq_wrap[2], sq_bars[2], sq_written[2], sq_prio[2][SEQ_MAX];
 static uint32_t sq_rng = 0x2545F491u;
 static float seq_vol, seq2_vol, sq_cut = 600.0f, sq_edec = 0.9995f, sq_adec = 0.9997f;
+static float sq2_cut = 450.0f, sq2_edec = 0.9995f, sq2_adec = 0.9997f, sq_rev[2] = {1.0f, 1.0f}, sq_echo[2] = {1.0f, 1.0f};
+static float sw_v, sw_t, sw_mul = 1.0f;          /* the Sweep: where its wander is, where it goes; the cutoff's factor */
+static int sw_bars = 16, sw_len = 16;            /* (a first aim on the first bar) */
+volatile float en_seq_cut;                       /* (the Sweep's wander, 0..1, for the screen and the tests) */
 const char *const EN_SV_NAME[EN_NS2V] = {"2600", "Moog", "Synthi", "Pulse", "Glass", "Sub"};
 
 /* a piece's patterns, kept (en_seq_get, en_seq: EN_SEQ_N bytes): each one's degrees (16 + 16), steps, octaves and
@@ -1532,9 +1540,9 @@ static void pluck_voice(int l, int n, int vel, int rep)   /* rep: a repeat, pann
     v->amp = (float)vel * (1.0f / 127.0f);
     v->att = 0.0f;
     v->env = 1.0f;
-    v->adec = sq_adec;
-    v->edec = sq_edec;
-    v->cut = sq_cut * (l ? 0.7f : 1.0f);
+    v->adec = l ? sq2_adec : sq_adec;
+    v->edec = l ? sq2_edec : sq_edec;
+    v->cut = l ? sq2_cut : sq_cut * sw_mul;
     v->s1[0] = v->s1[1] = v->s2[0] = v->s2[1] = 0.0f;
     p = ((l ? 0.0f : rep ? 0.35f : -0.25f) + 1.0f) * (FM_PI / 4.0f);
     v->gl = fm_cosf(p);
@@ -1592,6 +1600,17 @@ static void seq_tick(void)                       /* a sixteenth: the sequences' 
     static const uint8_t DT[6] = {2, 3, 4, 6, 8, 16};   /* the repeats' times (the echo's), in sixteenths */
     const int on_grid = par[P_SEQGRID] || !(sixteenth & 1u);
     int l;
+    if (!(sixteenth & 15u)) {                    /* the Sweep: the Sequence's cutoff wandering, a new aim every 8 .. 64
+                                                  * bars (~20 s .. 2.5 min at 96), up to 1.5 octaves either way */
+        if (++sw_bars >= sw_len) {
+            sw_t = 2.0f * (float)(seq_rand(&sq_rng) >> 8) * (1.0f / 16777216.0f) - 1.0f;
+            sw_len = 8 + (int)(seq_rand(&sq_rng) % 57u);
+            sw_bars = 0;
+        }
+        sw_v += (sw_t - sw_v) * (1.0f / (float)sw_len);
+        sw_mul = fm_exp2f(1.5f * (float)pe(P_SWEEP) * 0.01f * sw_v);
+        en_seq_cut = 0.5f + 0.5f * (float)pe(P_SWEEP) * 0.01f * sw_v;
+    }
     if (!(sixteenth & 15u))                      /* a bar line: the performer, when a pass ended on it (at most every
                                                   * 4 bars), or every 16 */
         for (l = 0; l < 2; l++)
@@ -1617,7 +1636,8 @@ static void seq_tick(void)                       /* a sixteenth: the sequences' 
             if ((q.gate >> st & 1u) && !(q.skip >> st & 1u) &&
                 (sq_written[l] || pat || sq_prio[l][st] < 25 + 3 * pe(P_DENSITY) / 4) && (ch >= 100 || irand(100) < ch)) {
                 played = seq_note(&q, l, st);
-                vel = q.acc >> st & 1u ? 120 : 77;   /* the root accented (as Synth Seeker's 121 and 77) */
+                vel = q.acc >> st & 1u ? 120 : 120 - 86 * par[P_SACCENT] / 100;   /* the root accented (Accent 50: 77,
+                                                                               * as Synth Seeker's 121 and 77) */
                 pluck_voice(l, played, vel, 0);
             }
             sq_pos[l] = seq_next(&q, st);
@@ -1643,7 +1663,7 @@ static struct {
     uint8_t on, note;                            /* sounding (its gate); the note it glides to */
     float cur, ph, ph2, ph3, vph, env, fenv, vt, s1[2], s2[2], c1[4], c2[4];
 } lead;
-static float lead_vol, ld_gk = 0.004f;
+static float lead_vol, ld_gk = 0.004f, ld_tone = 1.0f, ld_att = 0.0009f, ld_rev = 1.0f, ld_echo = 1.0f;
 static uint8_t ld_note[8], ld_dur[8], ld_n, ld_i, ld_left, ld_rest;
 static uint32_t ld_rng = 0x3C6EF372u;
 
@@ -1875,11 +1895,11 @@ static void drum_fire(int d, float vel)
     v->att = 0.0f;
     switch (d) {
     case 0: {                                   /* kick: a sine falling fast from ~5x to its note */
-        float f = mtof((float)(kick_note(par[P_ROOT]) + par[P_KTUNE])), pu = rel(P_KPUNCH);
+        float f = mtof((float)(kick_note(par[P_ROOT]) + par[P_KTUNE])), pu = 0.0f;
         v->note = DRUM_GM[0];
         v->inc = f * KIT[kit].start * fm_exp2f(0.8f * pu) * (1.0f / EN_SR);
         v->inc_end = f * (1.0f / EN_SR);
-        v->adec = fm_expf(-6.9f / (KIT[kit].t60 * fm_exp2f(1.2f * rel(P_KLEN)) * EN_SR));
+        v->adec = fm_expf(-6.9f / (KIT[kit].t60 * fm_exp2f(1.2f * 0.0f) * EN_SR));
         v->clk = KIT[kit].click * 2.0f * fm_maxf(1.0f + pu, 0.0f);   /* (Tight: 1, as before) */
         duck_x = duck_xb = 1.0f;
         break;
@@ -1959,12 +1979,12 @@ static void bass_hit(int first, int up)
     bass.target = (float)n;
     if (bass.gate > 0 || bass.midi_note)
         midi(0x82, bass.midi_note, 0);
-    bass.gate = (int32_t)(fm_minf(GROOVE_GATE[gpat()] * fm_exp2f(rel(P_BLEN)), 15.8f) * step_len);
+    bass.gate = (int32_t)(fm_minf(GROOVE_GATE[gpat()] * fm_exp2f(0.0f), 15.8f) * step_len);
     bass_bite = 1.0f;
     {
         int bv = (unsigned)par[P_LVOICE] < EN_NBV ? par[P_LVOICE] : 0;
         if (BV_PATCH[bv])
-            fm_note(&bfm, BV_PATCH[bv], mtof(bass.note), 1.0f, fm_q(P_BFRAT), fm_d(P_BFDEC));
+            fm_note(&bfm, BV_PATCH[bv], mtof(bass.note), 1.0f, 1.0f, fm_d(P_BFDEC));
     }
     bass.midi_note = (uint8_t)n;
     hit(2, first ? 1.0f : 0.75f);
@@ -2739,7 +2759,7 @@ int en_fm_alg(int layer)
         const fmpatch_t *p = BV_PATCH[(unsigned)par[P_LVOICE] < EN_NBV ? par[P_LVOICE] : 0];
         return p ? fm_alg_of(P_BALG, p) : 0;
     }
-    return par[P_PALG] ? par[P_PALG] - 1 : 0 ? 4 : FM_ALG2;
+    return FM_ALG2;
 }
 
 /* a layer's envelope, for a sound page (computed from the values, as the render would play them) */
@@ -2759,24 +2779,24 @@ void en_env_shape(int layer, float *lvl, float *aux, int n, float *secs)
     }
     case 1: {
         int pv = 0;
-        t60 = 0.8f * PV[pv].t60 * fm_exp2f(1.5f * rel(P_PLEN));
+        t60 = 0.8f * PV[pv].t60 * fm_exp2f(1.5f * 0.0f);
         a = 0.004f + 0.02f * fm_minf(btone * 2.0f, 1.0f);
-        fe = fm_clampf(PV[pv].drop + 0.015f * (float)par[P_PBEND], 0.0f, 3.0f) / 3.0f;   /* the bend */
+        fe = fm_clampf(PV[pv].drop + 0.015f * 0.0f, 0.0f, 3.0f) / 3.0f;   /* the bend */
         ft = 0.035f;
         T = fm_clampf(t60 * 1.2f, 0.25f, 4.0f);
         break;
     }
     case 2: {                                   /* the bass: in, held for its gate, out */
-        hold = fm_minf(GROOVE_GATE[gpat()] * fm_exp2f(rel(P_BLEN)), 15.8f) * step_len / EN_SR;
+        hold = fm_minf(GROOVE_GATE[gpat()] * fm_exp2f(0.0f), 15.8f) * step_len / EN_SR;
         a = 0.02f;
         T = fm_clampf(hold * 1.5f + 0.1f, 0.25f, 4.0f);
         break;
     }
     default: {                                  /* the kick: its decay; its pitch falling */
-        t60 = KIT[kit].t60 * fm_exp2f(1.2f * rel(P_KLEN));
+        t60 = KIT[kit].t60 * fm_exp2f(1.2f * 0.0f);
         a = 0.05f;
         ft = 1.0f / (KIT[kit].fall * EN_SR);
-        fe = fm_clampf(KIT[kit].start * fm_exp2f(0.8f * rel(P_KPUNCH)) / 10.0f, 0.0f, 1.0f);
+        fe = fm_clampf(KIT[kit].start * fm_exp2f(0.8f * 0.0f) / 10.0f, 0.0f, 1.0f);
         T = fm_clampf(t60 * 1.2f, 0.25f, 2.0f);
         break;
     }
@@ -2832,12 +2852,6 @@ static void apply(int p, int v)
     case P_SMODE: case P_SGATE0: case P_SGATE1: case P_SOCT0: case P_SOCT1: case P_SSKIP0: lanes(); break;
     case P_SEQLEN: seq_regrow(0); break;
     case P_SEQ2LEN: seq_regrow(1); break;
-    case P_HTONE: {                              /* the hats' colour (BERLIN: the dub's, silent) */
-        float h = fm_clampf((float)(50 + par[P_HTONE]), 0.0f, 100.0f);
-        hat_f = 0.25f + 0.0045f * h;                      /* the high-pass: ~1.8 kHz dark .. ~5 kHz bright */
-        hat_open = 0.4f - 0.0025f * h;                    /* the open hat: long and soft .. short and crisp */
-        break;
-    }
     case P_ECHO: echo_send = (float)(v * v) * 0.0001f; break;
     case P_ETIME: echo_time(); break;
     case P_REVERB: rev_send = (float)(v * v) * 0.0001f; break;
@@ -2857,7 +2871,6 @@ static void apply(int p, int v)
             sq_adec = fm_expf(-6.9f / (1.5f * t * EN_SR));
         }
         break;
-    case P_PTON: btone = fm_clampf((float)(40 + par[P_PTON]), 0.0f, 100.0f) * 0.01f; break;
     case P_MOTION: motion = (float)v * 0.01f; break;
     case P_EVOLVE: evolve = (float)v * 0.01f; break;
     case P_CRACKLE:                              /* (1.3.0: straight, not squared: a bed at 15 too; 35 as before,
@@ -2893,21 +2906,31 @@ static void apply(int p, int v)
         nctl.character = 1;
         break;
     case P_PHASER: ph_depth = (float)v * 0.01f; break;
+    case P_PEDAL: dr_pedal = (float)v * 0.01f; break;
+    case P_DRREV: dr_rev = (float)v * 0.02f; break;  /* (the sends: x1 at 50, x2 at 100) */
+    case P_DRECHO: dr_echo = (float)v * 0.02f; break;
+    case P_SQREV: sq_rev[0] = (float)v * 0.02f; break;
+    case P_SQECHO: sq_echo[0] = (float)v * 0.02f; break;
+    case P_S2REV: sq_rev[1] = (float)v * 0.02f; break;
+    case P_S2ECHO: sq_echo[1] = (float)v * 0.02f; break;
+    case P_LDREV: ld_rev = (float)v * 0.02f; break;
+    case P_LDECHO: ld_echo = (float)v * 0.02f; break;
+    case P_LTONE: ld_tone = fm_exp2f((float)(v - 50) * 0.04f); break;   /* (the Lead's filter, two octaves either way) */
+    case P_LATT: ld_att = 1.0f - fm_expf(-1.0f / (0.005f * fm_exp2f((float)v * 0.0645f) * EN_SR)); break;   /* 5 .. 400 ms */
+    case P_S2CUT: sq2_cut = 110.0f * fm_exp2f((float)v * 0.055f); break;
+    case P_S2DEC: {
+        const float t = 0.08f * fm_exp2f((float)v * 0.0164f);
+        sq2_edec = fm_expf(-6.9f / (t * EN_SR));
+        sq2_adec = fm_expf(-6.9f / (1.5f * t * EN_SR));
+        break;
+    }
     case P_CATT: dr_up = 1.0f / (0.5f * fm_exp2f((float)v * 0.0458f) * EN_SR); break;    /* a swell of 0.5 .. 12 s */
     case P_DREL: dr_down = 1.0f / (fm_exp2f((float)v * 0.039f) * EN_SR); break;         /* dying in 1 .. 15 s */
-    case P_PGHOST:                               /* the pings' dry: 0 dB (0), -6 dB (50), -20 dB (100) */
-        ping_dry = 0.5f * fm_exp2f((v <= 50 ? 6.0f * (float)(50 - v) : -14.0f * (float)(v - 50)) * 0.02f * 0.16609640f);
-        break;
-    case P_HATSLVL: hats_lvl = fm_exp2f((float)(v - 50) * 0.04f); break;   /* x1 at 50, -12 .. +12 dB */
     case P_RUMBLE:                               /* the kick's rumble: none (0) .. a deep roar (100), longer as it rises:
                                                   * its tail 0.8 s .. 2.5 s (rumble); (1.3.0: off, not yet to standard,
                                                   * the user: EN_RUMBLE 1 for 1.4.0's work; the value kept, saved) */
         rb_amt = EN_RUMBLE ? (float)v * (float)v * 0.0001f : 0.0f;
         rb_g = fm_exp2f(-9.966f * (180.0f / RB_SR) / (0.8f + 1.7f * (float)v * 0.01f));
-        break;
-    case P_CGHOST:                               /* the chord's dry: 0 dB (0), -6 dB (50), -20 dB (100); its sends x1 .. x1.7 */
-        chord_dry = 0.5f * fm_exp2f((v <= 50 ? 6.0f * (float)(50 - v) : -14.0f * (float)(v - 50)) * 0.02f * 0.16609640f);
-        chord_snd = 1.0f + (float)v * 0.007f;
         break;
     case P_EBLUR:                                /* the diffusers' gain: 0.15 (clean copies) .. 0.6 (50) .. 0.75 */
         ec_g = v <= 50 ? 0.15f + 0.009f * (float)v : 0.6f + 0.003f * (float)(v - 50);
@@ -3042,6 +3065,13 @@ void en_init(void)
         sint[i] = fm_sinf((float)i * (FM_TWO_PI / (float)SN));
     for (i = 0; i <= SN; i++)
         orgt[i] = sint[i % SN] + 0.5f * sint[2 * i % SN] + 0.3f * sint[3 * i % SN] + 0.2f * sint[4 * i % SN];
+    rng = 0x9E3779B9u;                           /* (BERLIN) the dice from the top: a reset plays the same again */
+    ph_rng = cl_rng = sq_rng = 0x2545F491u;
+    dr_rng = 0x6A09E667u;
+    ld_rng = 0x3C6EF372u;
+    atm_rng = 0xBB67AE85u;
+    root_note = 55;                              /* (the voicing from its first, the walk with no past) */
+    walk_prev = 0;
     memset(pluck, 0, sizeof pluck);              /* (BERLIN's voices from rest: none sounding, none to let go) */
     memset(&lead, 0, sizeof lead);
     dr_on[0] = dr_on[1] = 0;
@@ -3159,7 +3189,7 @@ static void macro(int i, int v)
 {
     /* each: the parameters it moves and how far at full turn (+50), in the parameter's own units */
     static const struct { uint8_t p; int8_t at50; } MOVE[] = {
-        {P_CGHOST, 50}, {P_PGHOST, 50}, {P_ECHO, 30},  /* (1.3.0) Wet: the whole music dry, or drowned in the echo (the
+        {P_SQECHO, 40}, {P_LDECHO, 40}, {P_ECHO, 30},  /* (1.3.0) Wet: the whole music dry, or drowned in the echo (the
                                                           * chord's and the pings' Wet, the echo's send; the noise too:
                                                           * render_crackle) */
         {P_DENSITY, 85}, {P_SEQ, 30}, {P_SEQ2, 30},       /* Energy (BERLIN): the sequences' notes and levels, */
@@ -3548,7 +3578,7 @@ static void render_bass(uint32_t n)
                                                  /* a short slide (Slide: ~1 ms .. ~250 ms) */
     inc = mtof(bass.note) * (1.0f / EN_SR);
     if (BV_PATCH[bv])                            /* the FM voices follow the slide */
-        fm_tune(&bfm, BV_PATCH[bv], mtof(bass.note), 1.0f, fm_q(P_BFRAT));
+        fm_tune(&bfm, BV_PATCH[bv], mtof(bass.note), 1.0f, 1.0f);
     for (j = 0; j < n; j++) {
         float x, tgt = gate > 0 ? 1.0f : 0.0f;
         if (gate > 0 && --gate == 0)
@@ -3592,7 +3622,7 @@ static void render_bells(uint32_t n)
     for (i = 0; i < NBELL; i++) {
         bell_t *v = &bell[i];
         float amp = v->amp, att = v->att;
-        const int alg = fm_alg_of(P_PALG, &v->pt);
+        const int alg = v->pt.alg;
         const float fb = fm_fb(P_PFB, &v->pt);
         uint32_t j = 0;
         if (!v->on)
@@ -3780,8 +3810,9 @@ static void render_drums(uint32_t n)
  * a second; a little of it into the plate.
  * Four controls shape it, each -1..+1 around the piece's own (0), and a character (a preset of the mix): ready
  * on ARP's Noise page (P_NCOL .. P_NCHAR, into nctl) */
-const char *const EN_NCHAR_NAME[EN_NNCHAR] = {"Wind", "Surf", "Space", "Air", "Tape"};   /* (BERLIN: the Atmosphere's;
+const char *const EN_NCHAR_NAME[EN_NNCHAR] = {"None", "Wind", "Surf", "Space", "Air", "Tape"};   /* (BERLIN: the Atmosphere's;
                                                   * NCHAR below is the dub's noise machine, heard as Tape) */
+#define NZCH 5                                  /* (the dub's noise machine's characters: Tape is its 1) */
 /* 1.3.0's noise machine (build/research/dubtechno/REPORT4-noise.md, after Bahadirhan Kocer's "Using Resonators in
  * Live"): not a broadband bed but a voice. A crackle groove, hits on a 2-bar sixteenth pattern (Density; redrawn by
  * phrase, now and then kept: a motif that comes back), each a click and a short noise burst, rings three combs tuned
@@ -3794,7 +3825,7 @@ static const struct {
                                                      * clicks, and offsets: hits, Decay, Tone, Air */
     float loose;                                    /* the dry clicks off the grid (the rest on its sixteenths) */
     uint8_t key, inh;                               /* on the key's triad (not the chord's); inharmonic ratios */
-} NCHAR[EN_NNCHAR] = {
+} NCHAR[NZCH] = {
     {1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.6f, 0, 0},     /* Vinyl: the resonated crackle groove, on the chord */
     {1.0f, 1.0f, 0.4f, -0.6f, 0.6f, -0.2f, -0.3f, 0.3f, 0, 0},  /* Tape: the hiss through the combs, a pad that swells between
                                                            * the beats (the duck), few hits */
@@ -3824,7 +3855,7 @@ static float cr_u(void)                          /* the noises' own randomness: 
     cnoise = cnoise * 1664525u + 1013904223u;
     return (float)(cnoise >> 8) * (1.0f / 16777216.0f);
 }
-static unsigned nz_char(void) { return nctl.character < EN_NNCHAR ? nctl.character : 0u; }
+static unsigned nz_char(void) { return nctl.character < NZCH ? nctl.character : 0u; }
 /* the phrase's groove: Density's hits (2..16 in two bars), Euclidean, turned, a couple nudged a step off; now and then
  * the last one kept (more often as Evolve falls): a motif that comes back */
 static void noise_pattern(void)
@@ -3906,24 +3937,26 @@ static void noise_step(int s)
  * and right apart; Space: sample-and-hold bleeps, short sines on random notes of the scale high up, at random, into
  * the echo; Air: a soft high hiss, breathing; Tape: the dub's noise machine (render_crackle). Colour: darker ..
  * brighter; Density: calmer .. busier; Drift: slower .. quicker. While playing, as the dub's was */
-enum { ATM_WIND, ATM_SURF, ATM_SPACE, ATM_AIR, ATM_TAPE };
+enum { ATM_NONE, ATM_WIND, ATM_SURF, ATM_SPACE, ATM_AIR, ATM_TAPE };
 static inline float svf_lp(const float *c, float *s, float x, float *bp);
-static uint32_t atm_rng = 0xBB67AE85u;
 static float atm_gate, atm_w[2] = {0.3f, 0.6f}, atm_wt[2] = {0.5f, 0.5f}, atm_gu = 0.5f, atm_gt = 0.5f, atm_s[2][2],
              atm_c[2][4], atm_sw[2] = {0.0f, 0.4f}, atm_swr[2] = {0.11f, 0.13f}, atm_lp[2], bl_ph, bl_dt, bl_env,
-             bl_gl, bl_gr, bl_wait;
+             bl_gl, bl_gr, bl_wait, atm_hl, atm_hr;
 static float atm_u(void) { return (float)(seq_rand(&atm_rng) >> 8) * (1.0f / 16777216.0f); }
 static float atm_noise(void) { return (float)(int32_t)seq_rand(&atm_rng) * (1.0f / 2147483648.0f); }
 static void render_atmos(uint32_t n)
 {
     const int c = atm_char;
-    const float col = fm_exp2f(fm_clampf(nctl.colour, -1.0f, 1.0f)), busy = fm_exp2f(fm_clampf(nctl.grain, -1.0f, 1.0f)),
+    const float bl_dk = fm_expf(-6.9f / ((0.025f + 0.0023f * (float)par[P_NTUNE]) * EN_SR)),
+                air = (float)(par[P_NROOM] + 50) * 0.01f, wid = (float)par[P_NWIDTH] * 0.02f,
+                rv = (float)par[P_NPLATE] * 0.02f, ec = (float)par[P_NECHO] * 0.02f,
+                col = fm_exp2f(fm_clampf(nctl.colour, -1.0f, 1.0f)), busy = fm_exp2f(fm_clampf(nctl.grain, -1.0f, 1.0f)),
                 spd = fm_exp2f(fm_clampf(nctl.drift, -1.0f, 1.0f)), sec_n = (float)n * (1.0f / EN_SR);
     float g;
     uint32_t j;
     int ch;
     atm_gate += ((en_playing ? 1.0f : 0.0f) - atm_gate) * fm_minf((float)n / (0.5f * EN_SR), 1.0f);
-    g = mutes & EN_M_NOISE ? 0.0f : crackle_vol * atm_gate;
+    g = mutes & EN_M_NOISE || c == ATM_NONE ? 0.0f : crackle_vol * atm_gate;
     if (g < 1e-5f) {
         for (j = 0; j < n; j++)
             crl[j] = crr[j] = 0.0f;
@@ -3933,7 +3966,7 @@ static void render_atmos(uint32_t n)
         if (atm_u() < sec_n * 0.35f * spd)
             atm_wt[ch] = atm_u();
         atm_w[ch] += (atm_wt[ch] - atm_w[ch]) * fm_minf(sec_n * 0.25f * spd, 1.0f);
-        svf_coefs(atm_c[ch], 250.0f * fm_exp2f(3.0f * atm_w[ch]) * col, 0.16f);
+        svf_coefs(atm_c[ch], 250.0f * fm_exp2f(3.0f * atm_w[ch]) * col, 0.32f - 0.28f * (float)par[P_NTUNE] * 0.01f);
     }
     if (atm_u() < sec_n * 0.5f * spd * busy)     /* (the gusts) */
         atm_gt = atm_u();
@@ -3974,12 +4007,12 @@ static void render_atmos(uint32_t n)
             if (bl_env > 1e-4f) {
                 const float x = 1.25f * sine(bl_ph + 2.0f + 0.3f * sine(2.0f * bl_ph)) * bl_env;
                 l = x * bl_gl, r = x * bl_gr;
-                bl_env *= 0.998f;                /* (~80 ms) */
+                bl_env *= bl_dk;                 /* (Ring: ~25 .. 250 ms) */
             }
             bl_ph += bl_dt;
             if (bl_ph >= 1.0f)
                 bl_ph -= 1.0f;
-            esend[j] += 0.9f * (l + r) * g;       /* (into the echo, twittering) */
+            esend[j] += 0.9f * ec * (l + r) * g;  /* (into the echo, twittering) */
             break;
         default:                                 /* Air: what a low-pass leaves, breathing with the gusts */
             for (ch = 0; ch < 2; ch++) {
@@ -3992,9 +4025,20 @@ static void render_atmos(uint32_t n)
             }
             break;
         }
+        if (c != ATM_AIR) {                      /* Air: a hiss under the others */
+            const float hl = atm_noise(), hr = atm_noise();
+            atm_hl += 0.35f * (hl - atm_hl), atm_hr += 0.35f * (hr - atm_hr);
+            l += 0.12f * air * (hl - atm_hl), r += 0.12f * air * (hr - atm_hr);
+        }
+        {                                        /* Width: 0 one, 50 as it is, 100 wider */
+            const float m = 0.5f * (l + r), sd = 0.5f * (l - r) * wid;
+            l = m + sd, r = m - sd;
+        }
         crl[j] = l * g;
         crr[j] = r * g;
-        rsend[j] += 0.5f * (l + r) * g;
+        rsend[j] += 0.5f * rv * (l + r) * g;
+        if (c != ATM_SPACE)
+            esend[j] += 0.15f * ec * (l + r) * g;   /* (a little into the echo; the bleeps, more: above) */
     }
 }
 
@@ -4339,8 +4383,8 @@ static void render_plucks(uint32_t n)
             x *= amp * att * g;
             mixl[j] += x * v->gl;
             mixr[j] += x * v->gr;
-            rsend[j] += x * 0.35f;
-            esend[j] += x * 0.6f;
+            rsend[j] += x * 0.35f * sq_rev[v->layer];
+            esend[j] += x * 0.6f * sq_echo[v->layer];
             amp *= adec;
             env *= edec;
             att += (1.0f - att) * 0.03f;
@@ -4413,7 +4457,7 @@ static void render_drone(uint32_t n)
                 v->ph2 += cv == 4 ? 3.5f * v->dt : 1.006f * v->dt;
                 if (v->ph2 >= 1.0f)
                     v->ph2 -= (float)(int)v->ph2;
-                x = svf_lp(c, v->s, x, &bp) * a * (i == EN_NPAD ? 0.7f : 1.0f);
+                x = svf_lp(c, v->s, x, &bp) * a * (i == EN_NPAD ? dr_pedal : 1.0f);
                 drl[j] += x * v->gl;
                 drr[j] += x * v->gr;
             }
@@ -4465,8 +4509,8 @@ static void render_drone(uint32_t n)
     for (j = 0; j < n; j++) {
         mixl[j] += drl[j];
         mixr[j] += drr[j];
-        rsend[j] += 0.5f * (drl[j] + drr[j]);
-        esend[j] += 0.12f * (drl[j] + drr[j]);
+        rsend[j] += 0.5f * dr_rev * (drl[j] + drr[j]);
+        esend[j] += 0.12f * dr_echo * (drl[j] + drr[j]);
     }
 }
 
@@ -4483,8 +4527,8 @@ static void render_lead(uint32_t n)
         if (!(j & 15u)) {                        /* the glide, the vibrato, the filter: every 16 */
             const float vd = vib * fm_clampf((lead.vt - 0.4f) * 2.5f, 0.0f, 1.0f), f = mtof(lead.cur + vd * sine(lead.vph));
             dt = f * (1.0f / EN_SR);
-            svf_coefs(lead.c1, f * (3.0f + 6.0f * lead.fenv), 0.9f);
-            svf_coefs(lead.c2, f * (3.0f + 6.0f * lead.fenv), 0.7f);
+            svf_coefs(lead.c1, f * (3.0f + 6.0f * lead.fenv) * ld_tone, 0.9f);
+            svf_coefs(lead.c2, f * (3.0f + 6.0f * lead.fenv) * ld_tone, 0.7f);
             lead.vt += 16.0f / EN_SR;
             lead.vph += 16.0f * 5.5f / EN_SR;
             if (lead.vph >= 1.0f)
@@ -4512,12 +4556,12 @@ static void render_lead(uint32_t n)
             x = svf_lp(lead.c1, lead.s1, x, &bp);
             x = svf_lp(lead.c2, lead.s2, x, &bp);
         }
-        lead.env += ((lead.on ? 1.0f : 0.0f) - lead.env) * (lead.on ? 0.0009f : 0.00008f);   /* (~25 ms in, ~300 ms out) */
+        lead.env += ((lead.on ? 1.0f : 0.0f) - lead.env) * (lead.on ? ld_att : 0.00008f);   /* (Attack in, ~300 ms out) */
         a = x * lead.env * g;
         mixl[j] += a * gl;
         mixr[j] += a * gr;
-        rsend[j] += 0.45f * a;
-        esend[j] += 0.6f * a;
+        rsend[j] += 0.45f * ld_rev * a;
+        esend[j] += 0.6f * ld_echo * a;
     }
     en_bass_level = lead.env;
 }
