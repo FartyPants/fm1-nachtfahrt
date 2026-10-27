@@ -25,7 +25,7 @@ const uint16_t EN_MODE_POOL[EN_NMODES] = {
 #undef B
 const uint8_t EN_LOOP_LEN[EN_NLOOP] = {13, 17, 23, 29};
 const uint8_t EN_DRUM_N[EN_NDRUM] = {16, 16, 16, 16, 16};
-const char *const EN_SEC_NAME[EN_NSEC] = {"Full", "Break", "Groove", "Thin"};
+const char *const EN_SEC_NAME[EN_NSEC] = {"Emerge", "Flow", "Solo", "Drift"};   /* (BERLIN's: the arc) */
 
 static const en_param_t PARAMS[P_NPARAMS] = {
     {"Chord", 0, 100, 60},    {"Sequence", 0, 100, 70},    {"Lead", 0, 100, 40},     {"Sequence 2", 0, 100, 60},
@@ -42,7 +42,7 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Attack", 0, 100, 40},   {"Colour", -50, 50, 0},   {"Resonance", -50, 50, 0}, {"Release", 0, 100, 50},
     {"Pedal", 0, 100, 70},    {"Seq reverb", 0, 100, 50}, {"Seq echo", 0, 100, 50}, {"Lead reverb", 0, 100, 90},
     {"Lead oct", -2, 1, 0},   {"Vibrato", 0, 100, 40},  {"Lead echo", 0, 100, 90}, {"Glide", 0, 100, 25},
-    {"Kick tune", -12, 12, 0}, {"Drone reverb", 0, 100, 50}, {"Drone echo", 0, 100, 50}, {"Seq2 echo", 0, 100, 50},
+    {"Ending", 0, 2, 0}, {"Drone reverb", 0, 100, 50}, {"Drone echo", 0, 100, 50}, {"Seq2 echo", 0, 100, 50},
     {"Chord alg", 0, 9, 0},   {"Chord ratio", -50, 50, 0}, {"Chord fb", 0, 100, 0}, {"Chord LFO", 0, 100, 0},
     {"Decay 2", 0, 100, 35},    {"Ping ratio", -50, 50, 0}, {"Ping fb", 0, 100, 0}, {"Ping LFO", 0, 100, 0},
     {"Bass alg", 0, 9, 0},    {"Lead attack", 0, 100, 10}, {"Bass fb", 0, 100, 0}, {"Bass LFO", 0, 100, 0},
@@ -65,8 +65,8 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Phaser", 0, 100, 40},   {"Cutoff 2", 0, 100, 40},  {"Phrases", 0, 100, 50},   {"Seq2 reverb", 0, 100, 50},
     {"Lead tone", 0, 100, 50}, {"Length 2", 3, 16, 7}, {"Blur", 0, 100, 50}, {"Echo tone", 0, 100, 50},
     {"Width", 0, 100, 50},    {"Ring", 0, 100, 50},
-    {"Noise width", 0, 100, 50}, {"Noise plate", 0, 100, 50}, {"Noise echo", 0, 100, 50}, {"Hat len", -50, 50, 0},
-    {"Noise LFO", 0, 100, 0}, {"Rumble", 0, 100, 0},
+    {"Noise width", 0, 100, 50}, {"Noise plate", 0, 100, 50}, {"Noise echo", 0, 100, 50}, {"Emerge", 0, 100, 0},
+    {"Noise LFO", 0, 100, 0}, {"Arc", 0, 100, 0},
 };
 const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PARAMS[i] : &PARAMS[0]; }
 
@@ -187,7 +187,7 @@ void en_piece(int i, int16_t *par, uint16_t *pool)
                                   P_CVOICE, P_CATT, P_DREL, P_PHASER, P_LEAD, P_LVOICE, P_GLIDE, P_VIB, P_LDENS, P_LOCT,
                                   P_CRACKLE, P_NCHAR, P_PEDAL, P_SQREV, P_SQECHO, P_LDREV, P_LDECHO, P_DRREV, P_DRECHO,
                                   P_S2REV, P_S2ECHO, P_LTONE, P_S2CUT, P_S2DEC, P_LATT, P_NWIDTH, P_NPLATE, P_NECHO, P_NTUNE,
-                                  P_NROOM, P_NGRAIN, P_NCOL, P_NDRIFT, P_S2IN, P_LDIN};
+                                  P_NROOM, P_NGRAIN, P_NCOL, P_NDRIFT, P_S2IN, P_LDIN, P_EMERGE, P_ARC, P_ENDING};
     unsigned k;
     for (p = 0; p < P_NPARAMS; p++)
         par[p] = PIECES[i].v[p];
@@ -277,6 +277,8 @@ void en_param_text(int i, int v, char *b)
         s = v ? "16ths" : "8ths";
     else if (i == P_TAPAT || i == P_TAPBT)
         s = ETIME_NAME[(unsigned)v < 6u ? v : 0];          /* the echo's times: 1/8 .. 1 bar */
+    else if (i == P_ENDING)
+        s = v == 2 ? "Fade" : v ? "Supernova" : "Crash";
     else if (i == P_TRANS)
         s = v == 2 ? "Bed" : v ? "Diatonic" : "Parallel";
     else if (i == P_MODE)
@@ -1458,6 +1460,103 @@ static void bell_ring(int l, int slot)
     bell_voice(l, n, vel, irand(220));           /* a hand on the grid: up to 5 ms late */
 }
 
+/* ---------------------------------------------------------------- the arc --- */
+/* (BERLIN, spec 5) how a piece builds: Emerge (the Drone and the Atmosphere; the Sequence fading in through a closed
+ * filter over its last third), then Flow (the sequences; the Lead now and then), Solo (the Lead in full), Drift (the
+ * sequences out), 16 .. 64 bars each (Motion: shorter; at 0, Flow for ever), a swell into Flow from Drift (the
+ * Sequence back through its filter, the echo up, two bars). Over an Arc of bars the Sequence's filter rises to a peak
+ * at 80%, the Atmosphere louder just before it; then an ending (Crash: a take-off into the echo; Supernova: the echo
+ * past full; Fade), 8 bars, and the arc again (Seq2 in and Lead in counted again from the Sequence fully in) */
+static uint8_t ar_sec = EN_SEC_FLOW, ar_end, ar_first;
+static int ar_left = 64, ar_bar, ar_in;
+static float ar_seq = 1.0f, ar_cut = 1.0f, ar_atm = 1.0f, ar_push, ar_nova, ar_cr_env, ar_cr_f = 5000.0f;
+static uint32_t ar_rng;
+volatile uint8_t en_swell;
+volatile uint32_t en_endings;
+static int ar_emerge(void) { return par[P_EMERGE] ? 32 + 160 * par[P_EMERGE] / 100 : 0; }
+static int ar_len(void) { return par[P_ARC] ? 128 + 640 * par[P_ARC] / 100 : 0; }
+static int ar_sec_len(void) { return 16 + (int)(48.0f * (1.0f - motion)); }
+static void ar_shape(void)                       /* the Sequence's level and filter, the Atmosphere, the echo, as it stands */
+{
+    const int e = ar_emerge(), L = ar_len();
+    float rise = 0.5f;
+    if (ar_end)
+        ar_seq = (float)ar_end / 8.0f;
+    else if (ar_sec == EN_SEC_EMERGE)
+        ar_seq = fm_clampf(((float)ar_bar - (float)(2 * e) / 3.0f) / ((float)e / 3.0f), 0.0f, 1.0f);
+    else if (ar_sec == EN_SEC_DRIFT)
+        ar_seq = en_swell ? (float)(3 - ar_left) / 3.0f : 0.0f;
+    else
+        ar_seq = 1.0f;
+    if (L) {
+        const float pos = (float)ar_bar / (float)L;
+        rise = pos < 0.8f ? pos / 0.8f : 1.0f - 2.5f * (pos - 0.8f);
+    }
+    ar_cut = (L ? fm_exp2f(2.0f * rise - 1.0f) : 1.0f) * (0.25f + 0.75f * ar_seq);
+    ar_atm = L && !ar_end && (float)ar_bar >= 0.7f * (float)L && (float)ar_bar < 0.8f * (float)L ? 2.0f : 1.0f;
+    ar_push = en_swell ? 0.5f : 0.0f;
+}
+static void ar_start(void)                       /* the arc from its start: Emerge, or Flow at once */
+{
+    ar_bar = 0;
+    ar_end = 0;
+    en_swell = 0;
+    ar_nova = 0.0f;
+    if (ar_emerge()) {
+        ar_sec = EN_SEC_EMERGE;
+        ar_left = ar_emerge();
+        ar_in = -1;
+    } else {
+        ar_sec = EN_SEC_FLOW;
+        ar_left = ar_sec_len();
+        ar_in = 0;
+    }
+    en_section = ar_sec;
+    ar_shape();
+}
+static void ar_tick_bar(void)                    /* a bar line (the first, at the start, already counted) */
+{
+    if (ar_first) {
+        ar_first = 0;
+        return;
+    }
+    ar_bar++;
+    if (ar_end) {                                /* the ending: then the arc again */
+        if (--ar_end == 0) {
+            en_endings++;
+            ar_start();
+            return;
+        }
+        ar_shape();
+        return;
+    }
+    if (ar_len() && ar_bar >= ar_len()) {        /* the arc done: its ending */
+        ar_end = 8;
+        en_swell = 0;
+        if (par[P_ENDING] == 0)
+            ar_cr_env = 1.0f, ar_cr_f = 5000.0f;
+        ar_nova = par[P_ENDING] == 1 ? 1.0f : 0.0f;
+        ar_shape();
+        return;
+    }
+    if (--ar_left <= 0) {
+        const float r = (float)(seq_rand(&ar_rng) >> 8) * (1.0f / 16777216.0f);
+        switch (ar_sec) {
+        case EN_SEC_EMERGE: ar_sec = EN_SEC_FLOW, ar_in = ar_bar; break;
+        case EN_SEC_FLOW:
+            if (motion > 0.005f)
+                ar_sec = r < 0.6f ? EN_SEC_SOLO : EN_SEC_DRIFT;
+            break;
+        case EN_SEC_SOLO: ar_sec = r < 0.7f ? EN_SEC_FLOW : EN_SEC_DRIFT; break;
+        default: ar_sec = EN_SEC_FLOW; break;
+        }
+        ar_left = ar_sec_len();
+    }
+    en_swell = ar_sec == EN_SEC_DRIFT && ar_left <= 2;
+    en_section = ar_sec;
+    ar_shape();
+}
+
 /* ------------------------------------------------------------- the sequences --- */
 /* (BERLIN) two step sequences (seq.c: the pattern, its performer, its pitch, the repeats' history), each note a
  * pluck (render_plucks): the Sequence (layer 0, MIDI channel 2) with its two repeats, played again as notes
@@ -1552,7 +1651,7 @@ static void pluck_voice(int l, int n, int vel, int rep)   /* rep: a repeat, pann
     v->env = 1.0f;
     v->adec = l ? sq2_adec : sq_adec;
     v->edec = l ? sq2_edec : sq_edec;
-    v->cut = l ? sq2_cut * fm_exp2f(-2.0f * (1.0f - s2_gain)) : sq_cut * sw_mul * (perf & EN_PF_SWEEP ? 4.0f : 1.0f);   /* (PERFORM's
+    v->cut = l ? sq2_cut * fm_exp2f(-2.0f * (1.0f - s2_gain)) : sq_cut * sw_mul * ar_cut * (perf & EN_PF_SWEEP ? 4.0f : 1.0f);   /* (PERFORM's
                                                   * Sweep held: the Sequence's filter two octaves open) */   /* (its filter opening as it comes in) */
     v->s1[0] = v->s1[1] = v->s2[0] = v->s2[1] = 0.0f;
     p = ((l ? 0.0f : rep ? 0.35f : -0.25f) + 1.0f) * (FM_PI / 4.0f);
@@ -1627,8 +1726,8 @@ static void seq_tick(void)                       /* a sixteenth: the sequences' 
     static const uint8_t DT[6] = {2, 3, 4, 6, 8, 16};   /* the repeats' times (the echo's), in sixteenths */
     const int on_grid = par[P_SEQGRID] || !(sixteenth & 1u);
     int l;
-    s2_gain = par[P_S2IN] ? fm_minf((float)(sixteenth >> 4) / (float)par[P_S2IN], 1.0f) : 1.0f;   /* (the bars since the
-                                                  * start: the arc's Emerge will move this to "since the Sequence is in") */
+    s2_gain = ar_in < 0 ? 0.0f : (par[P_S2IN] ? fm_minf((float)(ar_bar - ar_in) / (float)par[P_S2IN], 1.0f) : 1.0f) * ar_seq;   /* (the
+                                                  * bars since the Sequence came fully in; the arc's level too) */
     if (!(sixteenth & 15u)) {                    /* the Sweep: the Sequence's cutoff wandering, a new aim every 8 .. 64
                                                   * bars (~20 s .. 2.5 min at 96), up to 1.5 octaves either way */
         if (++sw_bars >= sw_len) {
@@ -1636,12 +1735,14 @@ static void seq_tick(void)                       /* a sixteenth: the sequences' 
             sw_len = 8 + (int)(seq_rand(&sq_rng) % 57u);
             sw_bars = 0;
         }
-        sw_v += (sw_t - sw_v) * (1.0f / (float)sw_len);
+        sw_v += fm_clampf((sw_t - sw_v) * (1.0f / (float)sw_len), -0.08f, 0.08f);
         sw_mul = fm_exp2f(1.5f * (float)pe(P_SWEEP) * 0.01f * sw_v);
         en_seq_cut = 0.5f + 0.5f * (float)pe(P_SWEEP) * 0.01f * sw_v;
     }
-    if (!(sixteenth & 15u))
+    if (!(sixteenth & 15u)) {
+        ar_tick_bar();
         seq_publish();
+    }
     if (!(sixteenth & 15u))                      /* a bar line: the performer, when a pass ended on it (at most every
                                                   * 4 bars), or every 16 */
         for (l = 0; l < 2; l++)
@@ -1671,6 +1772,8 @@ static void seq_tick(void)                       /* a sixteenth: the sequences' 
                                                                                * as Synth Seeker's 121 and 77) */
                 if (l)
                     vel = (int)((float)vel * s2_gain * s2_gain);   /* (Sequence 2 coming in: silent at first) */
+                else
+                    vel = (int)((float)vel * ar_seq);   /* (the arc: Emerge's fade in, Drift out, the ending) */
                 pluck_voice(l, played, vel, 0);
             }
             sq_pos[l] = seq_next(&q, st);
@@ -1771,8 +1874,10 @@ static void lead_tick(void)                      /* a sixteenth: the phrase goes
     if (!(sixteenth & 15u) && !ld_n) {           /* a bar line, between phrases */
         if (ld_rest)
             ld_rest--;
-        else if ((int)(sixteenth >> 4) >= par[P_LDIN] && seq_rand(&ld_rng) % 100u < (uint32_t)(20 + 6 * pe(P_LDENS) / 10))
-            lead_phrase();                       /* (not before Lead in bars: the sequence established first) */
+        else if (ar_in >= 0 && ar_bar - ar_in >= par[P_LDIN] && ar_sec != EN_SEC_EMERGE && !ar_end &&
+                 seq_rand(&ld_rng) % 100u < (uint32_t)(20 + 6 * pe(P_LDENS) / 10) / (ar_sec == EN_SEC_FLOW ? 3u : 1u))
+            lead_phrase();                       /* (not before Lead in bars after the Sequence is in: established first;
+                                                  * Solo and Drift its own, Flow now and then) */
     }
     if (!ld_n)
         return;
@@ -1937,7 +2042,7 @@ static void drum_fire(int d, float vel)
     v->att = 0.0f;
     switch (d) {
     case 0: {                                   /* kick: a sine falling fast from ~5x to its note */
-        float f = mtof((float)(kick_note(par[P_ROOT]) + par[P_KTUNE])), pu = 0.0f;
+        float f = mtof((float)kick_note(par[P_ROOT])), pu = 0.0f;
         v->note = DRUM_GM[0];
         v->inc = f * KIT[kit].start * fm_exp2f(0.8f * pu) * (1.0f / EN_SR);
         v->inc_end = f * (1.0f / EN_SR);
@@ -1948,13 +2053,13 @@ static void drum_fire(int d, float vel)
     }
     case 1:                                     /* the shaker: short; it chokes the open hat */
         v->note = DRUM_GM[1];
-        v->adec = fm_expf(-6.9f / (0.07f * KIT[kit].hat_t * fm_exp2f(1.2f * rel(P_HLEN)) * EN_SR));   /* (1.3.0: 45 ms to 70: a
+        v->adec = fm_expf(-6.9f / (0.07f * KIT[kit].hat_t * 1.0f * EN_SR));   /* (1.3.0: 45 ms to 70: a
                                                                                              * shaker; the hats' length) */
         drum[2].adec = fm_expf(-6.9f / (0.03f * EN_SR));
         break;
     case 2:                                     /* open hat: the "tss" off the beat */
         v->note = DRUM_GM[2];
-        v->adec = fm_expf(-6.9f / (hat_open * KIT[kit].hat_t * fm_exp2f(1.2f * rel(P_HLEN)) * EN_SR));
+        v->adec = fm_expf(-6.9f / (hat_open * KIT[kit].hat_t * 1.0f * EN_SR));
         break;
     case 3:                                     /* the rim: a short wooden tok, thrown into the echo */
         v->note = DRUM_GM[3];
@@ -2038,7 +2143,7 @@ static void section_set(int s)
 {
     float bl = 16.0f * step_len;
     sec = (uint8_t)s;
-    en_section = (uint8_t)s;
+    (void)0;                                     /* (BERLIN: en_section is the arc's) */
     lay_kick = lay_hats = lay_open = lay_bass = lay_stabs = 1;
     switch (s) {
     case SEC_BREAK:                             /* the kick and the bass out; dark, then building */
@@ -2646,7 +2751,8 @@ static inline void echoes(float in, float *el, float *er, float *xl, float *xr)
                 tape_w = 0;
             tape[tape_w] = s;
         } else {
-            float g = fm_minf(echo_fb + 0.15f * st_throw + 0.12f * perf_echo + 0.1f * dub_up, fb_cap);   /* (Dub: past the knob) */
+            float g = fm_minf(echo_fb + 0.15f * st_throw + 0.12f * perf_echo + 0.1f * dub_up + 0.35f * ar_nova,
+                              fb_cap + 0.3f * ar_nova);   /* (Dub: past the knob; the arc's Supernova, past full) */
             if (ec_pp)
                 g *= g;                          /* (two repeats a turn round: the feedback squared) */
             tape_lp += tape_lpc * (f1 + fb_lean * st_throw * (f2 - f1) - tape_lp);   /* each time round: thinner, darker */
@@ -2968,7 +3074,7 @@ static void apply(int p, int v)
     }
     case P_CATT: dr_up = 1.0f / (0.5f * fm_exp2f((float)v * 0.0458f) * EN_SR); break;    /* a swell of 0.5 .. 12 s */
     case P_DREL: dr_down = 1.0f / (fm_exp2f((float)v * 0.039f) * EN_SR); break;         /* dying in 1 .. 15 s */
-    case P_RUMBLE:                               /* the kick's rumble: none (0) .. a deep roar (100), longer as it rises:
+    case P_ARC:                               /* the kick's rumble: none (0) .. a deep roar (100), longer as it rises:
                                                   * its tail 0.8 s .. 2.5 s (rumble); (1.3.0: off, not yet to standard,
                                                   * the user: EN_RUMBLE 1 for 1.4.0's work; the value kept, saved) */
         rb_amt = EN_RUMBLE ? (float)v * (float)v * 0.0001f : 0.0f;
@@ -3112,6 +3218,7 @@ void en_init(void)
     dr_rng = 0x6A09E667u;
     ld_rng = 0x3C6EF372u;
     atm_rng = 0xBB67AE85u;
+    ar_rng = 0x510E527Fu;
     root_note = 55;                              /* (the voicing from its first, the walk with no past) */
     walk_prev = 0;
     memset(pluck, 0, sizeof pluck);              /* (BERLIN's voices from rest: none sounding, none to let go) */
@@ -3188,6 +3295,8 @@ static void play_start(int from_top)
         bar = 0;
         for (i = 0; i < EN_NLOOP; i++)
             loop_pos[i] = 0;
+        ar_start();                              /* (the arc from its start; the first bar line already counted) */
+        ar_first = 1;
         for (i = 0; i < 2; i++) {                /* the sequences from their first step */
             sq_pos[i] = 0;
             sq_bars[i] = sq_wrap[i] = 0;
@@ -4012,7 +4121,7 @@ static void render_atmos(uint32_t n)
     uint32_t j;
     int ch;
     atm_gate += ((en_playing ? 1.0f : 0.0f) - atm_gate) * fm_minf((float)n / (0.5f * EN_SR), 1.0f);
-    g = mutes & EN_M_NOISE || c == ATM_NONE ? 0.0f : crackle_vol * atm_gate;
+    g = mutes & EN_M_NOISE || c == ATM_NONE ? 0.0f : crackle_vol * atm_gate * ar_atm;
     if (g < 1e-5f) {
         for (j = 0; j < n; j++)
             crl[j] = crr[j] = 0.0f;
@@ -4637,6 +4746,29 @@ static void render_lead(uint32_t n)
     en_bass_level = lead.env;
 }
 
+/* (BERLIN) the arc's Crash: a take-off, noise through a band-pass falling five octaves from ~5 kHz in 4 s, dying in
+ * ~4 s, mostly into the echo */
+static float ar_cr_s[2];
+static void render_crash(uint32_t n)
+{
+    float c[4], bp;
+    uint32_t j;
+    if (ar_cr_env < 1e-4f)
+        return;
+    svf_coefs(c, ar_cr_f, 0.25f);
+    for (j = 0; j < n; j++) {
+        float x;
+        svf_lp(c, ar_cr_s, atm_noise(), &bp);
+        x = 0.5f * bp * ar_cr_env;
+        mixl[j] += x;
+        mixr[j] += x;
+        esend[j] += 1.2f * x;
+        rsend[j] += 0.5f * x;
+        ar_cr_env *= 0.99996f;
+    }
+    ar_cr_f = fm_maxf(ar_cr_f * fm_exp2f(-(float)n * (5.0f / (4.0f * EN_SR))), 120.0f);
+}
+
 static void render_chunk(int32_t *out, uint32_t n, float gain)
 {
     uint32_t j;
@@ -4644,7 +4776,7 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
     const float rg = rev_send * rev_in_gain * (1.0f - 0.2f * arcm);
     /* (the cloud listens as if Reverb were at 63 at least, so Cloud works with little reverb too) */
     const float cl_in = rev_send > 0.0001f ? fm_maxf(rev_send, 0.4f) / rev_send : 0.0f;
-    const float push = perf_echo;
+    const float push = fm_maxf(perf_echo, ar_push);   /* (and the arc's swell) */
     float eg = (echo_send + (1.0f - echo_send) * push) * ein_gain, ca = cloud_amt * (sec == SEC_BREAK ? 1.4f : 1.0f);   /* more in a Break */
     /* PERFORM's Open and Shut on the music, the kick left out on top: Shut a low-pass down to ~230 Hz, Open a
      * resonant high-pass up to ~400 Hz (thin and bright), both swept with perf_sw */
@@ -4672,6 +4804,7 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
         render_plucks(n);
         render_drone(n);
         render_lead(n);
+        render_crash(n);
         widen(n);                                /* (the chord's and the pings' dry, wider) */
         if (tl == 2)
             for (j = 0; j < n; j++)

@@ -72,7 +72,7 @@ said Setup page: Tune 0, MIDI out On
 tap GLO
 wait 300
 expect view 22
-said Arc page: Seq2 in 8, Lead in 16, Sweep 50, Motion 30
+said Arc page: Emerge 0, Seq2 in 8, Lead in 16, Arc 0
 # the voices: ALGORITHM on a layer's page
 tap ENV
 wait 300

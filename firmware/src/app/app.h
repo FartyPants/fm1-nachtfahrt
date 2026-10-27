@@ -10,7 +10,7 @@
 #define EN_VERSION "DEV"
 #endif
 #define PROJ_MAGIC 0x314C5242u           /* "BRL1": DUB-1's ("DUB1") and AMB-1's ("ENO1") projects give the recipes */
-#define PROJ_FORMAT 4u                   /* (4: an Atmosphere in half the pieces; 3: Sequence 2 heard by default; 2: the pages' new parameters, the Lead's sends; while BERLIN is built, a
+#define PROJ_FORMAT 5u                   /* (5: the arc: Emerge, Arc, Ending; 4: an Atmosphere in half the pieces; 3: Sequence 2 heard by default; 2: the pages' new parameters, the Lead's sends; while BERLIN is built, a
                                          * slot that changes meaning moves the format on, so a save from before gives the
                                          * recipes) */
 #define NPIECES EN_NPIECES

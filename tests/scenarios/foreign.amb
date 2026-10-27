@@ -3,7 +3,7 @@
 storefile tests/host/proj-1.2.0-basic-changed.bin
 reboot
 wait 500
-expect format 4
+expect format 5
 expect piece 0
 # piece 0's value (Length, BERLIN's 8), not the 77 that was saved there
 expect par28 8

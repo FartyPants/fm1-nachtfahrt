@@ -59,7 +59,7 @@ enum {
     P_CATT, P_CCOL, P_CRES, P_DREL,                   /* the chord: attack, colour, resonance, the filter's envelope */
     P_PEDAL, P_SQREV, P_SQECHO, P_LDREV,                  /* the pings: tone, ratio, length, bend */
     P_LOCT, P_VIB, P_LDECHO, P_GLIDE,              /* the bass: bite, shape, length, slide */
-    P_KTUNE, P_DRREV, P_DRECHO, P_S2ECHO,               /* the drums: the kick's tune, length, punch; the hats' tone */
+    P_ENDING, P_DRREV, P_DRECHO, P_S2ECHO,               /* the drums: the kick's tune, length, punch; the hats' tone */
     /* the FM pages (an FM voice): the algorithm (0: the voice's; 1..9), the upper operators' ratio, op 4's
      * feedback, the modulators' decay: relative, -50 .. +50 */
     P_CALG, P_CFRAT, P_CFB, P_CFDEC,
@@ -98,9 +98,9 @@ enum {
     P_LTONE, P_SEQ2LEN, P_EBLUR, P_ETONE, P_EWIDTH, P_NTUNE,
     /* (format 15) the Noise page's second (SAVE again): its width (0 mono, 50 as it was, 100 wide), how much of it
      * into the plate and into the echo (50 as it was, 0 none, 100 twice); the hats' length (-50..+50 around the kit's) */
-    P_NWIDTH, P_NPLATE, P_NECHO, P_HLEN,
+    P_NWIDTH, P_NPLATE, P_NECHO, P_EMERGE,
     P_NLFO,                                           /* (1.3.0, format 16) the noise's LFO: its rings' tone, over a bar */
-    P_RUMBLE,                                         /* (1.3.0, format 17) the kick's rumble */
+    P_ARC,                                         /* (1.3.0, format 17) the kick's rumble */
     P_NPARAMS
 };
 typedef struct {
@@ -175,6 +175,10 @@ extern const char *const EN_CV_NAME[EN_NCV], *const EN_PV_NAME[EN_NPV], *const E
 /* the arrangement's sections */
 enum { SEC_FULL, SEC_BREAK, SEC_GROOVE, SEC_THIN, EN_NSEC };
 extern const char *const EN_SEC_NAME[EN_NSEC];
+enum { EN_SEC_EMERGE, EN_SEC_FLOW, EN_SEC_SOLO, EN_SEC_DRIFT };   /* (BERLIN) en_section: the arc's sections */
+extern volatile uint8_t en_swell;               /* the arc's swell into Flow (its two bars) */
+extern volatile uint32_t en_endings;            /* the arc's endings so far */
+extern volatile float en_seq_cut;               /* the Sweep's wander, 0..1 */
 
 /* state for the screen (UI) */
 extern volatile uint8_t en_playing, en_frozen, en_ext;

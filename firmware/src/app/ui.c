@@ -112,7 +112,7 @@ static const uint16_t VIEW_KNOB[NVIEWS][4] = {
     {P_NGRAIN, P_NWIDTH, P_NDRIFT, P_NROOM},       /* the Atmosphere */
     {P_EBLUR, P_ETONE, P_EWIDTH, P_SIZE},
     {P_NCOL, P_NTUNE, P_NPLATE, P_NECHO},      /* its space */
-    {P_S2IN, P_LDIN, P_SWEEP, P_MOTION},         /* the Arc (GLO again): how the piece builds (the arc's Emerge and Ending
+    {P_EMERGE, P_S2IN, P_LDIN, P_ARC},         /* the Arc (GLO again): how the piece builds (the arc's Emerge and Ending
                                                   * to come, in Sweep's and Motion's places) */
 };
 static const char *const KNOB_LABEL[NVIEWS][4] = {
@@ -138,7 +138,7 @@ static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Density", "Width", "Drift", "Air"},
     {"Blur", "Tone", "Width", "Size"},
     {"Colour", "Ring", "Reverb", "Echo"},
-    {"Seq2 in", "Lead in", "Sweep", "Motion"},
+    {"Emerge", "Seq2 in", "Lead in", "Arc"},
 };
 /* what each knob does, a line: on the rule above the knobs while it's being turned (in capitals; each fits the
  * rule's 228 px: the host's expect helpfit) */
@@ -1145,7 +1145,7 @@ static const uint8_t NUDGE_PAR[NNUDGE][8] = {   /* (the FM ones, the last two of
     {P_CATT, P_CCOL, P_CRES, P_DECAY, P_CATT, P_CUTOFF, P_CFRAT, P_CFB},   /* (Env, on no page now, left be) */
     {P_PEDAL, P_SQREV, P_SQECHO, P_LDREV, P_S2CUT, P_SQECHO, P_PFRAT, P_PFB},   /* (Ghost: the dry against the echo) */
     {P_LOCT, P_VIB, P_LDECHO, P_GLIDE, P_TRANS, P_LDECHO, P_LATT, P_BFB},
-    {P_KTUNE, P_DRREV, P_DRECHO, P_S2ECHO, P_DRREV, P_S2REV, P_S2ECHO, P_KTUNE},   /* (Hats: their level, against the kick) */
+    {P_ENDING, P_DRREV, P_DRECHO, P_S2ECHO, P_DRREV, P_S2REV, P_S2ECHO, P_ENDING},   /* (Hats: their level, against the kick) */
     {P_ECHO, P_FEEDBACK, P_REVERB, P_SIZE, P_CLOUD, P_ECHO, P_ECHO, P_ECHO},   /* (the space: FX; its shake, a new echo time) */
     {P_NCOL, P_NGRAIN, P_NTUNE, P_NROOM, P_NCOL, P_NGRAIN, P_NTUNE, P_NCOL},   /* (the noise: SAVE; its shake, a new character) */
 };
@@ -1226,7 +1226,7 @@ static void nudge(int layer, int how)
         int w = nrand(np), p = pick[w], lo = en_param_info(p)->lo, hi = en_param_info(p)->hi;
         int st = (hi - lo) / (p == P_DECAY || p == P_CUTOFF || p == P_FEEDBACK ? 16 : 8), v = proj.par[p], d;
         pick[w] = pick[--np];                    /* (not twice in one nudge) */
-        if (p == P_KTUNE)
+        if (p == P_ENDING)
             st = 2;                              /* (the kick's tune: semitones) */
         if (how == NUDGE_EVOLVE)
             st = (st + 1) / 2;
@@ -2744,7 +2744,7 @@ static void draw_main(void)
         char t[12];
         int b;
         caps(t, EN_SEC_NAME[en_section], sizeof t);
-        cv_text(8, 2, &FONT_XS, t, en_section == SEC_FULL ? K_DIM : K_ACC);
+        cv_text(8, 2, &FONT_XS, t, en_section == EN_SEC_FLOW ? K_DIM : K_ACC);
         for (b = 0; b < 8; b++) {                /* (1.3.0: bars 4 and 8, the B bars, whiter; the 8th blinking on its
                                                   * bar when the next phrase brings a change) */
             const int bb = (b == 3 || b == 7) && !ui.lock, lit = en_playing && b <= en_phrase_bar;   /* (Lock: all alike) */

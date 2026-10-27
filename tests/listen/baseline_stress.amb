@@ -1,5 +1,5 @@
-# CPU, stressed (BERLIN): Density, both repeats, Sequence 2, the Phaser and the Lead's phrases at full (DUB-1's was
-# Night Drive with its pings' Density and Cloud at 100: docs/BASELINE.md)
+# CPU, stressed (BERLIN): Density, both repeats, Sequence 2, the Phaser and the Lead's phrases at full, on the unified
+# pages (DUB-1's was Night Drive with its pings' Density and Cloud at 100: docs/BASELINE.md)
 spin PRESET 5
 wait 300
 expect piece 5
@@ -8,14 +8,16 @@ wait 200
 spin K1 100
 tap ARP
 wait 200
+tap ARP
+wait 200
 spin K1 100
 spin K3 100
 tap SEQ
 wait 200
-spin K1 100
+spin K4 100
 tap ENV
 wait 200
-spin K4 100
+spin K3 100
 tap LFO
 wait 200
 spin K1 100

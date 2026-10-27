@@ -675,29 +675,6 @@ int main(void)
             }
     }
 
-    /* the arrangement: at Motion 100, it leaves Full now and then; at Motion 0, never */
-    {
-        int k, m, secs[EN_NSEC];
-        static const int MOT[2] = {100, 0};
-        for (m = 0; m < 2; m++) {
-            memset(secs, 0, sizeof secs);
-            fresh();
-            en_set(P_MOTION, MOT[m]);
-            en_play(1);
-            for (k = 0; k < 600; k++) {
-                run(1.0f);
-                secs[en_section < EN_NSEC ? en_section : 0]++;
-            }
-            printf("  10 min at Motion %d: Full %d s, Break %d, Groove %d, Thin %d\n", MOT[m], secs[SEC_FULL],
-                   secs[SEC_BREAK], secs[SEC_GROOVE], secs[SEC_THIN]);
-            if (MOT[m])
-                CHECK(secs[SEC_FULL] < 500 && secs[SEC_FULL] > 150 && secs[SEC_BREAK] > 0,
-                      "Motion 100: Full %d s, Break %d s", secs[SEC_FULL], secs[SEC_BREAK]);
-            else
-                CHECK(secs[SEC_FULL] == 600, "Motion 0 left Full (%d s Full)", secs[SEC_FULL]);
-        }
-    }
-
     /* a new key while playing: the chord's notes in it at once */
     {
         uint32_t pent = EN_MODE_POOL[MODE_PENT_MIN];
@@ -952,7 +929,8 @@ int main(void)
         run(64.0f * 2.5f);
         for (i = 0; i < sq_n; i++)
             off += (sq_at[i] & 3u) != 0u;
-        CHECK(en_bars / 16u >= 63u && sq_n >= 4u * 63u && !off, "test_pattern_mode: %u of %u off the written steps (%u bars)",
+        /* (the arc's Drift takes the sequences out a while: notes in most bars, not all) */
+        CHECK(en_bars / 16u >= 63u && sq_n >= 100u && !off, "test_pattern_mode: %u of %u off the written steps (%u bars)",
               off, sq_n, en_bars / 16u);
         en_set(P_SMODE, 0);
     }
@@ -1194,6 +1172,122 @@ int main(void)
               v_lo, n_hi, v_hi);
         CHECK(ld_first != 0xFFFFFFFFu && ld_first >= 8u * 16u, "test_layer_entries: Lead in 8: first Lead note at %u",
               ld_first);
+    }
+
+    /* (BERLIN) the sections: Motion 0 stays in Flow; Motion 100 goes through Solo and Drift too */
+    {
+        int k, m, secs[EN_NSEC];
+        static const int MOT[2] = {100, 0};
+        for (m = 0; m < 2; m++) {
+            memset(secs, 0, sizeof secs);
+            fresh();
+            en_set(P_MOTION, MOT[m]);
+            en_play(1);
+            for (k = 0; k < 600; k++) {
+                run(1.0f);
+                secs[en_section < EN_NSEC ? en_section : 0]++;
+            }
+            printf("  10 min at Motion %d: Emerge %d s, Flow %d, Solo %d, Drift %d\n", MOT[m], secs[EN_SEC_EMERGE],
+                   secs[EN_SEC_FLOW], secs[EN_SEC_SOLO], secs[EN_SEC_DRIFT]);
+            if (MOT[m])
+                CHECK(secs[EN_SEC_FLOW] > 0 && secs[EN_SEC_SOLO] > 0 && secs[EN_SEC_DRIFT] > 0,
+                      "test_sections: Motion 100: Flow %d s, Solo %d, Drift %d", secs[EN_SEC_FLOW], secs[EN_SEC_SOLO],
+                      secs[EN_SEC_DRIFT]);
+            else
+                CHECK(secs[EN_SEC_FLOW] == 600, "test_sections: Motion 0 left Flow (%d s in Flow)", secs[EN_SEC_FLOW]);
+        }
+    }
+
+    /* (BERLIN) the arc: at 160 BPM (a bar 1.5 s), Emerge 1 (33 bars): Emerge first, the Sequence silent through its
+     * first half; then not Emerge again until an ending; an Arc of 1 (134 bars) ends (the ending's 8 bars), and Emerge
+     * follows; over 30 minutes at Motion 70 every section is heard */
+    {
+        uint32_t b, i, early = 0, lastb = 0xFFFFFFFFu;
+        int emerge_first = 1, emerge_after = 0, back = 0, seen[EN_NSEC] = {0, 0, 0, 0}, k;
+        fresh();
+        en_set(P_TEMPO, 160);
+        en_set(P_EMERGE, 1);
+        en_set(P_ARC, 1);
+        en_set(P_MOTION, 70);
+        en_play(1);
+        for (k = 0; k < 1200; k++) {             /* 30 minutes, a second at a time */
+            run(1.5f);
+            b = en_bars / 16u;
+            if (b == lastb)
+                continue;
+            lastb = b;
+            seen[en_section < EN_NSEC ? en_section : 0] = 1;
+            if (b < 33u && en_section != EN_SEC_EMERGE)
+                emerge_first = 0;
+            if (b > 34u && !en_endings && en_section == EN_SEC_EMERGE)
+                emerge_after = 1;
+            if (en_endings && en_section == EN_SEC_EMERGE)
+                back = 1;
+        }
+        for (i = 0; i < sq_n; i++)
+            early += sq_at[i] < 16u * 16u;
+        CHECK(emerge_first && !emerge_after, "test_starts_emerge: Emerge for the first 33 bars %d, again too soon %d",
+              emerge_first, emerge_after);
+        CHECK(!early, "test_emerge_sequence_late: %u Sequence notes in Emerge's first half", early);
+        CHECK(en_endings > 0 && back, "test_arc_ends: %u endings, Emerge after %d", en_endings, back);
+        CHECK(seen[0] && seen[1] && seen[2] && seen[3], "test_sections_all: Emerge %d Flow %d Solo %d Drift %d", seen[0],
+              seen[1], seen[2], seen[3]);
+    }
+
+    /* (BERLIN) the Sweep: in Flow (Motion 0), Sweep 100, ten minutes: the Sequence's cutoff wanders over much of its
+     * range, slowly (no more than 0.05 of it a bar); Sweep 0: still */
+    {
+        int k;
+        static const int SW[2] = {100, 0};
+        for (k = 0; k < 2; k++) {
+            float lo = 1.0f, hi = 0.0f, last = -1.0f, step = 0.0f;
+            uint32_t lastb = 0xFFFFFFFFu;
+            int j;
+            fresh();
+            en_set(P_MOTION, 0);
+            en_set(P_SWEEP, SW[k]);
+            en_play(1);
+            for (j = 0; j < 2400; j++) {
+                run(0.25f);
+                if (en_bars / 16u == lastb)
+                    continue;
+                lastb = en_bars / 16u;
+                lo = fminf(lo, en_seq_cut), hi = fmaxf(hi, en_seq_cut);
+                if (last >= 0.0f)
+                    step = fmaxf(step, fabsf(en_seq_cut - last));
+                last = en_seq_cut;
+            }
+            printf("  10 min, Sweep %d: the cutoff's wander %.2f .. %.2f, a bar's step at most %.3f\n", SW[k], (double)lo,
+                   (double)hi, (double)step);
+            if (SW[k])
+                CHECK(hi - lo >= 0.4f && step <= 0.05f, "test_sweep_moves: span %.2f, step %.3f", (double)(hi - lo),
+                      (double)step);
+            else
+                CHECK(hi - lo < 0.01f, "test_sweep_moves: Sweep 0 moved (%.2f)", (double)(hi - lo));
+        }
+    }
+
+    /* (BERLIN) the swell: every return from Drift to Flow has the swell in the two bars before it (Motion 100, twenty
+     * minutes at 160) */
+    {
+        uint32_t lastb = 0xFFFFFFFFu;
+        int k, prev = -1, swell1 = 0, swell2 = 0, returns = 0, bad = 0;
+        fresh();
+        en_set(P_TEMPO, 160);
+        en_set(P_MOTION, 100);
+        en_play(1);
+        for (k = 0; k < 4800; k++) {
+            run(0.25f);
+            if (en_bars / 16u == lastb)
+                continue;
+            lastb = en_bars / 16u;
+            if (prev == EN_SEC_DRIFT && en_section == EN_SEC_FLOW) {
+                returns++;
+                bad += !(swell1 || swell2);
+            }
+            swell2 = swell1, swell1 = en_swell, prev = en_section;
+        }
+        CHECK(returns > 0 && !bad, "test_swell_before_return: %d returns, %d without a swell", returns, bad);
     }
 
     /* (BERLIN) every note-on has its note-off: two minutes of piece changes, tempo changes, freeze, mutes, PANIC and
