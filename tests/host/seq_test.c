@@ -86,6 +86,26 @@ static int pop16(unsigned v)
     return n;
 }
 
+/* the oct and acc rules: no octave on the root, only the root accented, octaves only on the last 3 gated steps */
+static void check_rules(const seq_t *s, int len, int nscale)
+{
+    int i, rank = 0;
+    CHECK(!(s->oct & 1u), "nscale %d: no octave on step 0", nscale);
+    CHECK(s->acc == 1u, "nscale %d: only bit 0 accented, got %x", nscale, (unsigned)s->acc);
+    for (i = len - 1; i >= 0; i--)
+        if ((s->gate >> i) & 1u)
+            rank++;
+        else
+            CHECK(!((s->oct >> i) & 1u), "nscale %d: oct on a rest at %d", nscale, i);
+    rank = 0;
+    for (i = len - 1; i >= 0; i--)
+        if ((s->gate >> i) & 1u) {
+            rank++;
+            if (rank > 3)
+                CHECK(!((s->oct >> i) & 1u), "nscale %d: oct on step %d, gated rank %d from the end", nscale, i, rank);
+        }
+}
+
 static void test_grow_root_first(void)
 {
     uint32_t seed;
@@ -94,6 +114,7 @@ static void test_grow_root_first(void)
         seq_t s;
         memset(&s, 0, sizeof s);
         seq_grow(&s, &rng, 7, 50, 8);
+        check_rules(&s, 8, 7);
         CHECK(s.gate & 1u, "seed %u: step 0 plays", (unsigned)seed);
         CHECK(s.deg[0] == 0, "seed %u: step 0 is the root", (unsigned)seed);
         CHECK(s.acc & 1u, "seed %u: step 0 accented", (unsigned)seed);
@@ -115,15 +136,16 @@ static void test_grow_density(void)
 
 static void test_grow_in_scale(void)
 {
-    static const int ns[4] = {3, 5, 7, 12};
+    static const int ns[6] = {1, 2, 3, 5, 7, 12};
     int k, i;
     uint32_t seed;
-    for (k = 0; k < 4; k++)
+    for (k = 0; k < 6; k++)
         for (seed = 1; seed <= 100; seed++) {
             uint32_t rng = seed;
             seq_t s;
             memset(&s, 0, sizeof s);
             seq_grow(&s, &rng, ns[k], 60, SEQ_MAX);
+            check_rules(&s, SEQ_MAX, ns[k]);
             for (i = 0; i < SEQ_MAX; i++)
                 if ((s.gate >> i) & 1u)
                     CHECK(s.deg[i] >= 0 && s.deg[i] <= 2 * ns[k], "nscale %d: deg %d out of range", ns[k], s.deg[i]);
@@ -159,6 +181,10 @@ static void test_grow_deterministic(void)
     CHECK(memcmp(&a, &b, sizeof a) == 0, "same seed, same pattern");
     CHECK(r1 == r2, "same seed, same rng after");
     CHECK(seq_rand(&r1) != 0, "rand never 0");
+    {
+        uint32_t z = 0;
+        CHECK(seq_rand(&z) != 0 && z != 0, "zero seed is seeded");
+    }
 }
 
 static void test_grow_tiny_pool(void)
@@ -172,10 +198,11 @@ static void test_grow_tiny_pool(void)
                 seq_t s;
                 memset(&s, 0, sizeof s);
                 seq_grow(&s, &rng, nscale, density, 8);
+                check_rules(&s, 8, nscale);
                 CHECK(pop16(s.gate) >= 1, "tiny pool: a gate");
                 for (i = 0; i < 8; i++)
                     if ((s.gate >> i) & 1u)
-                        CHECK(s.deg[i] % nscale == 0, "nscale %d: deg %d", nscale, s.deg[i]);
+                        CHECK(s.deg[i] == 0 || s.deg[i] == nscale, "nscale %d: deg %d", nscale, s.deg[i]);
             }
 }
 
