@@ -4147,7 +4147,7 @@ static float ens_tap(float d)                    /* d samples back, between two 
 static void render_drone(uint32_t n)
 {
     const int cv = cvoice < EN_NCV ? cvoice : 0;
-    const float g = chord_vol * 0.32f, fc = 1800.0f * fm_exp2f(2.0f * rel(P_CCOL)), k = fm_clampf(1.2f - 0.9f * rel(P_CRES), 0.2f, 2.0f);
+    const float g = chord_vol * 0.072f, fc = 1800.0f * fm_exp2f(2.0f * rel(P_CCOL)), k = fm_clampf(1.2f - 0.9f * rel(P_CRES), 0.2f, 2.0f);
     float c[4], cf1[4], cf2[4];
     uint32_t j;
     int b, i;
