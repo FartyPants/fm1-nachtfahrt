@@ -989,6 +989,7 @@ int main(void)
     /* (BERLIN) the phaser at full: the Drone alone, a minute, bounded */
     fresh();
     en_set(P_SEQ, 0);
+    en_set(P_SEQ2, 0);
     en_set(P_CHORD, 100);
     en_set(P_PHASER, 100);
     en_set(P_CVOICE, 1);                         /* (Strings: the ensemble too) */
@@ -1038,6 +1039,7 @@ int main(void)
         en_set(P_TEMPO, 96);
         en_set(P_CHORD, 0);
         en_set(P_LEAD, 0);
+        en_set(P_SEQ2, 0);
         en_set(P_CRACKLE, 0);
         en_set(P_REVERB, 0);
         en_set(P_CLOUD, 0);
@@ -1073,6 +1075,7 @@ int main(void)
         for (c = 0; c < EN_NNCHAR; c++) {
             fresh();
             en_set(P_SEQ, 0);
+            en_set(P_SEQ2, 0);
             en_set(P_CHORD, 0);
             en_set(P_LEAD, 0);
             en_set(P_CRACKLE, 60);
