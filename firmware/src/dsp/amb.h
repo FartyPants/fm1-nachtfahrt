@@ -242,7 +242,6 @@ uint32_t en_groove(int g);                     /* the bass's pattern g (the engi
                                                 * Sync): bit i, a note on step i */
 int en_groove_pat(int knob);                   /* the Groove knob (Drone, Offbeat, Dotted, Sync, Roller): its pattern */
 int en_drift_bars(int v);                      /* Drift's value in bars; 0: the chord holds */
-int en_kick_note(int root);                    /* the kick's note (MIDI) for the key's root: F1..B1 */
 /* the FM pages: is the layer's voice FM now (0 chord, 1 pings, 2 bass), and its algorithm as it plays (0..8) */
 int en_voice_fm(int layer);
 #define EN_NPROG 8

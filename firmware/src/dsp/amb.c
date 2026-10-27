@@ -512,7 +512,6 @@ typedef struct {
 static noise_ctl_t nctl;
 static uint8_t atm_char;                        /* (BERLIN) the Atmosphere's character (render_atmos) */
 static uint32_t atm_rng;                        /* (its random: en_init's seed) */
-static float hats_lvl = 1.0f;                    /* Hats level */
 static int ec_pp;                               /* (BERLIN) the echo ping-pongs (twice its time fits the tape) */
 static float ec_g = 0.6f, ec_lpc = 0.68f, ec_wide = 1.0f;   /* the echo's Blur, Tone, Width (and the chord's and the
                                                              * pings': widen) */
@@ -698,39 +697,17 @@ static int8_t loop_note[EN_NLOOP][EN_LOOP_MAX];
 static uint8_t loop_vel[EN_NLOOP][EN_LOOP_MAX];
 
 /* ----------------------------------------------------------------- drums --- */
-typedef struct {
-    float ph, inc, inc_end, amp, adec, x1, x2, att, mph[4], pend, clk, lp[2];   /* (lp: a hat's low-pass) */
-    int32_t wait;                               /* swing: samples until a hit that waits (pend: its velocity) */
-    uint8_t on, note;
-} drum_t;
-static drum_t drum[EN_NDRUM];
+/* (the dub's drums: gone; their patterns still published, en_drum_pat, and the shaker's still turned, hats_evolve,
+ * its draws keeping the music's dice where they were) */
 static uint32_t drum_pat[EN_NDRUM];             /* 0 the kick's (four on the floor), 1 the shaker's, 2 the open hat's */
-static float pulse_vol, swing, hat_f = 0.9f, hat_open = 0.25f;
+static float swing;                              /* (never set: the grid straight) */
 static float step_len, pulse_left;               /* a sixteenth, in samples; to the next MIDI clock pulse */
-static uint32_t noise = 22222u, cnoise = 4321u;
-static const uint8_t DRUM_GM[EN_NDRUM] = {36, 42, 46, 37, 39};  /* kick, closed hat, open hat, side stick, hand clap */
-static const float HAT_INC[4] = {304.4f / EN_SR, 369.6f / EN_SR, 522.7f / EN_SR, 800.0f / EN_SR};
+static uint32_t cnoise = 4321u;
 /* the shaker's steps, the most wanted first (the off sixteenths before the downbeats; never the open
  * hat's off beats) */
 static uint8_t hat_order[12];
 static const uint8_t HAT_ORDER[12] = {3, 11, 7, 15, 1, 9, 5, 13, 0, 8, 4, 12};
 static int hat_k, hat_kb;
-static float duck_x, duck_d, duck_depth, duck_rel;
-/* the kits: the kick (its pitch at the strike, times its note; how quickly it falls; its length; its click;
- * its drive) and the hats (their high-pass, times Hats'; how much noise against the metal; their length) */
-static const struct {
-    float start, fall, t60, click, drive, hat_f, noise, hat_t, gain;
-} KIT[EN_NKIT] = {
-    /* (1.3.0's sound pass: each kick from lower, longer, with half the click; a soft, rolling pulse, the
-     * thump down from 100-200 Hz into the sub) */
-    {2.75f, 0.0016f, 0.63f, 0.25f, 1.5f, 1.0f, 0.7f, 1.0f, 1.0f},  /* Tight */
-    {2.0f, 0.0008f, 0.7f, 0.1f, 1.3f, 0.92f, 0.7f, 1.2f, 0.6f},    /* Deep: long, 808-ish (shorter and softer than
-                                                                    * it was: over a bass that holds now) */
-    {4.0f, 0.003f, 0.38f, 0.45f, 2.5f, 1.05f, 0.6f, 0.8f, 1.35f},  /* Punch: short and hard */
-    {1.8f, 0.0012f, 0.75f, 0.0f, 1.0f, 0.82f, 0.85f, 1.3f, 0.86f}, /* Soft: a muffled thump */
-    {2.6f, 0.0016f, 0.6f, 0.18f, 1.8f, 0.75f, 1.0f, 1.1f, 1.0f},   /* Dusty: darker, noisier hats */
-};
-static int kit;
 
 /* ------------------------------------------------------------------ space --- */
 static float echo_send, rev_send, echo_len, echo_len_t, echo_fb = 0.6f, ein_gain = 1.0f, echo_t60 = 6.0f;
@@ -764,7 +741,6 @@ static struct {
 } ph;
 static uint32_t ph_rng = 0x2545F491u;
 static uint32_t bar_k, bar_sh, bar_op, bar_bass;   /* this bar's: the kick's, the shaker's, the open hat's, the bass's */
-static int ph_st;                                /* (the step a drum hit is on: its lateness) */
 static void noise_pattern(void);
 static int cr_dbars;                            /* bars till the drifts' next targets (on a barline) */
 static void noise_step(int s);
@@ -1702,93 +1678,6 @@ static void hats_evolve(void)                   /* a shaker step trades places, 
     hats_publish();
 }
 
-/* the kick's note: the key's root in F1..B1 (44..62 Hz); below F, its fifth (G1..B1), so the kick and the
- * sub agree. One note a piece: it doesn't follow the chords */
-int en_kick_note(int root)
-{
-    int pc = (root % 12 + 12) % 12;
-    return pc >= 5 ? 24 + pc : 24 + pc + 7;
-}
-#define kick_note en_kick_note
-
-static void drum_fire(int d, float vel)
-{
-    drum_t *v = &drum[d];
-    v->on = 1;
-    v->amp = vel;
-    v->att = 0.0f;
-    switch (d) {
-    case 0: {                                   /* kick: a sine falling fast from ~5x to its note */
-        float f = mtof((float)kick_note(par[P_ROOT])), pu = 0.0f;
-        v->note = DRUM_GM[0];
-        v->inc = f * KIT[kit].start * fm_exp2f(0.8f * pu) * (1.0f / EN_SR);
-        v->inc_end = f * (1.0f / EN_SR);
-        v->adec = fm_expf(-6.9f / (KIT[kit].t60 * fm_exp2f(1.2f * 0.0f) * EN_SR));
-        v->clk = KIT[kit].click * 2.0f * fm_maxf(1.0f + pu, 0.0f);   /* (Tight: 1, as before) */
-        duck_x = 1.0f;
-        break;
-    }
-    case 1:                                     /* the shaker: short; it chokes the open hat */
-        v->note = DRUM_GM[1];
-        v->adec = fm_expf(-6.9f / (0.07f * KIT[kit].hat_t * 1.0f * EN_SR));   /* (1.3.0: 45 ms to 70: a
-                                                                                             * shaker; the hats' length) */
-        drum[2].adec = fm_expf(-6.9f / (0.03f * EN_SR));
-        break;
-    case 2:                                     /* open hat: the "tss" off the beat */
-        v->note = DRUM_GM[2];
-        v->adec = fm_expf(-6.9f / (hat_open * KIT[kit].hat_t * 1.0f * EN_SR));
-        break;
-    case 3:                                     /* the rim: a short wooden tok, thrown into the echo */
-        v->note = DRUM_GM[3];
-        v->adec = fm_expf(-6.9f / (0.06f * EN_SR));
-        v->clk = 1.0f;
-        break;
-    default:                                    /* the clap: three quick bursts and a tail, into the plate */
-        v->note = DRUM_GM[4];
-        v->ph = 0.0f;                            /* (its time, in samples) */
-        v->adec = fm_expf(-6.9f / (0.22f * EN_SR));
-        break;
-    }
-    en_drum_glow[d] = 1.0f;
-    hit(3, d == 0 ? vel : vel * 0.6f);           /* (the kick the biggest ring) */
-    midi(0x99, v->note, (uint32_t)(vel * 100.0f));
-    midi(0x89, v->note, 0);
-}
-
-static void drum_hit(int d, float vel, int off)  /* (Swing delays the whole off sixteenth now: clock_pulse) */
-{
-    int32_t w = 0;
-    (void)off;
-    if ((d == 1 || d == 2) && !par[P_SMODE])     /* (1.3.0: the hats a few ms late, the phrase's feel) */
-        w = (int32_t)((float)ph.late[ph_st & 15] * (1.0f / 255.0f) * 0.006f * EN_SR * loose());
-    if (w > 0) {
-        drum[d].wait = w;
-        drum[d].pend = vel;
-    } else {
-        drum_fire(d, vel);
-    }
-}
-
-static int32_t drums_wait(void)                 /* samples to the next hit that waits; 0: none */
-{
-    int32_t m = 0;
-    int d;
-    for (d = 0; d < EN_NDRUM; d++)
-        if (drum[d].wait > 0 && (!m || drum[d].wait < m))
-            m = drum[d].wait;
-    return m;
-}
-
-static void drums_wait_step(int32_t k)          /* k samples went by: hits whose wait is over */
-{
-    int d;
-    for (d = 0; d < EN_NDRUM; d++)
-        if (drum[d].wait > 0 && (drum[d].wait -= k) <= 0) {
-            drum[d].wait = 0;
-            drum_fire(d, drum[d].pend);
-        }
-}
-
 /* ------------------------------------------------------- the arrangement --- */
 static void section_set(int s)
 {
@@ -2038,54 +1927,15 @@ static void lanes(void)
     en_lane[5] = (uint16_t)(lay_bass && !(mutes & EN_M_BASS) && !(perf & EN_PF_DROP) && par[P_LEAD] > 0 ? bar_bass : 0u);
 }
 
-/* a pattern's hit: its chance (Play: Pattern only, so Auto's music stays as it was), its accent */
-static int dhit(int d, int st, float *vel)
-{
-    if (!par[P_SMODE])
-        return 1;
-    if (par[P_SCH0 + d] < 100 && frand() * 100.0f >= (float)par[P_SCH0 + d])
-        return 0;
-    if (!((uint32_t)(uint16_t)par[P_SACC0 + d] >> st & 1u))
-        *vel *= 1.0f - 0.006f * 50.0f;   /* (the unaccented, quieter as Accent turns up) */
-    return 1;
-}
-
 /* the grid: one call a sixteenth (MIDI clock: 6 ticks) */
 static void tick(void)
 {
     int st = (int)(sixteenth & 15u), d;
-    float r = frand();
+    (void)frand();                               /* (the dub's drums' draw, every sixteenth: kept, so the music's dice
+                                                  * fall where they did; the walk and the Sequence's chances draw on) */
     if (st == 0)
         bar_start();
-    const int kick = lay_kick && !(mutes & EN_M_KICK) && !(perf & EN_PF_DROP), hats = !(mutes & EN_M_HATS);
     lanes();
-    if (EN_DUB) {
-        const float fv = (float)ph.vel[st] * (1.0f / 255.0f);   /* (the phrase's feel: this step's accent) */
-        float v0 = st ? 0.88f : 1.0f, v1 = fv, v2 = 0.55f + 0.35f * fv, v3 = 0.75f + 0.15f * r;
-        ph_st = st;
-        if (bar_k >> st & 1u && st == 14 && !(KSHAPE[kick_shape] >> 14 & 1u))
-            v0 *= 0.45f;                         /* (the busy B bar's pickup: a ghost) */
-        if (!par[P_SMODE] && kick_shape == KS_GHOST && (st == 4 || st == 12))
-            v0 *= 0.32f;                         /* (two and four ghosted, -10 dB) */
-        if (kick && bar_k >> st & 1u && !(fill && st >= 8) && dhit(0, st, &v0))
-            drum_hit(0, v0, 0);
-        else if (!(st & 3) && EN_DUB) {   /* the ghost duck: the music breathes on every beat, the kick
-                                                    * or not (lighter without one; lightest in a Break) */
-            const float gd = lay_kick ? 0.7f : 0.45f;
-            duck_x = fm_maxf(duck_x, gd);
-        }
-        if (hats && lay_hats && bar_sh >> st & 1u && dhit(1, st, &v1))
-            drum_hit(1, v1, st & 1);
-        if (hats && (lay_open || fill) && bar_op >> st & 1u && dhit(2, st, &v2))
-            drum_hit(2, v2, 0);
-        if (hats && lay_hats && dpat(3) >> st & 1u && dhit(3, st, &v3))
-            drum_hit(3, v3, st & 1);
-        if (en_lane[4] >> st & 1u) {             /* the clap: rare (Auto: 3% + 5% x Evolve, ~5% at 40; Pattern: its Chance) */
-            float v4 = 0.8f + 0.2f * r;
-            if (par[P_SMODE] ? dhit(4, st, &v4) : frand() < 0.03f + 0.05f * evolve)
-                drum_hit(4, v4, 0);
-        }
-    }
     noise_step((int)(sixteenth & 31u));         /* (the noise's groove: two bars) */
     for (d = 0; d < EN_NDRUM; d++)
         en_drum_pos[d] = (uint8_t)st;
@@ -2715,8 +2565,6 @@ static void notes_off(void)
 static void quiet(void)
 {
     int i;
-    for (i = 0; i < EN_NDRUM; i++)
-        drum[i].on = 0, drum[i].wait = 0;
     drone_off(0), drone_off(1);
     dr_lvl[0] = dr_lvl[1] = 0.0f;
     lead_off();
@@ -2774,7 +2622,6 @@ void en_init(void)
         mod[i].v = mod[i].tgt = 0.0f;
         mod[i].left = 0;
     }
-    duck_rel = fm_expf(-1.0f / (0.13f * EN_SR));
     arcm = arc = 0.0f;
     for (i = 0; i < P_NPARAMS; i++)
         apply(i, PARAMS[i].def);
@@ -2836,9 +2683,6 @@ static void play_start(int from_top)
 
 static void play_stop(void)
 {
-    int d;
-    for (d = 0; d < EN_NDRUM; d++)
-        drum[d].wait = 0;                        /* a swung hit still waiting stays unplayed */
     tick_wait = 0;
     en_playing = 0;
     drone_off(dr_bank);
@@ -2995,7 +2839,7 @@ static void drain(void)
 
 /* --------------------------------------------------------------- render --- */
 #define BLK 256
-static float mixl[BLK], mixr[BLK], rsend[BLK], esend[BLK], kickb[BLK], crl[BLK], crr[BLK];
+static float mixl[BLK], mixr[BLK], rsend[BLK], esend[BLK], crl[BLK], crr[BLK];
 
 /* (the classics pass) the chord's and the pings' dry, wider: each side a little of the other's, 5 and 8 ms later and
  * drifting slowly (a chorus crossed), so the two sides differ without the voices panned further; Width (0 none,
@@ -3041,143 +2885,6 @@ static void widen(uint32_t n)
     }
 }
 
-
-/* a hat: the metal and noise, high-passed (Chamberlin SVF, ~1.8 to 5 kHz by Hats) and low-passed (~8 kHz):
- * in the references' 2-8 kHz, not the air above (1.3.0); no pitch; into the echo (metal: the square's share,
- * at: the attack's smoothing) */
-static void render_hat(drum_t *v, uint32_t n, float g, float pl, float pr, float es, float metal, float at)
-{
-    uint32_t j;
-    int k;
-    float x1, x2, amp, att, lp, lp2, hf = fm_minf(hat_f * KIT[kit].hat_f, 1.2f);
-    if (!v->on)
-        return;
-    x1 = v->x1, x2 = v->x2, amp = v->amp, att = v->att, lp = v->lp[0], lp2 = v->lp[1];
-    for (j = 0; j < n; j++) {
-        float in = 0.0f, hp, x;
-        for (k = 0; k < 4; k++) {
-            v->mph[k] += HAT_INC[k];
-            if (v->mph[k] >= 1.0f)
-                v->mph[k] -= 1.0f;
-            in += v->mph[k] < 0.5f ? 0.25f : -0.25f;
-        }
-        noise = noise * 1664525u + 1013904223u;
-        in = metal * (1.1f - KIT[kit].noise) * in + KIT[kit].noise * (float)(int32_t)noise * (1.0f / 2147483648.0f);
-        hp = in - x2 - 0.8f * x1;
-        x1 += hf * hp;
-        x2 += hf * x1;
-        lp += 0.65f * (hp - lp);
-        lp2 += 0.65f * (lp - lp2);
-        x = lp2 * amp * att * g;
-        mixl[j] += x * pl;
-        mixr[j] += x * pr;
-        rsend[j] += x * 0.15f;
-        esend[j] += x * es;
-        amp *= v->adec;
-        att += (1.0f - att) * at;
-    }
-    v->x1 = fm_flush(x1);
-    v->x2 = fm_flush(x2);
-    v->lp[0] = fm_flush(lp);
-    v->lp[1] = fm_flush(lp2);
-    v->amp = amp;
-    v->att = att;
-    v->on = amp > 0.0005f;
-}
-
-static void render_drums(uint32_t n)
-{
-    uint32_t j;
-    const float g = pulse_vol * KIT[kit].gain, fall = KIT[kit].fall, drive = KIT[kit].drive;
-    drum_t *v = &drum[0];
-    if (v->on) {                                 /* the kick: its own bus, ducked by nothing */
-        float ph = v->ph, inc = v->inc, amp = v->amp, att = v->att, clk = v->clk, cl = v->x1;
-        for (j = 0; j < n; j++) {
-            float x;
-            noise = noise * 1664525u + 1013904223u;
-            cl += 0.5f * ((float)(int32_t)noise * (1.0f / 2147483648.0f) - cl);   /* the click: noise, softened */
-            x = (sine(ph) * att + 0.5f * cl * clk) * amp;
-            kickb[j] += sat(x * drive) * g * (0.89f / drive);   /* (-2 dB from 1.2.0: -5 in 1.3.0, the drums as spice; +3 back, the user: hear the drums) */
-            ph += inc;
-            if (ph >= 1.0f)
-                ph -= 1.0f;
-            inc += (v->inc_end - inc) * fall;
-            amp *= v->adec;
-            att += (1.0f - att) * 0.05f;          /* (in over ~0.5 ms: softer) */
-            clk *= 0.985f;
-        }
-        v->ph = ph;
-        v->inc = inc;
-        v->amp = amp;
-        v->att = att;
-        v->clk = clk;
-        v->x1 = fm_flush(cl);
-        v->on = amp > 0.0005f;
-    }
-    {   /* (Energy: the hats -6 dB down to +6 dB up) */
-        const float hl = fm_exp2f((float)mac[EN_MAC_ENERGY] * (1.0f / 50.0f)) * hats_lvl;   /* (and Hats: +-12 dB) */
-        render_hat(&drum[1], n, g * 0.16f * hl, 0.6f, 1.0f, 0.2f, 0.6f, 0.02f);   /* shaker: a little right, soft, into the echo */
-        render_hat(&drum[2], n, g * 0.17f * hl, 1.0f, 0.7f, 0.2f, 1.0f, 0.3f);   /* open: a little left, some echo */
-    }
-    v = &drum[3];                                /* the rim: two tones (~520 Hz, ~1.7 kHz) and a click of noise */
-    if (v->on) {
-        float amp = v->amp, att = v->att, clk = v->clk;
-        for (j = 0; j < n; j++) {
-            float x;
-            v->ph += 520.0f / EN_SR;
-            if (v->ph >= 1.0f)
-                v->ph -= 1.0f;
-            v->mph[0] += 1710.0f / EN_SR;
-            if (v->mph[0] >= 1.0f)
-                v->mph[0] -= 1.0f;
-            noise = noise * 1664525u + 1013904223u;
-            x = (sine(v->ph) * 0.55f + sine(v->mph[0]) * 0.45f + (float)(int32_t)noise * (1.0f / 2147483648.0f) * clk) *
-                amp * att * g * 0.3f;
-            mixl[j] += x * 0.85f;
-            mixr[j] += x;
-            esend[j] += x * 1.2f;                /* (mostly into the echo: a dub rim) */
-            rsend[j] += x * 0.5f;
-            amp *= v->adec;
-            att += (1.0f - att) * 0.4f;
-            clk *= 0.9f;
-        }
-        v->amp = amp;
-        v->att = att;
-        v->clk = clk;
-        v->on = amp > 0.0005f;
-    }
-    v = &drum[4];                                /* the clap: noise through a band-pass (~1.1 kHz), its envelope */
-    if (v->on) {                                 /* three bursts 9 ms apart, then the tail */
-        float amp = v->amp, t = v->ph, x1 = v->x1, x2 = v->x2;
-        for (j = 0; j < n; j++) {
-            float w, hp, bp, e, x, tb = t < 1200.0f ? (t - 400.0f * (float)(int)(t * (1.0f / 400.0f))) : 1e9f;
-            noise = noise * 1664525u + 1013904223u;
-            w = (float)(int32_t)noise * (1.0f / 2147483648.0f);
-            hp = w - x2 - 0.7f * x1;            /* (a Chamberlin SVF: the band) */
-            x1 += 0.16f * hp;
-            x2 += 0.16f * x1;
-            bp = x1;
-            /* a burst: ~3 ms, in over ~0.3 ms (from nothing at once, the ringing band stepped: a click each burst,
-             * which the plate and the echo repeated) */
-            e = tb < 1e8f ? (1.0f - fm_expf(-tb * (1.0f / 6.0f))) * fm_expf(-tb * (1.0f / 130.0f)) : 0.0f;
-            if (t >= 1200.0f)
-                e = amp * 0.9f;
-            x = bp * e * g * 1.1f;
-            mixl[j] += x;
-            mixr[j] += x * 0.8f;
-            rsend[j] += x * 1.4f;                /* (into the plate, most of it) */
-            esend[j] += x * 0.5f;
-            if (t >= 1200.0f)
-                amp *= v->adec;
-            t += 1.0f;
-        }
-        v->amp = amp;
-        v->ph = t;
-        v->x1 = fm_flush(x1);
-        v->x2 = fm_flush(x2);
-        v->on = amp > 0.0005f;
-    }
-}
 
 /* Crackle: a small palette of noises, each mono, each drifting on its own over minutes (its level, and the
  * hiss its colour), so the bed never settles into one static noise (1.3.0; it was a garnish of hiss and clicks):
@@ -3497,15 +3204,10 @@ static void render_crackle(uint32_t n)
         float ex = nz_ex, ck = nz_click, acc = nz_acc, b0 = nz_b[0], b1 = nz_b[1], b2 = nz_b[2], b3 = nz_b[3];
         float pl = nz_p[0], pr = nz_p[1], ql = nz_c[0], qr = nz_c[1];
         float exd = nz_exd;
-        const float sw = 0.05f * cont * (1.0f - 0.8f * duck_d);   /* (Tape: the hiss in, between beats) */
+        const float sw = 0.05f * cont;          /* (Tape: the hiss in) */
         const int32_t sj = nz_wait >= 0 && nz_wait < (int32_t)n ? nz_wait : -1;   /* (a hit strikes in this chunk) */
         const int rest = SHED && ex < 1e-4f && cont <= 0.0f &&
                          fm_fabsf(nz_lp[0]) + fm_fabsf(nz_lp[1]) + fm_fabsf(nz_lp[2]) < 2e-4f;
-        /* (1.3.0: the noise under the duck, deeper than the music, its sends too: it dips on each beat and swells
-         * between, the kick or not; the duck as it is at this chunk's start) */
-        const float dn = 1.0f - fm_minf(1.7f * duck_depth, 0.85f) * duck_d;
-        /* (the combs at the music's own depth: ducked deeper, a hit on the beat swelled late, REPORT6 9.1) */
-        const float dnr = 1.0f - fm_minf(duck_depth, 0.85f) * duck_d;
         /* (the second page: Width, Plate, Echo; PERFORM's Wet, -50..+50: the dry x2 .. x0.5, the sends x0.5 .. x2) */
         const float wv = (float)par[P_NWIDTH] * 0.02f, wa = 0.6f + 0.25f * wv, wb = 0.6f - 0.25f * wv,
                     wm = (float)mac[EN_MAC_DUB] * (1.0f / 50.0f), nw = fm_exp2f(-wm),
@@ -3586,16 +3288,16 @@ static void render_crackle(uint32_t n)
                 ql = b1 * gres, qr = b3 * gres;
             }
             f = (float)ph * 0.25f;               /* (back to the full rate: a line from the last to the next) */
-            l = (pl + (ql - pl) * f) * dnr;
-            r = (pr + (qr - pr) * f) * dnr;
+            l = pl + (ql - pl) * f;
+            r = pr + (qr - pr) * f;
             esend[j] += (l + r) * (0.15f * ne);   /* (a little into the echo, Echo) */
             rsend[j] += (l + r) * 0.3f * np + h * gh * 0.4f;   /* (the plate, Plate) */
             l *= 0.75f * nw;                     /* (the dry -2.5 dB, less into the plate than before: further back,
                                                   * its breathing heard, not smoothed into the plate's wash; PERFORM's
                                                   * Wet: the dry down as it turns up) */
             r *= 0.75f * nw;
-            l += (h * gh + vg * fl) * dn;
-            r += (0.9f * h * gh + vg * fr) * dn;
+            l += h * gh + vg * fl;
+            r += 0.9f * h * gh + vg * fr;
             crl[j] = l;
             crr[j] = r;
         }
@@ -4006,14 +3708,13 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
     else
         mb_s[0] = mb_s[1] = mb_s[2] = mb_s[3] = 0.0f;
     for (j = 0; j < n; j++)
-        mixl[j] = mixr[j] = rsend[j] = esend[j] = kickb[j] = 0.0f;
+        mixl[j] = mixr[j] = rsend[j] = esend[j] = 0.0f;
     lfo_step();
     render_plucks(n);
     render_drone(n);
     render_lead(n);
     render_crash(n);
     widen(n);                                    /* (the chord's and the pings' dry, wider) */
-    render_drums(n);
     if (atm_char == ATM_TAPE)
         render_crackle(n);
     else
@@ -4023,10 +3724,7 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
     eg += (1.0f - eg) * fx_wash;                 /* Wash: everything into the echo */
     epk = en_echo_pk;
     for (j = 0; j < n; j++) {
-        float wl, wr, l, r, el, er, dg, rin, cl, cr, sd, dry = 1.0f - 0.75f * fx_wash;
-        duck_d += (duck_x - duck_d) * 0.08f;
-        duck_x *= duck_rel;
-        dg = 1.0f - 0.3f * duck_depth * duck_d;  /* the duck: the wash ducked lightly */
+        float wl, wr, l, r, el, er, rin, cl, cr, sd, dry = 1.0f - 0.75f * fx_wash;
         echoes(esend[j] * eg, &el, &er);
         epk = fm_maxf(epk, fm_fabsf(el + er));   /* (the screen's ripples: the echo as it comes out) */
         rin = (rsend[j] * rg + (el + er) * 0.12f * rev_send) * 0.8f;   /* (the classics pass: less of the echo into
@@ -4059,8 +3757,8 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
         ms_lp1 += 0.0113f * (sd - ms_lp1);
         ms_lp2 += 0.0113f * (sd - ms_lp1 - ms_lp2);
         sd = ms_lp1 + ms_lp2;
-        l = (l - sd) * dg;
-        r = (r + sd) * dg;
+        l = l - sd;
+        r = r + sd;
         if (shut > 0.01f) {
             float bp;
             l = svf_lp(mb_c, mb_s, l, &bp);
@@ -4071,12 +3769,12 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
             lp = svf_lp(mb_c, mb_s + 2, r, &bp);
             r -= lp + mb_c[3] * bp;
         }
-        l = (l + kickb[j] * (1.0f - 0.5f * fx_wash) + crl[j]) * 0.75f * gain;   /* (1.3.0: +1.5 dB, what the
+        l = (l + crl[j]) * 0.75f * gain;   /* (1.3.0: +1.5 dB, what the
                                                                                   * re-balance took, from the headroom;
                                                                                   * the classics pass: +2 dB more, the
                                                                                   * user's ear; the loop held, the
                                                                                   * level steadier) */
-        r = (r + kickb[j] * (1.0f - 0.5f * fx_wash) + crr[j]) * 0.75f * gain;
+        r = (r + crr[j]) * 0.75f * gain;
         if (mf_lp < 14.15f || mf_hp > 4.35f) {   /* the master filter */
             l = mfx(l, mf_s);
             r = mfx(r, mf_s + 4);
@@ -4096,8 +3794,6 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
         }
     }
     en_echo_pk = epk;
-    duck_x = fm_flush(duck_x);
-    duck_d = fm_flush(duck_d);
     ms_lp1 = fm_flush(ms_lp1);
     ms_lp2 = fm_flush(ms_lp2);
 }
@@ -4129,14 +3825,11 @@ static void control(uint32_t n)                 /* once a chunk: the slow things
         en_echo_ms = echo_len * (1000.0f / TAPE_SR);
     en_echo_g = en_frozen ? 1.0f : fm_minf(echo_fb + 0.12f * perf_echo, fb_cap) * 0.82f;
     en_echo_in = echo_send + (1.0f - echo_send) * perf_echo;
-    en_duck = duck_d * (duck_depth > 0.0f ? 1.0f : 0.0f);
     cl_dens = cloud_amt > 0.0f ? fm_clampf(0.25f + 0.5f * cloud_amt + 0.3f * arcm, 0.05f, 1.0f) : 0.0f;
     if (fx_cf > 0.01f)                          /* (Freeze: the grains thick, even at Cloud 0) */
         cl_dens = fm_maxf(cl_dens, fx_cf);
     for (i = 0; i < EN_NLOOP; i++)
         en_loop_glow[i] *= 0.985f;
-    for (i = 0; i < EN_NDRUM; i++)
-        en_drum_glow[i] *= 0.93f;
 }
 
 void en_render(int32_t *out, uint32_t n, uint32_t gain_q12)
@@ -4163,18 +3856,12 @@ void en_render(int32_t *out, uint32_t n, uint32_t gain_q12)
         }
         if (k > n)
             k = n;
-        {
-            int32_t w = drums_wait();            /* a swung hit lands on its sample */
-            if (w > 0 && (uint32_t)w < k)
-                k = (uint32_t)w;
-            if (tick_wait > 0 && (uint32_t)tick_wait < k)   /* (and a swung sixteenth) */
-                k = (uint32_t)tick_wait;
-        }
+        if (tick_wait > 0 && (uint32_t)tick_wait < k)   /* (a swung sixteenth) */
+            k = (uint32_t)tick_wait;
         if (timed)
             pulse_left -= (float)k;
         control(k);
         render_chunk(out, k, gain);
-        drums_wait_step((int32_t)k);
         if (tick_wait > 0 && (tick_wait -= (int32_t)k) <= 0) {
             tick_wait = 0;
             if (en_playing)
