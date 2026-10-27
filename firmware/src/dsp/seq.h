@@ -25,4 +25,23 @@ void seq_grow(seq_t *s, uint32_t *rng, int nscale, int density, int len);
 /* the performer, called at most once per 4 bars: one structural move (return point, a skip or an octave) with
  * probability motion/100, and a note change with probability evolve/100 x 1/8. deg[0] and gate bit 0 never change */
 void seq_vary(seq_t *s, uint32_t *rng, int nscale, int motion, int evolve);
+
+/* the MIDI note of step i. steps: the scale's semitones from the root, ascending from 0 (en_scale's output), nscale
+ * of them; root_note: the piece's root as a MIDI note in the voice's register; chord_off: the chord walk's root in
+ * semitones above the key's root (0..11).
+ * parallel 1: the whole shape shifted by chord_off semitones (it may leave the scale);
+ * parallel 0: shifted by the chord root's scale degree (it stays in the scale, the shape bends) */
+int seq_pitch(const seq_t *s, int i, const int *steps, int nscale, int root_note, int parallel, int chord_off);
+
+/* the last 8 sixteenths, for the repeat taps; note -1: nothing played */
+typedef struct {
+    int16_t note[8];
+    uint8_t vel[8];
+    uint8_t pos;   /* where the next push goes */
+} seq_hist_t;
+void seq_hist_clear(seq_hist_t *h);
+void seq_hist_push(seq_hist_t *h, int note, int vel);   /* once per sixteenth, after the step (-1: nothing played) */
+/* the note played dt sixteenths before the current one (dt 1..8, 1 = the latest push; the current one not yet
+ * pushed); its velocity into *vel (may be NULL); -1 and vel 0 if none or dt out of range */
+int seq_tap(const seq_hist_t *h, int dt, int *vel);
 #endif

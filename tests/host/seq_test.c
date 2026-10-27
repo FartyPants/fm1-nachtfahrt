@@ -278,6 +278,93 @@ static void test_vary_root_kept(void)
         }
 }
 
+/* pitch: D minor (Aeolian) at root_note 50 */
+static const int aeo[7] = {0, 2, 3, 5, 7, 8, 10};
+static const int pent[5] = {0, 2, 4, 7, 9};
+
+static int in_scale(int semis, const int *st, int n)
+{
+    int k, pc = ((semis % 12) + 12) % 12;
+    for (k = 0; k < n; k++)
+        if (st[k] == pc)
+            return 1;
+    return 0;
+}
+
+static void test_pitch_root(void)
+{
+    seq_t s = mk(8, 0);
+    s.deg[0] = 0;
+    s.deg[1] = 7;
+    s.deg[2] = 2;
+    s.deg[3] = 14;
+    s.oct = 1u << 2;
+    CHECK(seq_pitch(&s, 0, aeo, 7, 50, 1, 0) == 50, "deg 0 is the root");
+    CHECK(seq_pitch(&s, 1, aeo, 7, 50, 1, 0) == 62, "deg 7 is the octave");
+    CHECK(seq_pitch(&s, 2, aeo, 7, 50, 1, 0) == 50 + 3 + 12, "deg 2 + oct bit");
+    CHECK(seq_pitch(&s, 3, aeo, 7, 50, 1, 0) == 74, "deg 14: two octaves");
+    CHECK(seq_pitch(&s, 0, NULL, 7, 50, 1, 5) == 50, "no scale: root");
+    CHECK(seq_pitch(&s, 1, aeo, 0, 50, 0, 5) == 50, "nscale 0: root");
+}
+
+static void test_pitch_parallel(void)
+{
+    uint32_t rng = 8;
+    seq_t s;
+    int i;
+    memset(&s, 0, sizeof s);
+    seq_grow(&s, &rng, 7, 80, 16);
+    for (i = 0; i < 16; i++)
+        CHECK(seq_pitch(&s, i, aeo, 7, 50, 1, 5) == seq_pitch(&s, i, aeo, 7, 50, 1, 0) + 5, "step %d: +5", i);
+}
+
+static void test_pitch_diatonic(void)
+{
+    int off, n, i;
+    uint32_t seed;
+    seq_t t = mk(4, 0);
+    for (n = 0; n < 2; n++)
+        for (off = 0; off < 12; off++)
+            for (seed = 1; seed <= 20; seed++) {
+                uint32_t rng = seed;
+                seq_t s;
+                const int *st = n ? pent : aeo;
+                int ns = n ? 5 : 7;
+                memset(&s, 0, sizeof s);
+                seq_grow(&s, &rng, ns, 80, 16);
+                for (i = 0; i < 16; i++)
+                    CHECK(in_scale(seq_pitch(&s, i, st, ns, 50, 0, off) - 50, st, ns),
+                          "nscale %d off %d step %d: out of scale", ns, off, i);
+            }
+    t.deg[0] = 0;
+    t.deg[1] = 2;
+    CHECK(seq_pitch(&t, 0, aeo, 7, 50, 0, 3) == 53, "off 3 = degree 2: root -> 53");
+    CHECK(seq_pitch(&t, 1, aeo, 7, 50, 0, 3) == 57, "off 3, deg 2 -> degree 4 -> 57");
+    CHECK(seq_pitch(&t, 0, aeo, 7, 50, 0, 4) == 53, "off 4 not in scale: nearest below, 53");
+    CHECK(seq_pitch(&t, 0, pent, 5, 50, 0, 5) == 54, "pentatonic off 5: nearest below is 4, 54");
+    CHECK(seq_pitch(&t, 0, aeo, 7, 50, 0, 12 + 7) == 50 + 12 + 7, "off 19: an octave plus the fifth");
+    CHECK(seq_pitch(&t, 0, aeo, 7, 50, 0, 0) == 50, "off 0 unchanged");
+}
+
+static void test_hist_taps(void)
+{
+    seq_hist_t h;
+    int i, vel = -1;
+    seq_hist_clear(&h);
+    CHECK(seq_tap(&h, 3, &vel) == -1 && vel == 0, "cleared: none");
+    for (i = 0; i < 8; i++)
+        seq_hist_push(&h, 60 + i, 100 + i);
+    CHECK(seq_tap(&h, 3, &vel) == 65 && vel == 105, "tap 3 is 65, got vel %d", vel);
+    CHECK(seq_tap(&h, 4, NULL) == 64, "tap 4 is 64");
+    CHECK(seq_tap(&h, 1, NULL) == 67 && seq_tap(&h, 8, NULL) == 60, "tap 1 latest, tap 8 oldest");
+    CHECK(seq_tap(&h, 0, &vel) == -1 && vel == 0, "dt 0: none");
+    CHECK(seq_tap(&h, 9, &vel) == -1, "dt 9: none");
+    seq_hist_push(&h, -1, 0);
+    CHECK(seq_tap(&h, 1, NULL) == -1 && seq_tap(&h, 2, NULL) == 67, "a rest is -1, ring wraps");
+    seq_hist_clear(&h);
+    CHECK(seq_tap(&h, 3, NULL) == -1, "after clear: none");
+}
+
 int main(void)
 {
     test_next_wraps();
@@ -295,6 +382,10 @@ int main(void)
     test_vary_notes_rare();
     test_vary_return_point();
     test_vary_root_kept();
+    test_pitch_root();
+    test_pitch_parallel();
+    test_pitch_diatonic();
+    test_hist_taps();
     printf("seq: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;
 }

@@ -175,3 +175,56 @@ void seq_vary(seq_t *s, uint32_t *rng, int nscale, int motion, int evolve)
             s->deg[cand[seq_rand(rng) % (uint32_t)n]] = (int8_t)seq_pick_deg(rng, nscale);
     }
 }
+
+/* the note of scale degree d (0 up, past nscale climbs the octaves) */
+static int seq_degnote(const int *steps, int nscale, int d, int root_note)
+{
+    if (d < 0)
+        d = 0;
+    return root_note + 12 * (d / nscale) + steps[d % nscale];
+}
+
+int seq_pitch(const seq_t *s, int i, const int *steps, int nscale, int root_note, int parallel, int chord_off)
+{
+    int d = s->deg[i], up = ((s->oct >> i) & 1u) ? 12 : 0, k, j;
+    if (!steps || nscale < 1)
+        return root_note;
+    if (parallel)
+        return seq_degnote(steps, nscale, d, root_note) + up + chord_off;
+    /* the chord root's scale degree: the scale step at or just below its pitch class */
+    for (k = 0, j = 0; j < nscale; j++)
+        if (steps[j] <= chord_off % 12)
+            k = j;
+    return seq_degnote(steps, nscale, d + k, root_note) + up + 12 * (chord_off / 12);
+}
+
+void seq_hist_clear(seq_hist_t *h)
+{
+    int i;
+    for (i = 0; i < 8; i++) {
+        h->note[i] = -1;
+        h->vel[i] = 0;
+    }
+    h->pos = 0;
+}
+
+void seq_hist_push(seq_hist_t *h, int note, int vel)
+{
+    h->note[h->pos] = (int16_t)note;
+    h->vel[h->pos] = (uint8_t)vel;
+    h->pos = (uint8_t)((h->pos + 1u) & 7u);
+}
+
+int seq_tap(const seq_hist_t *h, int dt, int *vel)
+{
+    int idx;
+    if (dt < 1 || dt > 8) {
+        if (vel)
+            *vel = 0;
+        return -1;
+    }
+    idx = (h->pos - dt) & 7;
+    if (vel)
+        *vel = h->note[idx] < 0 ? 0 : h->vel[idx];
+    return h->note[idx];
+}
