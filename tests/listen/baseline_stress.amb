@@ -1,0 +1,14 @@
+# CPU baseline, stressed (as DUB-1 PLAN.md measured on the device): Night Drive, Pings Density 100, Cloud 100
+spin PRESET 5
+wait 300
+expect piece 5
+tap ARP
+wait 200
+spin K1 100
+spin K4 100
+expect par4 100
+expect par32 100
+wait 200
+peakreset
+wait 60000
+expect peak_db_max -0.5

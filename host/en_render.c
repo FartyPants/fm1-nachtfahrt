@@ -6,7 +6,7 @@
  * piece=N takes piece N's recipe (0..7) first; NAME=V sets a parameter by its name as amb.c's table
  * has it, spaces as underscores (Echo_time=2, Cutoff=60); freeze=T0-T1 holds from T0 to T1 seconds;
  * NAME=V@T sets it at T seconds instead; fx=N@T0-T1 holds the effects grid's effect N (0..15) from T0 to T1; log prints each bar's section and stabs, and the chord as it moves.
- *   cc -O2 -ffp-contract=off -DEN_HOST -Ifirmware/src/dsp -o build/host/en_render host/en_render.c \
+ *   cc -O2 -ffp-contract=off -D_GNU_SOURCE -DEN_HOST -Ifirmware/src/dsp -o build/host/en_render host/en_render.c \
  *      firmware/src/dsp/amb.c -lm */
 #define EN_HOST 1
 #include <stdio.h>

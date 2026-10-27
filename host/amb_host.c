@@ -910,7 +910,7 @@ int main(int argc, char **argv)
     wav_close();
     if (midi_log)
         fclose(midi_log);
-    printf("host: %u ms simulated, %u blits, render %.1f%% of real time (host CPU)%s\n", now_ms, blits,
+    printf("host: %u ms simulated, %u blits, render %.2f%% of real time (host CPU)%s\n", now_ms, blits,
            render_budget_ns_total > 0 ? 100.0 * render_ns_total / render_budget_ns_total : 0.0,
            fails ? ", EXPECTATIONS FAILED" : "");
     return fails ? 1 : 0;

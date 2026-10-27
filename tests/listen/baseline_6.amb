@@ -1,0 +1,7 @@
+# CPU baseline: piece 6 for a minute (tests/listen/baseline.sh runs all of them three times)
+spin PRESET 6
+wait 300
+expect piece 6
+peakreset
+wait 60000
+expect peak_db_max -0.5

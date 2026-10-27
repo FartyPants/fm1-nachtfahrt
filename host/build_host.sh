@@ -4,7 +4,7 @@
 # Same sources as the firmware, -ffp-contract=off like the device (no fused multiply-add).
 set -e
 cd "$(dirname "$0")/.."
-CC="${CC:-cc}"
+CC="${CC:-cc} -D_GNU_SOURCE"          # (Linux hides clock_gettime and friends under -std=c99)
 mkdir -p build/gen build/host
 [ -f build/gen/felucca_font.h ] || python3 tools/gen_font.py build/gen/felucca_font.h >/dev/null
 python3 tools/gen_words.py firmware/words.tsv web/words build/gen/ann_words.h >/dev/null
