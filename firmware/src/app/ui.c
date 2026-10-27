@@ -86,15 +86,15 @@ static const char *const LANE_NAME[EN_NDRUM] = {"Kick", "Shaker", "Open", "Rim",
 _Static_assert(P_NPARAMS <= K_LEDS, "the knobs' own codes must come after the parameters");
 static const uint16_t VIEW_KNOB[NVIEWS][4] = {
     {K_FILTER, P_EVOLVE, P_MOTION, P_DRIFT},
-    {P_SEQLEN, P_PHASER, P_CGHOST, P_CUTOFF},
-    {P_DENSITY, P_SEQOCT, P_PGHOST, P_CLOUD},
-    {P_BNOTES, P_SEQ2OCT, P_SEQGRID, P_TRANS},
-    {P_SEQ2LEN, P_TAPA, P_HATSLVL, P_HTONE},       /* (Duck: PERFORM's, a master action) */
+    {P_CATT, P_DREL, P_CCOL, P_PHASER},          /* (BERLIN, until its own pages: the Drone) */
+    {P_DENSITY, P_SEQOCT, P_CUTOFF, P_DECAY},    /* (the Sequence) */
+    {P_SEQGRID, P_TRANS, P_SEQLEN, P_SWEEP},     /* (the Sequence's shape, until the Lead) */
+    {P_SEQ2, P_SEQ2LEN, P_SEQ2OCT, P_SCH1},      /* (Sequence 2) */
     {P_ECHO, P_ETIME, P_FEEDBACK, P_REVERB},
     {P_TUNE, P_MIDI, K_LEDS, K_SAVE},
     {P_CHORD, P_SEQ, P_BASS, P_SEQ2},
-    {P_CATT, P_DECAY, P_CCOL, P_CRES},           /* (Env, P_DREL, off the page: the voices and the recipes set it) */
-    {P_PTON, P_PRAT, P_PLEN, P_PBEND},
+    {P_CCOL, P_CRES, P_CATT, P_DREL},            /* (the Drone's sound) */
+    {P_TAPA, P_TAPAT, P_TAPB, P_TAPBT},          /* (the Sequence's repeats) */
     {P_BBITE, P_BSHAPE, P_BLEN, P_BSLIDE},
     {P_KTUNE, P_KLEN, P_KPUNCH, P_HLEN},         /* (1.4.0: the kick's rumble here, in Hat len's place: EN_RUMBLE) */
     {P_CALG, P_CFRAT, P_CFB, P_CFDEC},
@@ -102,23 +102,23 @@ static const uint16_t VIEW_KNOB[NVIEWS][4] = {
     {P_BALG, P_BFRAT, P_BFB, P_BFDEC},
     {K_SLOT, K_CQ, K_CX, K_PLAY},
     {K_LANE, P_SACCENT, K_LCH, P_SMODE},
-    {K_FILTER, K_DUB, K_ENERGY, P_TAPBT},         /* (Wet, Energy: offsets for playing; Duck the piece's own) */
-    {P_TEMPO, P_ROOT, K_MODE, P_TAPAT},
+    {K_FILTER, K_DUB, K_ENERGY, P_SWEEP},         /* (Wet, Energy: offsets for playing; Sweep the piece's own) */
+    {P_TEMPO, P_ROOT, K_MODE, P_TRANS},
     {P_NGRAIN, P_NROOM, P_NCOL, P_NTUNE},     /* (the level on OCT- / OCT+, as the layers'; Drift the recipes') */
     {P_EBLUR, P_ETONE, P_EWIDTH, P_SIZE},
     {P_NWIDTH, P_NPLATE, P_NECHO, P_NLFO},       /* (the Noise page's second: SAVE again; its Change the recipes') */
 };
 static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Filter", "Evolve", "Motion", "Drift"},
-    {"Density", "Throws", "Wet", "Cutoff"},
-    {"Density", "Octave", "Wet", "Cloud"},
-    {"Density", "Octave", "Groove", "Fifth"},
-    {"Density", "Hits", "Hats", "Tone"},
+    {"Attack", "Release", "Colour", "Phaser"},
+    {"Density", "Octave", "Cutoff", "Decay"},
+    {"Grid", "Transpose", "Length", "Sweep"},
+    {"Level", "Length", "Octave", "Chance"},
     {"Echo", "Echo time", "Feedback", "Reverb"},
     {"Tune", "MIDI out", "Lights", "Save"},
-    {"Chord", "Pings", "Bass", "Drums"},
-    {"Attack", "Decay", "Colour", "Reso"},
-    {"Tone", "Ratio", "Length", "Bend"},
+    {"Drone", "Seq", "Bass", "Seq 2"},
+    {"Colour", "Reso", "Attack", "Release"},
+    {"Repeat A", "A time", "Repeat B", "B time"},
     {"Bite", "Shape", "Length", "Slide"},
     {"Kick tune", "Kick len", "Punch", "Hat len"},
     {"Algo", "Ratio", "Feedback", "LFO"},
@@ -126,8 +126,8 @@ static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Algo", "Ratio", "Feedback", "LFO"},
     {"Slot", "Chord", "Type", "Play"},
     {"Lane", "Accent", "Chance", "Play"},
-    {"Filter", "Wet", "Energy", "Duck"},
-    {"Tempo", "Root", "Mode", "Swing"},
+    {"Filter", "Wet", "Energy", "Sweep"},
+    {"Tempo", "Root", "Mode", "Transpose"},
     {"Density", "Air", "Tone", "Decay"},
     {"Blur", "Tone", "Width", "Size"},
     {"Width", "Plate", "Echo", "LFO"},

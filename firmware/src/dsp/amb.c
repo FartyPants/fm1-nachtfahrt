@@ -317,7 +317,7 @@ void en_param_text(int i, int v, char *b)
         }
         return;
     }
-    if ((i == P_TUNE || i == P_SEQOCT || i == P_SEQ2OCT || (i >= P_CATT && i < P_CR0) || (i >= P_NCOL && i <= P_NDRIFT)) && v > 0)
+    if (PARAMS[i].lo < 0 && v > 0)               /* (a signed value, above its zero) */
         *b++ = '+';
     itoa_s(v, b);
 }

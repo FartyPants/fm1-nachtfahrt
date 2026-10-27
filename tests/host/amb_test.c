@@ -310,6 +310,8 @@ int main(void)
         CHECK(!strcmp(t, "Bed"), "transpose 2: %s", t);
         en_param_text(P_SVOICE, 0, t);
         CHECK(!strcmp(t, "2600"), "seq voice 0: %s", t);
+        en_param_text(P_CATT, 40, t);
+        CHECK(!strcmp(t, "40"), "attack 40, unsigned: %s", t);
         en_param_text(P_SEQ2OCT, 1, t);
         CHECK(!strcmp(t, "+1"), "seq2 oct: %s", t);
         en_param_text(P_MODE, MODE_DORIAN, t);
