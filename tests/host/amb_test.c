@@ -29,7 +29,8 @@ static uint8_t kick_bar[KBARS], bar_sec[KBARS];
  * notes sounding (note-ons less note-offs); note-ons on channel 10 and above (the drums', which are gone) */
 #define SQN 8192
 static uint32_t sq_n, sq_at[SQN], drum_ch_ons, s2_n, s2_at[SQN];
-static uint8_t sq_note[SQN], sq_vel[SQN], s2_note[SQN], dr_note[SQN];
+static uint8_t sq_note[SQN], sq_vel[SQN], s2_note[SQN], s2_vel[SQN], dr_note[SQN];
+static uint32_t ld_first = 0xFFFFFFFFu;          /* (the Lead's first note-on, its sixteenth) */
 static uint32_t dr_n, dr_at[SQN];
 static uint32_t ld_ons, ld_groups, ld_mono_bad, ld_outscale, ld_last_off = 0xFFFFFFFFu, ld_on_now, ld_pool = 0xFFFu;
 static int sounding[16][128];
@@ -54,7 +55,9 @@ void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2)
         if ((st & 15u) == 0u && dr_n < SQN)
             dr_at[dr_n] = en_bars, dr_note[dr_n] = (uint8_t)d1, dr_n++;
         if ((st & 15u) == 3u && s2_n < SQN)
-            s2_at[s2_n] = en_bars, s2_note[s2_n] = (uint8_t)d1, s2_n++;
+            s2_at[s2_n] = en_bars, s2_note[s2_n] = (uint8_t)d1, s2_vel[s2_n] = (uint8_t)d2, s2_n++;
+        if ((st & 15u) == 2u && ld_first == 0xFFFFFFFFu)
+            ld_first = en_bars;
     } else if ((st & 0xF0u) == 0x80u || (st & 0xF0u) == 0x90u) {
         sounding[st & 15u][d1 & 127u]--;
         if ((st & 15u) == 2u)
@@ -1082,6 +1085,43 @@ int main(void)
             else
                 CHECK(!bad && peak > 0.01f && peak < 0.8f, "test_atmos_chars: %s: peak %f", EN_NCHAR_NAME[c], (double)peak);
         }
+    }
+
+    /* (BERLIN) the layers come in one by one: Seq2 in 0, Sequence 2 with the Sequence, from its first bar; Seq2 in 8,
+     * nothing in its first bar, then rising (its notes louder in bars 9 .. 12 than in 1 .. 3); Lead in 8: no Lead
+     * before bar 8, and some after */
+    {
+        uint32_t i, first0 = 0xFFFFFFFFu, first8 = 0xFFFFFFFFu, n_lo = 0, n_hi = 0, v_lo = 0, v_hi = 0;
+        fresh();
+        en_set(P_SEQ2, 60);
+        en_set(P_S2IN, 0);
+        en_play(1);
+        run(10.0f);
+        for (i = 0; i < s2_n; i++)
+            first0 = s2_at[i] < first0 ? s2_at[i] : first0;
+        CHECK(first0 < 16u, "test_layer_entries: Seq2 in 0: first note at sixteenth %u", first0);
+        fresh();
+        en_set(P_SEQ2, 60);
+        en_set(P_S2IN, 8);
+        en_set(P_LDIN, 8);
+        en_set(P_LEAD, 60);
+        en_set(P_LDENS, 100);
+        ld_first = 0xFFFFFFFFu;
+        en_play(1);
+        run(120.0f);
+        for (i = 0; i < s2_n; i++) {
+            const uint32_t b = s2_at[i] / 16u;
+            first8 = s2_at[i] < first8 ? s2_at[i] : first8;
+            if (b >= 1u && b <= 3u)
+                n_lo++, v_lo += s2_vel[i];
+            if (b >= 9u && b <= 12u)
+                n_hi++, v_hi += s2_vel[i];
+        }
+        CHECK(first8 >= 16u && n_lo && n_hi && v_lo * n_hi < v_hi * n_lo,
+              "test_layer_entries: Seq2 in 8: first at %u, bars 1-3 %u notes vel %u, bars 9-12 %u notes vel %u", first8, n_lo,
+              v_lo, n_hi, v_hi);
+        CHECK(ld_first != 0xFFFFFFFFu && ld_first >= 8u * 16u, "test_layer_entries: Lead in 8: first Lead note at %u",
+              ld_first);
     }
 
     /* (BERLIN) every note-on has its note-off: two minutes of piece changes, tempo changes, freeze, mutes, PANIC and

@@ -24,16 +24,17 @@
 /* (past NPAGES, on no button of their own: V_MIX, PERFORM's knobs, the four layers' levels; the layers' sound
  * pages, the layer's button pressed again) */
 enum { V_DUB, V_CHORD, V_TEXTURE, V_BASS, V_DRUMS, V_SPACE, V_SETUP, NPAGES, V_MIX = NPAGES, V_CSND, V_PSND, V_BSND,
-       V_DSND, V_CFM, V_PFM, V_BFM, V_CHORDS, V_PAT, V_PERF, V_KEY, V_NSND, V_ESND, V_NSND2, NVIEWS };
+       V_DSND, V_CFM, V_PFM, V_BFM, V_CHORDS, V_PAT, V_PERF, V_KEY, V_NSND, V_ESND, V_NSND2, V_ARC, NVIEWS };
 /* (V_PERF: PERFORM's knobs, the master actions; V_MIX while white 6 is held. V_KEY: HOME again, the key and the
  * tempo, the Dub page's second) */
 static const char *const VIEW_NAME[NVIEWS] = {"Berlin", "Drone", "Sequence", "Lead", "Sequence 2", "Space", "Setup",
                                               "Mix", "Drone sound", "Seq sound", "Lead sound", "Seq2 sound",
                                               "Drone FM", "Repeats", "Lead FM", "Chords", "Pattern", "Perform", "Key", "Atmosphere",
-                                              "Echo", "Atmos sound"};
+                                              "Echo", "Atmos sound", "Arc"};
 #define B_NONE 0xFFu
 static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_ENV, B_ARP, B_LFO, B_SEQ, B_FX, B_GLO, B_NONE, B_NONE, B_NONE, B_NONE,
-                                         B_NONE, B_NONE, B_NONE, B_NONE, B_NONE, B_NONE, B_NONE, B_NONE, B_SAVE, B_NONE, B_NONE};
+                                         B_NONE, B_NONE, B_NONE, B_NONE, B_NONE, B_NONE, B_NONE, B_NONE, B_SAVE, B_NONE, B_NONE,
+                                         B_NONE};
 static int sound_of(int v) { return v == V_CHORD ? V_CSND : v == V_TEXTURE ? V_PSND : v == V_BASS ? V_BSND : v == V_DRUMS ? V_DSND : -1; }
 static int fm_of(int v) { return v == V_TEXTURE ? V_PFM : -1; }   /* (BERLIN: no FM pages; the Sequence's third, its
                                                                    * Repeats, in the Ping FM page's place) */
@@ -55,7 +56,8 @@ static int fm_knob_off(int v, int i)             /* a knob there doing nothing: 
 }
 static int page_of(int v)                        /* a sound page: its layer's; the Echo page: Space's */
 {
-    return v == V_KEY ? V_DUB : v == V_ESND ? V_SPACE : v == V_NSND2 ? V_NSND : parent_of(v) >= 0 ? parent_of(v) : v;
+    return v == V_KEY ? V_DUB : v == V_ESND ? V_SPACE : v == V_NSND2 ? V_NSND : v == V_ARC ? V_SETUP
+         : parent_of(v) >= 0 ? parent_of(v) : v;
 }
 /* SELECT's round and the dots, as the buttons sit on the panel: FX ENV LFO GLO, then HOME SAVE ARP SEQ */
 #define NROUND 8
@@ -108,6 +110,8 @@ static const uint16_t VIEW_KNOB[NVIEWS][4] = {
     {P_NGRAIN, P_NWIDTH, P_NDRIFT, P_NROOM},       /* the Atmosphere */
     {P_EBLUR, P_ETONE, P_EWIDTH, P_SIZE},
     {P_NCOL, P_NTUNE, P_NPLATE, P_NECHO},      /* its space */
+    {P_S2IN, P_LDIN, P_SWEEP, P_MOTION},         /* the Arc (GLO again): how the piece builds (the arc's Emerge and Ending
+                                                  * to come, in Sweep's and Motion's places) */
 };
 static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Filter", "Evolve", "Motion", "Drift"},
@@ -132,6 +136,7 @@ static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Density", "Width", "Drift", "Air"},
     {"Blur", "Tone", "Width", "Size"},
     {"Colour", "Ring", "Reverb", "Echo"},
+    {"Seq2 in", "Lead in", "Sweep", "Motion"},
 };
 /* what each knob does, a line: on the rule above the knobs while it's being turned (in capitals; each fits the
  * rule's 228 px: the host's expect helpfit) */
@@ -959,6 +964,11 @@ static void button(int b)
     }
     if (b == B_FX && (ui.view == V_SPACE || ui.view == V_ESND)) {   /* FX again: the Echo page; again: back */
         set_view(ui.view == V_SPACE ? V_ESND : V_SPACE);
+        return;
+    }
+    if (b == B_GLO && (ui.view == V_SETUP || ui.view == V_ARC)) {   /* GLO again: the Arc (how the piece builds);
+                                                                       * again: back */
+        set_view(ui.view == V_SETUP ? V_ARC : V_SETUP);
         return;
     }
     if (b == B_HOME && ui.view == V_DUB) {       /* HOME again: the Key page (the key and the tempo); again: back */

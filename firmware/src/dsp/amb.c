@@ -40,8 +40,8 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Cloud", 0, 100, 30},
     {"Seq voice", 0, EN_NSV - 1, 0}, {"Lead voice", 0, EN_NBV - 1, 0}, {"Seq2 voice", 0, EN_NS2V - 1, 1},
     {"Attack", 0, 100, 40},   {"Colour", -50, 50, 0},   {"Resonance", -50, 50, 0}, {"Release", 0, 100, 50},
-    {"Pedal", 0, 100, 70},    {"Seq reverb", 0, 100, 50}, {"Seq echo", 0, 100, 50}, {"Lead reverb", 0, 100, 50},
-    {"Lead oct", -2, 1, 0},   {"Vibrato", 0, 100, 40},  {"Lead echo", 0, 100, 50}, {"Glide", 0, 100, 25},
+    {"Pedal", 0, 100, 70},    {"Seq reverb", 0, 100, 50}, {"Seq echo", 0, 100, 50}, {"Lead reverb", 0, 100, 90},
+    {"Lead oct", -2, 1, 0},   {"Vibrato", 0, 100, 40},  {"Lead echo", 0, 100, 90}, {"Glide", 0, 100, 25},
     {"Kick tune", -12, 12, 0}, {"Drone reverb", 0, 100, 50}, {"Drone echo", 0, 100, 50}, {"Seq2 echo", 0, 100, 50},
     {"Chord alg", 0, 9, 0},   {"Chord ratio", -50, 50, 0}, {"Chord fb", 0, 100, 0}, {"Chord LFO", 0, 100, 0},
     {"Decay 2", 0, 100, 35},    {"Ping ratio", -50, 50, 0}, {"Ping fb", 0, 100, 0}, {"Ping LFO", 0, 100, 0},
@@ -55,9 +55,9 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Play", 0, 6, 1},
     {"Steps", -32768, 32767, 0}, {"Steps 2", -32768, 32767, 0}, {"Octaves", -32768, 32767, 0},
     {"Octaves 2", -32768, 32767, 0},  {"Skips", -32768, 32767, 0},
-    {"Accents", -32768, 32767, 0},   {"Accents 2", -32768, 32767, 0},   {"Open acc", -32768, 32767, 0},
+    {"Accents", -32768, 32767, 0},   {"Accents 2", -32768, 32767, 0},   {"Seq2 in", 0, 64, 8},
     {"Rim acc", -32768, 32767, 0},    {"Clap acc", -32768, 32767, 0},
-    {"Chance", 0, 100, 100}, {"Chance 2", 0, 100, 100}, {"Open chance", 0, 100, 100}, {"Rim chance", 0, 100, 100},
+    {"Chance", 0, 100, 100}, {"Chance 2", 0, 100, 100}, {"Lead in", 0, 64, 16}, {"Rim chance", 0, 100, 100},
     {"Clap chance", 0, 100, 5},
     {"Accent", 0, 100, 50}, {"Seq play", 0, 1, 0},
     {"Noise tone", -50, 50, 0}, {"Noise density", -50, 50, 0}, {"Air", -50, 50, 0}, {"Noise drift", -50, 50, 0},
@@ -187,7 +187,7 @@ void en_piece(int i, int16_t *par, uint16_t *pool)
                                   P_CVOICE, P_CATT, P_DREL, P_PHASER, P_LEAD, P_LVOICE, P_GLIDE, P_VIB, P_LDENS, P_LOCT,
                                   P_CRACKLE, P_NCHAR, P_PEDAL, P_SQREV, P_SQECHO, P_LDREV, P_LDECHO, P_DRREV, P_DRECHO,
                                   P_S2REV, P_S2ECHO, P_LTONE, P_S2CUT, P_S2DEC, P_LATT, P_NWIDTH, P_NPLATE, P_NECHO, P_NTUNE,
-                                  P_NROOM, P_NGRAIN, P_NCOL, P_NDRIFT};
+                                  P_NROOM, P_NGRAIN, P_NCOL, P_NDRIFT, P_S2IN, P_LDIN};
     unsigned k;
     for (p = 0; p < P_NPARAMS; p++)
         par[p] = PIECES[i].v[p];
@@ -1471,6 +1471,7 @@ static uint8_t sq_wrap[2], sq_bars[2], sq_written[2], sq_prio[2][SEQ_MAX];
 static uint32_t sq_rng = 0x2545F491u;
 static float seq_vol, seq2_vol, sq_cut = 600.0f, sq_edec = 0.9995f, sq_adec = 0.9997f;
 static float sq2_cut = 450.0f, sq2_edec = 0.9995f, sq2_adec = 0.9997f, sq_rev[2] = {1.0f, 1.0f}, sq_echo[2] = {1.0f, 1.0f};
+static float s2_gain = 1.0f;                    /* (Sequence 2 coming in: 0 .. 1 over Seq2 in bars) */
 static float sw_v, sw_t, sw_mul = 1.0f;          /* the Sweep: where its wander is, where it goes; the cutoff's factor */
 static int sw_bars = 16, sw_len = 16;            /* (a first aim on the first bar) */
 volatile float en_seq_cut;                       /* (the Sweep's wander, 0..1, for the screen and the tests) */
@@ -1542,7 +1543,7 @@ static void pluck_voice(int l, int n, int vel, int rep)   /* rep: a repeat, pann
     v->env = 1.0f;
     v->adec = l ? sq2_adec : sq_adec;
     v->edec = l ? sq2_edec : sq_edec;
-    v->cut = l ? sq2_cut : sq_cut * sw_mul;
+    v->cut = l ? sq2_cut * fm_exp2f(-2.0f * (1.0f - s2_gain)) : sq_cut * sw_mul;   /* (its filter opening as it comes in) */
     v->s1[0] = v->s1[1] = v->s2[0] = v->s2[1] = 0.0f;
     p = ((l ? 0.0f : rep ? 0.35f : -0.25f) + 1.0f) * (FM_PI / 4.0f);
     v->gl = fm_cosf(p);
@@ -1600,6 +1601,8 @@ static void seq_tick(void)                       /* a sixteenth: the sequences' 
     static const uint8_t DT[6] = {2, 3, 4, 6, 8, 16};   /* the repeats' times (the echo's), in sixteenths */
     const int on_grid = par[P_SEQGRID] || !(sixteenth & 1u);
     int l;
+    s2_gain = par[P_S2IN] ? fm_minf((float)(sixteenth >> 4) / (float)par[P_S2IN], 1.0f) : 1.0f;   /* (the bars since the
+                                                  * start: the arc's Emerge will move this to "since the Sequence is in") */
     if (!(sixteenth & 15u)) {                    /* the Sweep: the Sequence's cutoff wandering, a new aim every 8 .. 64
                                                   * bars (~20 s .. 2.5 min at 96), up to 1.5 octaves either way */
         if (++sw_bars >= sw_len) {
@@ -1638,6 +1641,8 @@ static void seq_tick(void)                       /* a sixteenth: the sequences' 
                 played = seq_note(&q, l, st);
                 vel = q.acc >> st & 1u ? 120 : 120 - 86 * par[P_SACCENT] / 100;   /* the root accented (Accent 50: 77,
                                                                                * as Synth Seeker's 121 and 77) */
+                if (l)
+                    vel = (int)((float)vel * s2_gain * s2_gain);   /* (Sequence 2 coming in: silent at first) */
                 pluck_voice(l, played, vel, 0);
             }
             sq_pos[l] = seq_next(&q, st);
@@ -1730,8 +1735,8 @@ static void lead_tick(void)                      /* a sixteenth: the phrase goes
     if (!(sixteenth & 15u) && !ld_n) {           /* a bar line, between phrases */
         if (ld_rest)
             ld_rest--;
-        else if (seq_rand(&ld_rng) % 100u < (uint32_t)(20 + 6 * pe(P_LDENS) / 10))
-            lead_phrase();
+        else if ((int)(sixteenth >> 4) >= par[P_LDIN] && seq_rand(&ld_rng) % 100u < (uint32_t)(20 + 6 * pe(P_LDENS) / 10))
+            lead_phrase();                       /* (not before Lead in bars: the sequence established first) */
     }
     if (!ld_n)
         return;

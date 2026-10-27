@@ -78,8 +78,8 @@ enum {
     /* the drums' pattern page: each lane's sixteen steps (bit i: step i, as int16) and its accents, its chance (%);
      * the accents' strength; Play: Auto (generated, as ever) or Pattern (these) */
     P_SGATE0, P_SGATE1, P_SOCT0, P_SOCT1, P_SSKIP0,
-    P_SACC0, P_SACC1, P_DACC2, P_DACC3, P_DACC4,
-    P_SCH0, P_SCH1, P_DCH2, P_DCH3, P_DCH4,
+    P_SACC0, P_SACC1, P_S2IN, P_DACC3, P_DACC4,
+    P_SCH0, P_SCH1, P_LDIN, P_DCH3, P_DCH4,
     P_SACCENT, P_SMODE,
     /* the noise (SAVE's Noise page, 1.3.0): Colour, Grain, Room, Drift, -50..+50 around the piece's own (0), and a
      * character (EN_NCHAR_NAME: Vinyl, Tape, Dust, Room, Machine); Crackle (the Noise page's Level) is its level.

@@ -219,6 +219,7 @@ static void orph_run(int p, int v, float *e, uint32_t *mh)
     en_set(P_SEQ2, 60);
     en_set(P_TAPB, 60);                          /* (Repeat B heard: its time can be) */
     en_set(P_NCHAR, 1);                          /* (an Atmosphere heard: Wind; the default is None) */
+    en_set(P_LDIN, 0);                           /* (the Lead heard from the start) */
     en_set(p, v);
     en_regrow();
     en_play(1);
@@ -816,7 +817,7 @@ int main(int argc, char **argv)
                                                   * scenario: it leaves the engine reset) */
             static const uint8_t REACH[] = {V_DUB, V_KEY, V_CHORD, V_CSND, V_TEXTURE, V_PSND, V_PFM, V_BASS, V_BSND,
                                             V_DRUMS, V_DSND, V_PAT, V_SPACE, V_ESND, V_SETUP, V_MIX, V_PERF, V_NSND,
-                                            V_NSND2};
+                                            V_NSND2, V_ARC};
             float e0[16], e1[16];
             uint32_t m0, m1;
             unsigned k;
