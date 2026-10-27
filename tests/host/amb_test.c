@@ -339,11 +339,7 @@ int main(void)
         }
     }
 
-    /* grooves, drift */
-    CHECK(en_groove(0) == 1u, "Drone: the downbeat");
-    for (i = 0; i < 5; i++)
-        CHECK(en_groove(i) & 0xFFFFu && !(en_groove(i) >> 16), "groove %d: %x", i, en_groove(i));
-    CHECK(en_groove(1) == 0x4444u, "Offbeat: %x", en_groove(1));
+    /* drift */
     CHECK(en_drift_bars(0) == 2 && en_drift_bars(5) == 64 && en_drift_bars(6) == 0, "drift bars");
 
     /* texts */

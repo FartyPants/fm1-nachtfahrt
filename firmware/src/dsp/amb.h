@@ -200,8 +200,8 @@ extern volatile uint8_t en_pad_note[EN_NPAD];  /* the note each voice plays (MID
 extern volatile float en_pad_amp[EN_NPAD];     /* and how loud */
 extern volatile uint8_t en_section;            /* SEC_*: the phrase playing */
 extern volatile uint8_t en_phrase_bar;         /* 0..7: its bar */
-extern volatile uint8_t en_change_next;        /* the next phrase brings a change (1 the plan, 2 the kick, 4 the section;
-                                                * decided on its last bar) */
+extern volatile uint8_t en_change_next;        /* the next phrase brings a change (4 the section; decided on its last
+                                                * bar) */
 extern volatile uint32_t en_stab_pat;          /* the stabs' pattern this bar (bit i: step i) */
 extern volatile uint32_t en_throws;            /* stabs thrown into the echo so far (for tests) */
 /* for the screen's ripples and lanes */
@@ -238,9 +238,6 @@ int en_chord_tones(uint32_t pool, int root, int deg, int *pcs);
  * 7th chord, root 5th 7th 10th; shape 1: root 7th 10th 14th, a 9th without its fifth) */
 void en_voicing(uint32_t pool, int deg, int shape, int *iv);
 const char *en_chord_name(const int *pcs, int n, char *buf);   /* "Em7", "Dsus4", "C" ... */
-uint32_t en_groove(int g);                     /* the bass's pattern g (the engine's: Drone, Offbeat, Dotted, Roller,
-                                                * Sync): bit i, a note on step i */
-int en_groove_pat(int knob);                   /* the Groove knob (Drone, Offbeat, Dotted, Sync, Roller): its pattern */
 int en_drift_bars(int v);                      /* Drift's value in bars; 0: the chord holds */
 /* the FM pages: is the layer's voice FM now (0 chord, 1 pings, 2 bass), and its algorithm as it plays (0..8) */
 int en_voice_fm(int layer);
