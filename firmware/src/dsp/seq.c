@@ -43,11 +43,33 @@ uint32_t seq_rand(uint32_t *rng)
     return x;
 }
 
+/* one note for a step: mostly the core cell (root, fifth, octave), sometimes any step of the scale */
+static int seq_pick_deg(uint32_t *rng, int nscale)
+{
+    int core[3], ncore;
+    if (nscale < 1)
+        nscale = 1;
+    if (nscale > 12)
+        nscale = 12;
+    core[0] = 0;
+    if (nscale < 3) {
+        core[1] = nscale;
+        ncore = 2;
+    } else {
+        core[1] = (nscale * 7 + 6) / 12;   /* the fifth: the step nearest 7 semitones */
+        core[2] = nscale;
+        ncore = 3;
+    }
+    if (seq_rand(rng) % 100u < 70u || nscale < 3)
+        return core[seq_rand(rng) % (uint32_t)ncore];
+    return (int)(seq_rand(rng) % (uint32_t)nscale);   /* any other step of the scale */
+}
+
 /* grow a Berlin School pattern: the root first and accented, mostly root-fifth-octave, some rests,
  * and octave jumps only among the last few playing steps */
 void seq_grow(seq_t *s, uint32_t *rng, int nscale, int density, int len)
 {
-    int core[3], ncore, i, n, played, last[SEQ_MAX], nlast = 0, noct;
+    int i, n, played, last[SEQ_MAX], nlast = 0, noct;
     float f;
     if (nscale < 1)
         nscale = 1;
@@ -83,16 +105,6 @@ void seq_grow(seq_t *s, uint32_t *rng, int nscale, int density, int len)
         }
     }
 
-    /* the core cell: root, fifth (the step nearest 7 semitones), octave */
-    core[0] = 0;
-    if (nscale < 3) {
-        core[1] = nscale;
-        ncore = 2;
-    } else {
-        core[1] = (nscale * 7 + 6) / 12;
-        core[2] = nscale;
-        ncore = 3;
-    }
     for (i = 0; i < len; i++) {
         if (!((s->gate >> i) & 1u))
             continue;
@@ -101,10 +113,7 @@ void seq_grow(seq_t *s, uint32_t *rng, int nscale, int density, int len)
             s->acc |= 1u;
             continue;
         }
-        if (seq_rand(rng) % 100u < 70u || nscale < 3)
-            s->deg[i] = (int8_t)core[seq_rand(rng) % (uint32_t)ncore];
-        else
-            s->deg[i] = (int8_t)(seq_rand(rng) % (uint32_t)nscale);   /* any other step of the scale */
+        s->deg[i] = (int8_t)seq_pick_deg(rng, nscale);
         last[nlast++] = i;
     }
 
@@ -113,4 +122,56 @@ void seq_grow(seq_t *s, uint32_t *rng, int nscale, int density, int len)
     for (i = nlast - 1; i >= 0 && noct > 0; i--, noct--)
         if (seq_rand(rng) & 1u)
             s->oct |= (uint16_t)(1u << last[i]);
+}
+
+/* the performer: one structural move (return point, a skip or an octave) with probability motion/100, and
+ * independently a note change with probability evolve/100 x 1/8. step 0 is never touched, acc never changes */
+void seq_vary(seq_t *s, uint32_t *rng, int nscale, int motion, int evolve)
+{
+    int cand[SEQ_MAX], n = 0, i, len = s->len, base = s->base_len;
+    if (evolve > 100)
+        evolve = 100;
+    if (len > SEQ_MAX)
+        len = SEQ_MAX;
+
+    if (motion > 0 && seq_rand(rng) % 100u < (uint32_t)motion) {
+        switch (seq_rand(rng) % 3u) {
+        case 0:   /* return point: away from base_len by 1..3 (not below 3), home, or away again */
+            if (base >= 3) {
+                int lo = base - 3 < 3 ? 3 : base - 3, to;
+                if (len == base) {
+                    to = base - 1 - (int)(seq_rand(rng) % 3u);
+                    s->len = (uint8_t)(to < 3 ? 3 : to);
+                } else if (seq_rand(rng) & 1u) {
+                    s->len = (uint8_t)base;
+                } else {
+                    s->len = (uint8_t)(lo + (int)(seq_rand(rng) % (uint32_t)(base - lo + 1)));
+                }
+            }
+            break;
+        case 1:   /* skip: flip a gated step in 1..len-1 */
+            for (i = 1; i < len; i++)
+                if ((s->gate >> i) & 1u)
+                    cand[n++] = i;
+            if (n)
+                s->skip ^= (uint16_t)(1u << cand[seq_rand(rng) % (uint32_t)n]);
+            break;
+        default:   /* octave: flip one of the last 3 gated steps, never step 0 */
+            for (i = len - 1; i >= 1 && n < 3; i--)
+                if ((s->gate >> i) & 1u)
+                    cand[n++] = i;
+            if (n)
+                s->oct ^= (uint16_t)(1u << cand[seq_rand(rng) % (uint32_t)n]);
+            break;
+        }
+    }
+
+    /* a note change: rare, one gated step other than the root */
+    if (evolve > 0 && seq_rand(rng) % 800u < (uint32_t)evolve) {
+        for (n = 0, i = 1; i < len; i++)
+            if ((s->gate >> i) & 1u)
+                cand[n++] = i;
+        if (n)
+            s->deg[cand[seq_rand(rng) % (uint32_t)n]] = (int8_t)seq_pick_deg(rng, nscale);
+    }
 }

@@ -206,6 +206,78 @@ static void test_grow_tiny_pool(void)
             }
 }
 
+/* the performer: one pattern, played on, changed mostly by its return point, skips and octaves */
+static seq_t grown(uint32_t seed, int len)
+{
+    uint32_t rng = seed;
+    seq_t s;
+    memset(&s, 0, sizeof s);
+    seq_grow(&s, &rng, 7, 70, len);
+    return s;
+}
+
+static void test_vary_still(void)
+{
+    uint32_t rng = 99;
+    seq_t s = grown(7, 8), o = s;
+    int i;
+    for (i = 0; i < 1000; i++)
+        seq_vary(&s, &rng, 7, 0, 0);
+    CHECK(memcmp(&s, &o, sizeof s) == 0, "motion 0 evolve 0 changes nothing");
+}
+
+static void test_vary_notes_rare(void)
+{
+    uint32_t rng = 4242;
+    seq_t s = grown(11, 8);
+    int i, changed = 0;
+    for (i = 0; i < 800; i++) {
+        seq_t o = s;
+        seq_vary(&s, &rng, 7, 0, 100);
+        CHECK(memcmp(&o.gate, &s.gate, sizeof s.gate) == 0 && o.len == s.len && o.skip == s.skip && o.oct == s.oct,
+              "evolve alone moves only notes");
+        changed += memcmp(o.deg, s.deg, sizeof o.deg) != 0;
+    }
+    CHECK(changed >= 1 && changed <= 100, "notes changed in %d of 800 calls", changed);
+}
+
+static void test_vary_return_point(void)
+{
+    uint32_t rng = 31337;
+    seq_t s = grown(3, 8);
+    int i, seen[SEQ_MAX + 1] = {0}, kinds = 0, home = 0;
+    for (i = 0; i < 400; i++) {
+        seq_vary(&s, &rng, 7, 100, 0);
+        CHECK(s.len >= 3 && s.len <= 8, "len %d out of 3..8", s.len);
+        seen[s.len] = 1;
+        home += s.len == 8;
+    }
+    for (i = 0; i <= SEQ_MAX; i++)
+        kinds += seen[i];
+    CHECK(kinds >= 3, "len took %d different values", kinds);
+    CHECK(home * 10 >= 400 * 3, "back at base_len %d of 400 calls", home);
+    CHECK(s.base_len == 8, "base_len kept");
+}
+
+static void test_vary_root_kept(void)
+{
+    static const int mo[3] = {0, 50, 100}, ev[3] = {0, 50, 100};
+    int a, b, i;
+    for (a = 0; a < 3; a++)
+        for (b = 0; b < 3; b++) {
+            uint32_t rng = 17u + (uint32_t)(a * 3 + b);
+            seq_t s = grown(5u + (uint32_t)a, 12);
+            uint16_t acc = s.acc;
+            for (i = 0; i < 1000; i++) {
+                seq_vary(&s, &rng, 7, mo[a], ev[b]);
+                CHECK(s.deg[0] == 0 && (s.gate & 1u), "root lost");
+                CHECK(!(s.skip & 1u) && !(s.oct & 1u), "step 0 skipped or octaved");
+                CHECK(s.acc == acc, "acc changed");
+                CHECK(seq_cycle(&s) >= 1, "everything skipped");
+            }
+        }
+}
+
 int main(void)
 {
     test_next_wraps();
@@ -219,6 +291,10 @@ int main(void)
     test_grow_core_cell();
     test_grow_deterministic();
     test_grow_tiny_pool();
+    test_vary_still();
+    test_vary_notes_rare();
+    test_vary_return_point();
+    test_vary_root_kept();
     printf("seq: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;
 }
