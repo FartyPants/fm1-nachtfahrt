@@ -1518,6 +1518,8 @@ void en_seq_set(int l, const seq_t *p)
 
 static int sq_audible(int l)
 {
+    if (perf & EN_PF_DROP)                       /* (PERFORM's Drop: both sequences out) */
+        return 0;
     return l ? seq2_vol > 0.0f && !(mutes & (EN_M_KICK | EN_M_HATS)) : seq_vol > 0.0f && !(mutes & EN_M_PINGS);
 }
 
@@ -1550,7 +1552,8 @@ static void pluck_voice(int l, int n, int vel, int rep)   /* rep: a repeat, pann
     v->env = 1.0f;
     v->adec = l ? sq2_adec : sq_adec;
     v->edec = l ? sq2_edec : sq_edec;
-    v->cut = l ? sq2_cut * fm_exp2f(-2.0f * (1.0f - s2_gain)) : sq_cut * sw_mul;   /* (its filter opening as it comes in) */
+    v->cut = l ? sq2_cut * fm_exp2f(-2.0f * (1.0f - s2_gain)) : sq_cut * sw_mul * (perf & EN_PF_SWEEP ? 4.0f : 1.0f);   /* (PERFORM's
+                                                  * Sweep held: the Sequence's filter two octaves open) */   /* (its filter opening as it comes in) */
     v->s1[0] = v->s1[1] = v->s2[0] = v->s2[1] = 0.0f;
     p = ((l ? 0.0f : rep ? 0.35f : -0.25f) + 1.0f) * (FM_PI / 4.0f);
     v->gl = fm_cosf(p);
@@ -2260,14 +2263,14 @@ static uint32_t dpat(int d) { return par[P_SMODE] ? (uint32_t)(uint16_t)par[P_SG
 /* the screen's lanes, the bar as it plays: what is muted or at level 0, gone at once */
 static void lanes(void)
 {
-    const int kick = lay_kick && !(mutes & EN_M_KICK) && !(perf & EN_PF_KICKDROP) && EN_DUB,
+    const int kick = lay_kick && !(mutes & EN_M_KICK) && !(perf & EN_PF_DROP) && EN_DUB,
               hats = !(mutes & EN_M_HATS) && EN_DUB;
     en_lane[0] = (uint16_t)(mutes & EN_M_CHORD || !par[P_CHORD] ? 0u : en_stab_pat);
     en_lane[1] = (uint16_t)(kick ? bar_k & (fill ? 0x00FFu : 0xFFFFu) : 0u);
     en_lane[2] = (uint16_t)(hats ? (lay_hats ? bar_sh : 0u) | (lay_open || fill ? bar_op : 0u) : 0u);
     en_lane[3] = (uint16_t)(hats && lay_hats ? dpat(3) : 0u);
     en_lane[4] = (uint16_t)(hats && (sec == SEC_FULL || sec == SEC_GROOVE || par[P_SMODE]) ? dpat(4) : 0u);
-    en_lane[5] = (uint16_t)(lay_bass && !(mutes & EN_M_BASS) && !(perf & EN_PF_KICKDROP) && par[P_LEAD] > 0 ? bar_bass : 0u);
+    en_lane[5] = (uint16_t)(lay_bass && !(mutes & EN_M_BASS) && !(perf & EN_PF_DROP) && par[P_LEAD] > 0 ? bar_bass : 0u);
 }
 
 /* a pattern's hit: its chance (Play: Pattern only, so Auto's music stays as it was), its accent */
@@ -2290,7 +2293,7 @@ static void tick(void)
     gate_ctr = 0;
     if (st == 0)
         bar_start();
-    const int kick = lay_kick && !(mutes & EN_M_KICK) && !(perf & EN_PF_KICKDROP), hats = !(mutes & EN_M_HATS);
+    const int kick = lay_kick && !(mutes & EN_M_KICK) && !(perf & EN_PF_DROP), hats = !(mutes & EN_M_HATS);
     lanes();
     if (EN_DUB) {
         const float fv = (float)ph.vel[st] * (1.0f / 255.0f);   /* (the phrase's feel: this step's accent) */
@@ -2320,7 +2323,7 @@ static void tick(void)
                 drum_hit(4, v4, 0);
         }
     }
-    if (EN_DUB && lay_bass && !(mutes & EN_M_BASS) && !(perf & EN_PF_KICKDROP) && bar_bass >> st & 1u) {
+    if (EN_DUB && lay_bass && !(mutes & EN_M_BASS) && !(perf & EN_PF_DROP) && bar_bass >> st & 1u) {
         /* (1.3.0) the bar's notes, from the plan (Density and Energy: which rest, the same each A bar); the octave
          * note, if the plan has one, the same place each bar */
         const uint32_t first = bar_bass & (0u - bar_bass), below = bar_bass & ((1u << st) - 1u);
@@ -2331,7 +2334,7 @@ static void tick(void)
         int last = !later, thr = (fill && last) || frand() < fm_minf(0.12f * loose() * (sec == SEC_BREAK ? 1.5f : 1.0f) * throw_mul, 0.6f);
         float vel = st == (int)__builtin_ctz(en_stab_pat) ? 0.9f + 0.1f * frand() : 0.65f + 0.25f * frand();
         if (!(mutes & EN_M_CHORD))
-            stab_fire(vel, thr || (perf & EN_PF_THROW) || (fxm >> EN_FX_THROW & 1u));
+            stab_fire(vel, thr || (perf & EN_PF_SWEEP) || (fxm >> EN_FX_THROW & 1u));
     }
     noise_step((int)(sixteenth & 31u));         /* (the noise's groove: two bars) */
     for (d = 0; d < EN_NDRUM; d++)
@@ -3613,7 +3616,7 @@ static void render_bass(uint32_t n)
         float x, tgt = gate > 0 ? 1.0f : 0.0f;
         if (gate > 0 && --gate == 0)
             midi(0x82, bass.midi_note, 0);
-        if (perf & EN_PF_KICKDROP && gate > 0) {   /* PERFORM's Drop: the bass let go at once (~20 ms) */
+        if (perf & EN_PF_DROP && gate > 0) {   /* PERFORM's Drop: the bass let go at once (~20 ms) */
             gate = 0;
             midi(0x82, bass.midi_note, 0);
             tgt = 0.0f;
@@ -4461,7 +4464,7 @@ static float ens_tap(float d)                    /* d samples back, between two 
 static void render_drone(uint32_t n)
 {
     const int cv = cvoice < EN_NCV ? cvoice : 0;
-    const float g = chord_vol * 0.072f, fc = 1800.0f * fm_exp2f(2.0f * rel(P_CCOL)), k = fm_clampf(1.2f - 0.9f * rel(P_CRES), 0.2f, 2.0f);
+    const float g = mutes & EN_M_CHORD ? 0.0f : chord_vol * 0.072f, fc = 1800.0f * fm_exp2f(2.0f * rel(P_CCOL)), k = fm_clampf(1.2f - 0.9f * rel(P_CRES), 0.2f, 2.0f);
     float c[4], cf1[4], cf2[4];
     uint32_t j;
     int b, i;

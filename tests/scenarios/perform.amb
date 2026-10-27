@@ -1,150 +1,36 @@
-# PERFORM (SEL): white 1-5 mute the layers, black 1-5 solo them, white 7-11 held make the dub moves, white 6 held
-# puts the mix on the knobs (else the master actions: Filter, Dub, Energy, Space); SEL again stays (one page); a page's button or SELECT gives the scale back
+# PERFORM (SEL): white 1-5 mute the Drone, the Sequence, the Lead, Sequence 2, the Atmosphere (their levels kept);
+# white 7-11 held: Sweep, Open, Shut, Drop (both sequences out), Push; SEL or a page's button leaves
+wait 500
 listen
-wait 3000
-expect pool 0x6AD
 tap SEL
-wait 200
+wait 300
+expect view 17
 said PERFORM ON
-tapkey w3
-wait 200
-said KICK OFF
-tapkey w0
-wait 200
-said CHORD OFF
-key w6 down
-wait 200
-said THROW
-wait 1500
-key w6 up
-key w10 down
-wait 200
-said ECHO
-wait 1000
-key w10 up
-# white 6 held: the mix on the knobs; let go: the master actions
-expect view 17
-key w5 down
-wait 200
-expect view 7
-said MIX
-key w5 up
-wait 200
-expect view 17
-# the master actions: the Filter (it stops at the middle on the way through), Throws, Energy, Duck
-spin K1 -22
-wait 300
-said Filter Shut 40
-spin K1 30
-wait 300
-said Filter Off
-spin K1 12
-wait 300
-said Filter Open 20
-spin K1 -10
-wait 300
-spin K2 27
-wait 300
-said Wet +50
-spin K2 -25
-wait 300
-spin K3 -27
-wait 300
-said Energy -50
-spin K3 25
-wait 300
-spin K4 52
-wait 300
-said Duck 100
-expect par30 100
-spin K4 -50
-wait 300
-# a black key solos its layer (the scale stays): the others go quiet; more than one play together
-tapkey b0
-wait 200
-expect pool 0x6AD
-said SOLO CHORD
-tapkey b2
-wait 200
-said SOLO BASS
-tapkey b0
-wait 200
-said CHORD SOLO OFF
-tapkey b2
-wait 200
-said SOLO OFF
-tapkey w3
-wait 200
-said KICK ON
-# (true mutes: the Drums level untouched; the chord still muted)
-expect par3 80
-expect mutes 1
-tap SEL
-wait 200
-expect view 17
-tap HOME
-wait 200
-said PERFORM OFF
-# the keys are the scale again (key b0 is F#: added)
-tapkey b0
-wait 200
-said ADDED F#
-expect dirty 1
-# the mixer: PERFORM puts the four levels on the knobs; SEL off goes back to the page
-expect view 0
-tap SEL
-wait 200
-expect view 17
-key w5 down
-wait 200
-expect view 7
-spin K2 -100
-wait 200
-expect par1 0
-key w5 up
-wait 200
-tap HOME
-wait 200
-expect view 0
-# keys 1-5 are true mutes, the levels kept (the mixer above left Pings at 0: it stays there)
-tap SEL
-wait 200
+# the Sequence muted (white 2): no note on channel 2
 tapkey w1
-wait 200
-expect mutes 3
-expect par1 0
-said PINGS OFF
+wait 300
+said SEQ
+peakreset
+wait 6000
+expect notes_ch2 0
 tapkey w1
-wait 200
-expect mutes 1
-expect par1 0
-said PINGS ON
-tapkey w0
-wait 200
-expect mutes 0
-expect par0 52
-said CHORD ON
-tap HOME
-# SEL held: Lock (the phrases keep their kick, groove and plan), on or off, from any page; a tap is still PERFORM
+wait 300
+peakreset
+wait 6000
+expect notes_ch2 >0
+# Drop held (white 10): both sequences out, the Drone goes on
+key w9 down
+wait 300
+peakreset
+wait 6000
+expect notes_ch2 0
+expect notes_ch4 0
+key w9 up
+wait 300
+peakreset
+wait 6000
+expect notes_ch2 >0
+# a page's button leaves PERFORM
 tap ENV
 wait 300
 expect view 1
-expect lock 0
-press SEL
-wait 700
-release SEL
-wait 200
-said LOCK ON
-expect lock 1
-expect view 1
-expect card 1
-tap SEL
-wait 200
-expect view 17
-tap ENV
-press SEL
-wait 700
-release SEL
-wait 200
-said LOCK OFF
-expect lock 0

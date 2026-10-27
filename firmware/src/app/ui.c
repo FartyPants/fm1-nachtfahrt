@@ -694,8 +694,8 @@ static void set_piece(int i)                    /* the piece playing kept as it 
 static const uint8_t PERF_KEY[PERF_N] = {0, 2, 4, 6, 7,          /* white 1-5: the layers */
                                          11, 12, 14, 16, 18,     /* white 7-11: the moves */
                                          1, 3, 5, 8, 10};        /* black 1-5: the solos */
-static const char *const PERF_NAME[PERF_N] = {"DRONE", "SEQ", "LEAD", "SEQ 2", "SEQ 2", "THROW", "OPEN", "SHUT",
-                                              "DROP", "ECHO", "DRONE", "SEQ", "LEAD", "SEQ 2", "SEQ 2"};
+static const char *const PERF_NAME[PERF_N] = {"DRONE", "SEQ", "LEAD", "SEQ 2", "ATMOS", "SWEEP", "OPEN", "SHUT",
+                                              "DROP", "ECHO", "DRONE", "SEQ", "LEAD", "SEQ 2", "ATMOS"};
 static void perf_mutes(void)                     /* to the engine: the mutes, and with a solo, all but it */
 {
     en_mute(ui.mutes | (ui.solo ? 0x1Fu & ~ui.solo : 0u));

@@ -120,10 +120,13 @@ void plat_midi_out(uint32_t pkt)
         fprintf(midi_log, "%u ms: %02X %02X %02X\n", now_ms, (pkt >> 8) & 0xFF, (pkt >> 16) & 0xFF, (pkt >> 24) & 0xFF);
 }
 /* the engine's MIDI out, as the device's glue sends it (USB-MIDI packet, cable 0) */
+static uint32_t notes_ch[16];                    /* (note-ons on each channel since the last peakreset) */
 static uint32_t orph_midi, orph_out;             /* (orphans: the MIDI out and the samples, as hashes) */
 void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2)
 {
     orph_midi = (orph_midi ^ (st | d1 << 8 | d2 << 16)) * 16777619u;
+    if ((st & 0xF0u) == 0x90u && d2)
+        notes_ch[st & 15u]++;
     plat_midi_out(st >> 4 | st << 8 | d1 << 16 | d2 << 24);
 }
 
@@ -534,6 +537,8 @@ static int expect(const char *what, const char *val)
         got = proj.pool;
     else if (!strcmp(what, "format"))
         got = (int)proj.format;
+    else if (!strncmp(what, "notes_ch", 8))       /* notes_chN: note-ons on MIDI channel N since the last peakreset */
+        got = (int)notes_ch[(atoi(what + 8) + 15) % 16];
     else if (!strcmp(what, "pingsame"))           /* 1: the ping loops as at the last pingmark */
         got = ping_hash() == ping_mark;
     else if (!strcmp(what, "screen"))
@@ -754,7 +759,7 @@ int main(int argc, char **argv)
         } else if (!strcmp(cmd, "wavstop"))
             wav_close();
         else if (!strcmp(cmd, "peakreset"))
-            peak_out = 0.0f;
+            peak_out = 0.0f, memset(notes_ch, 0, sizeof notes_ch);
         else if (!strcmp(cmd, "shot")) {
             snprintf(out, sizeof out, "%s/%s", dir, a);
             png_write(out);
