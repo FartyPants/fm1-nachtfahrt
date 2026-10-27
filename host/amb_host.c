@@ -562,6 +562,10 @@ static int expect(const char *what, const char *val)
         got = 0;
         for (v = 0; v < NVIEWS; v++)
             for (k = 0; k < 4; k++) {
+                if (!KNOB_HELP[v][k]) {           /* (none: a page added without its help) */
+                    printf("  no help: view %d knob %d\n", v, k + 1), got++;
+                    continue;
+                }
                 caps(hp, KNOB_HELP[v][k], sizeof hp);
                 if (text_w(&FONT_XS, hp) > 222 || strlen(KNOB_HELP[v][k]) >= sizeof hp)
                     printf("  too wide: %s\n", hp), got++;

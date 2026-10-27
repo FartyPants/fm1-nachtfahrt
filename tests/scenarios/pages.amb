@@ -73,6 +73,12 @@ tap GLO
 wait 300
 expect view 22
 said Arc page: Emerge 10, Seq2 in 8, Lead in 32, Arc 25
+# a knob on the Arc page: its help line shown as it turns (the review: the Arc's row was missing, NULL)
+turn K3 1
+wait 300
+said Lead in 33
+turn K3 -1
+wait 300
 # the voices: ALGORITHM on a layer's page
 tap ENV
 wait 300
@@ -97,3 +103,5 @@ expect par1 70
 tap OCT+
 wait 300
 expect par1 75
+# every page's knobs have a help line, BERLIN's, and each fits the rule
+expect helpfit 0

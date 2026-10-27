@@ -141,49 +141,32 @@ static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Emerge", "Seq2 in", "Lead in", "Arc"},
 };
 /* what each knob does, a line: on the rule above the knobs while it's being turned (in capitals; each fits the
- * rule's 228 px: the host's expect helpfit) */
-static const char *const KNOB_HELP[NVIEWS][4] = {
-    {"Sweeps the whole mix but the kick", "How restless: stabs come and go", "How often it leaves Full, and sweeps",
-     "Bars before the chord moves on"},
-    {"Stabs a bar, one to six", "How often a stab is thrown to the echo", "Dry, to mostly the echo",
-     "The stabs' low-pass: dark to bright"},
-    {"How many notes each loop holds", "The pings two octaves down to two up", "Dry, to mostly the echo",
-     "The reverb through the grain cloud"},
-    {"How many of the groove's notes play", "The bass an octave down or up", "The pattern, from sparse to busy",
-     "How often the fifth, not the root"},
-    {"The kick: none, one, half, four", "How busy the hats are", "The hats' level against the kick",
-     "The hats, dark to bright"},
-    {"How much goes into the echo", "The tape loop's length, in beats", "How long the repeats go on",
-     "How much goes into the plate"},
-    {"Fine tuning, in cents", "Notes and clock out over MIDI", "The keys' and buttons' lights",
-     "A turn saves all eight pieces"},
-    {"The chord's level", "The pings' level", "The bass's level", "The drums' level"},
-    {"The strike: a snap, to a swell", "How long each stab rings", "The voice's own colour",
-     "The filter's resonance"},
-    {"The ping, round to metallic", "The modulator: harmonic to clangy", "How long each ping rings",
-     "The pitch falling at the strike"},
-    {"Drive: clean to growling", "A pure sine, to a square", "How long each note holds", "The glide between notes"},
-    {"The kick's pitch, in semitones", "How long the kick booms", "The kick's click and start pitch",
-     "How long the hats ring"},
-    {"Which operators modulate which", "Operators 3 and 4's pitch", "Op 4 on itself: pure to gritty",
-     "The filter swept, over two bars"},
-    {"Which operators modulate which", "Operators 3 and 4's pitch", "Op 4 on itself: pure to gritty",
-     "The brightness swept, over a bar"},
-    {"Which operators modulate which", "Operators 3 and 4's pitch", "Op 4 on itself: pure to gritty",
-     "The bite swept, over four bars"},
-    {"The slot you're writing", "Its kind (Empty: a gap)", "Triad, 6, 7, Maj7, 9, 11, Add9",
-     "Endless, or the slots in a loop"},
-    {"The lane you're writing", "How much quieter the other steps", "How likely the lane's steps play",
-     "Auto patterns, or your own"},
-    {"Shut: under water. Open: thin", "The whole music dry, or drowned", "Sparse and dry, to busy and bright",
-     "How far each beat pushes the rest down"},
-    {"Beats a minute", "The key's root note", "The scale: Minor, Dorian, ...", "Off sixteenths late: the whole groove"},
-    {"How many hits ring, in two bars", "The hiss under it, softer or more", "The rings darker, or brighter",
-     "How long each hit rings on the chord"},
-    {"Clean repeats, to a dissolving wash", "The repeats darker, or brighter", "The echo mono, to wide",
-     "How long the plate rings"},
-    {"The noise mono, to wide", "How much of it rings in the plate", "How much of it goes into the echo",
-     "The rings' tone swept, over a bar"},
+ * rule's 228 px, and every view has its row: the host's expect helpfit) */
+_Static_assert(NVIEWS == 23, "a view added: its KNOB_HELP row too");
+static const char *const KNOB_HELP[NVIEWS][4] = {   /* (BERLIN's, a row a view, V_DUB .. V_ARC) */
+    {"Down shuts, up opens; Off mid", "How often a step changes", "How much, and the sections' pace", "Bars before the chord moves on"},
+    {"The root an octave under", "The filter's resonance", "The slow phaser's depth", "How slowly the chord swells in"},
+    {"How many of the steps sound", "Two octaves down to two up", "Steps before it returns", "Eighths, or sixteenths"},
+    {"How often it plays a phrase", "Two octaves down to one up", "How long it slides, note to note", "How deep the late vibrato"},
+    {"How likely each note plays", "Its octave", "Steps: a step short, it drifts", "Its level"},
+    {"How much goes into the echo", "The echo's time: 1/8 to a bar", "How long the repeats go on", "How much goes into the plate"},
+    {"Fine tuning, in cents", "Notes and clock out over MIDI", "The keys' and buttons' lights", "A turn saves all eight pieces"},
+    {"The Drone's level", "The Sequence's level", "The Lead's level", "Sequence 2's level"},
+    {"Darker, or brighter and wider", "How long it fades at a change", "How much goes into the plate", "How much goes into the echo"},
+    {"The filter: dark to bright", "How long each note rings", "How much goes into the plate", "How much goes into the echo"},
+    {"Dark and soft, or bright", "How slowly a note swells in", "How much goes into the plate", "How much goes into the echo"},
+    {"The filter: dark to bright", "How long each note rings", "How much goes into the plate", "How much goes into the echo"},
+    {"Which operators modulate which", "Operators 3 and 4's pitch", "Op 4 on itself: pure to gritty", "The filter swept, over two bars"},
+    {"Each note again, as loud: 100", "When: a dotted eighth, classic", "A second repeat, into rests", "When the second comes"},
+    {"Which operators modulate which", "Operators 3 and 4's pitch", "Op 4 on itself: pure to gritty", "The tone swept, over four bars"},
+    {"The slot you're writing", "Its kind (Empty: a gap)", "Triad, 6, 7, Maj7, 9, 11, Add9", "Endless, or the slots in a loop"},
+    {"The lane you're writing", "How much quieter off the root", "How likely the lane's steps play", "Auto patterns, or your own"},
+    {"Down shuts, up opens; Off mid", "The whole music dry, or drowned", "Sparser, or busier", "How far the filter wanders"},
+    {"Beats a minute", "The key's root note", "The scale: Minor, Major, ...", "How the steps follow the chord"},
+    {"How busy it is", "Mono, to wide", "How quickly it changes", "The air under it"},
+    {"Clean repeats, to a dissolving wash", "The repeats darker, or brighter", "The echo mono, to wide", "How long the plate rings"},
+    {"Darker, or brighter", "How much it rings", "How much goes into the plate", "How much goes into the echo"},
+    {"Bars the piece takes to emerge", "Bars Sequence 2 takes to come in", "Bars before the Lead may start", "How long before it ends: 0 never"},
 };
 
 /* the screen's colours: a dark room, as a dub techno sleeve (grey on black, a cold blue). The chord and
@@ -714,7 +697,7 @@ static void lock_toggle(void)                    /* SEL held: Lock, on or off: t
     ui.lock = (uint8_t)!ui.lock;
     en_lock(ui.lock);
     say("LOCK", ui.lock ? "ON" : "OFF");
-    card_show("LOCK", ui.lock ? "the groove kept" : "the groove free", K_ACC, 0);
+    card_show("LOCK", ui.lock ? "the sequences kept" : "the sequences free", K_ACC, 0);
 }
 static void perf_key(uint32_t key, int down)
 {
@@ -1343,7 +1326,7 @@ static void input(void)
                 nudge(ALL[j], NUDGE_SHAKE);
             nudge_quiet = 0;
             say("SHAKE", "EVERYTHING");
-            card_show("SHAKE ALL", "chord pings bass drums noise", K_FROST, 1);
+            card_show("SHAKE ALL", "every layer, and the space", K_FROST, 1);
         }
     }
     if ((btn >> B_EDIT & 1u) && !edit_new && plat_ms() - ui.down_t[B_EDIT] >= SHAKE_HOLD &&
@@ -1359,6 +1342,15 @@ static void input(void)
     for (i = 0; i < NKEYS; i++)
         if (ch >> i & 1u) {
             int down = (int)(keys >> i & 1u);
+            if (!down) {                         /* (BERLIN) a white key let go: the Lead let go of it first, whatever
+                                                  * takes the key now (REC, an effect, PERFORM, a page); the engine
+                                                  * ignores a release that isn't its key */
+                int st;
+                for (st = 0; st < 16 && STEP_KEY[st] != i; st++)
+                    ;
+                if (st < 16)
+                    en_lead_key(st, 0);
+            }
             if (((btn >> B_REC & 1u) && down) || (!down && ui.fx))
                 if (fx_key(i, down))
                     continue;                    /* REC held: the effects (and their keys let go) */
@@ -1380,8 +1372,8 @@ static void input(void)
                 int st;
                 for (st = 0; st < 16 && STEP_KEY[st] != i; st++)
                     ;
-                if (st < 16)
-                    en_lead_key(st, (int)(keys >> i & 1u));
+                if (st < 16 && down)
+                    en_lead_key(st, 1);          /* (its release sent above) */
             }
         }
     if (btn || keys || ch)
@@ -2448,8 +2440,8 @@ static void draw_grid(void)                      /* REC held: the effects, the w
 static void draw_pattern(void)
 {
     static const uint16_t C[EN_NDRUM] = {K_PULSE, K_TEXT, K_DIM, K_RIM, K_CLAP};
-    static const char *const SH[EN_NDRUM] = {"KICK", "SHKR", "OPEN", "RIM", "CLAP"};
-    int l, i, pos = en_drum_pos[0];
+    static const char *const SH[EN_NDRUM] = {"SEQ", "SEQ2", "OCT", "OCT2", "SKIP"};   /* (BERLIN's lanes, LANE_NAME) */
+    int l, i, pos = en_loop_pos[0];              /* (the Sequence's step, not the bar's sixteenth) */
     text_c(120, -1, &FONT_XS, proj.par[P_SMODE] ? "PLAY: THE PATTERN" : "PLAY: AUTO (A KEY TAKES IT OVER)",
            proj.par[P_SMODE] ? K_ACC : K_DIM);
     if (en_playing)
@@ -3084,7 +3076,7 @@ static void sp_garden(void)
     sp_cat("Chord ");
     sp_chord();
     if (en_frozen) {
-        sp_cat(", dub hold");
+        sp_cat(", hold");
     } else if (en_drift_bars(proj.par[P_DRIFT])) {
         sp_cat(", next chord ");
         sp_int((uint32_t)(fm_clampf(en_drift, 0.0f, 1.0f) * 100.0f + 0.5f));
@@ -3094,8 +3086,6 @@ static void sp_garden(void)
     }
     sp_cat(". Section ");
     sp_cat(EN_SEC_NAME[en_section]);
-    sp_cat(", bar ");
-    sp_int((uint32_t)en_phrase_bar + 1u);
     sp_cat(". Scale");
     for (i = 0; i < 12; i++) {
         int pc = (proj.par[P_ROOT] + i) % 12;
@@ -3105,8 +3095,6 @@ static void sp_garden(void)
             last = pc;
         }
     }
-    if (en_pulse_rest && proj.par[P_SEQ2])
-        sp_cat(". Kick out");
 }
 
 
@@ -3424,7 +3412,7 @@ static void splash_band(int f, int32_t oy)
     if (f >= 1)                                  /* the name, struck */
         cv_text(x[0], YC - FH[0] / 2 - oy, F[0], "BERLIN", mix(K_BG, K_TEXT, f >= 3 ? 16 : 6 * f));
     if (f >= 20)
-        text_c(120, 204 - oy, &FONT_S, "Dub techno for the FM-1", mix(K_BG, K_ACC, f >= 23 ? 16 : (f - 19) * 4));
+        text_c(120, 204 - oy, &FONT_S, "Berlin School for the FM-1", mix(K_BG, K_ACC, f >= 23 ? 16 : (f - 19) * 4));
     if (f >= 22)
         text_c(120, 224 - oy, &FONT_XS, "BERLIN " EN_VERSION, K_DIM);
     cv_blit(0, (uint32_t)oy);

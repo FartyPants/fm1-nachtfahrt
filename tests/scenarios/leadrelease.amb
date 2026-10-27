@@ -1,0 +1,38 @@
+# (BERLIN) a white key's release always reaches the Lead, whatever took the key meanwhile (the review: the release
+# lost under REC, the effects, PERFORM, the Pattern page left the Lead sounding and the generated Lead silent)
+wait 500
+# REC pressed while a Lead key is held, the key let go under it
+key w3 down
+wait 300
+expect lastnote_ch3 67
+press REC
+wait 200
+key w3 up
+wait 200
+release REC
+wait 3000
+expect bass_level <5
+# SEL (PERFORM) while held
+key w3 down
+wait 300
+tap SEL
+wait 200
+key w3 up
+wait 3000
+expect bass_level <5
+tap SEL
+wait 300
+# the Pattern page opened while held
+key w3 down
+wait 300
+tap SEQ
+wait 100
+tap SEQ
+wait 100
+tap SEQ
+wait 200
+key w3 up
+wait 3000
+expect bass_level <5
+tap HOME
+wait 300

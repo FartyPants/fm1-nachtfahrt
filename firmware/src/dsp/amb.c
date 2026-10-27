@@ -1639,10 +1639,12 @@ static void seq_publish(void)                    /* the lanes as Auto plays them
     en_seq_lane[4] = sq[0].skip;
 }
 
+static uint8_t sq_grown[2];                     /* (the steps a pattern has had grown: Length back over them keeps them) */
 static void seq_regrow(int l)                    /* a pattern grown afresh: every step, Density thins it as it plays */
 {
     int i;
     seq_grow(&sq[l], &sq_rng, nsteps ? nsteps : 7, 100, l ? par[P_SEQ2LEN] : par[P_SEQLEN]);
+    sq_grown[l] = sq[l].len;
     for (i = 0; i < SEQ_MAX; i++)
         sq_prio[l][i] = (uint8_t)(seq_rand(&sq_rng) % 100u);
     sq_prio[l][0] = 0;                           /* (the root, always) */
@@ -1650,6 +1652,34 @@ static void seq_regrow(int l)                    /* a pattern grown afresh: ever
     sq_pos[l] = 0;
     sq_bars[l] = sq_wrap[l] = 0;
     seq_hist_clear(&sq_hist[l]);
+    seq_publish();
+}
+
+/* (BERLIN) Length turned: the return point moved, the notes kept (the review: it grew all afresh); steps past any
+ * grown so far grown now, from a pattern of the new length, and the rest as they were */
+static void seq_resize(int l, int len)
+{
+    seq_t *q = &sq[l], t;
+    int i;
+    if (len < 1)
+        len = 1;
+    if (len > SEQ_MAX)
+        len = SEQ_MAX;
+    if (len > sq_grown[l]) {
+        seq_grow(&t, &sq_rng, nsteps ? nsteps : 7, 100, len);
+        for (i = sq_grown[l]; i < len; i++) {
+            const uint16_t m = (uint16_t)(1u << i);
+            q->deg[i] = t.deg[i];
+            q->gate = (uint16_t)((q->gate & ~m) | (t.gate & m));
+            q->oct = (uint16_t)((q->oct & ~m) | (t.oct & m));
+            q->acc = (uint16_t)((q->acc & ~m) | (t.acc & m));
+            sq_prio[l][i] = (uint8_t)(seq_rand(&sq_rng) % 100u);
+        }
+        sq_grown[l] = (uint8_t)len;
+    }
+    q->len = q->base_len = (uint8_t)len;
+    if (sq_pos[l] >= len)
+        sq_pos[l] = 0;
     seq_publish();
 }
 
@@ -1667,6 +1697,10 @@ static void seq_take(void)                      /* a piece's kept patterns, back
         q->acc = (uint16_t)(seq_pend_b[40 + 2 * l] | seq_pend_b[41 + 2 * l] << 8);
         q->skip = 0;
         q->len = q->base_len = (uint8_t)par[l ? P_SEQ2LEN : P_SEQLEN];
+        sq_grown[l] = q->len;                    /* (a kept pattern: its own steps, to its last note past its length) */
+        for (i = q->len; i < SEQ_MAX; i++)
+            if (q->gate >> i & 1u)
+                sq_grown[l] = (uint8_t)(i + 1);
         sq_written[l] = 0;
         sq_pos[l] = 0;
         sq_bars[l] = sq_wrap[l] = 0;
@@ -2957,8 +2991,8 @@ static void apply(int p, int v)
                                                   * user: 37 .. 49 ms sounds right, more is a theremin) */
     case P_SEQ2: seq2_vol = (float)(v * v) * 0.0001f; break;
     case P_SMODE: case P_SGATE0: case P_SGATE1: case P_SOCT0: case P_SOCT1: case P_SSKIP0: lanes(); break;
-    case P_SEQLEN: seq_regrow(0); break;
-    case P_SEQ2LEN: seq_regrow(1); break;
+    case P_SEQLEN: seq_resize(0, v); break;
+    case P_SEQ2LEN: seq_resize(1, v); break;
     case P_ECHO: echo_send = (float)(v * v) * 0.0001f; break;
     case P_ETIME: echo_time(); break;
     case P_REVERB: rev_send = (float)(v * v) * 0.0001f; break;
@@ -3154,6 +3188,7 @@ static void quiet(void)
     dr_lvl[0] = dr_lvl[1] = 0.0f;
     lead_off();
     lead.env = 0.0f;
+    ld_key = -1;                                 /* (BERLIN) a key held on the Lead let go too: its phrases again */
     for (i = 0; i < NPLUCK; i++)
         if (pluck[i].on) {
             pluck[i].on = 0;

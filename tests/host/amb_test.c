@@ -1537,6 +1537,62 @@ int main(void)
         }
     }
 
+    /* (BERLIN) Length moves the return point and keeps the notes (the review): 8 -> 9 -> 8, the eight steps as they
+     * were; 8 -> 12 -> 8 too, and at 12 the new steps grown (a note at least among them) */
+    {
+        uint8_t b0[EN_SEQ_N], b1[EN_SEQ_N], b2[EN_SEQ_N];
+        int i, same = 1, same2 = 1;
+        fresh();
+        en_set(P_MOTION, 0);
+        en_set(P_EVOLVE, 0);
+        en_set(P_SEQLEN, 8);
+        en_regrow();
+        en_play(1);
+        run(0.5f);
+        en_seq_get(b0);
+        en_set(P_SEQLEN, 9);
+        run(0.05f);
+        en_set(P_SEQLEN, 8);
+        run(0.05f);
+        en_seq_get(b1);
+        for (i = 0; i < 8; i++)
+            same &= b0[i] == b1[i];
+        same &= (b0[32] == b1[32]) && b0[36] == b1[36] && b0[40] == b1[40];
+        CHECK(same, "test_length_keeps_notes: 8 -> 9 -> 8 changed the pattern");
+        en_set(P_SEQLEN, 12);
+        run(0.05f);
+        en_seq_get(b2);
+        CHECK((b2[32] | b2[33] << 8) >> 8 & 0xFu, "test_length_keeps_notes: at 12, steps 9-12 all rests (%02x%02x)",
+              b2[33], b2[32]);
+        en_set(P_SEQLEN, 8);
+        run(0.05f);
+        en_seq_get(b1);
+        for (i = 0; i < 8; i++)
+            same2 &= b0[i] == b1[i];
+        same2 &= b0[32] == b1[32];
+        CHECK(same2, "test_length_keeps_notes: 8 -> 12 -> 8 changed the pattern");
+    }
+
+    /* (BERLIN) PANIC frees a Lead key held (its release lost): the note ends, and the Lead plays its phrases again */
+    {
+        uint32_t before;
+        fresh();
+        en_set(P_EMERGE, 0);
+        en_set(P_LDIN, 0);
+        en_set(P_MOTION, 0);
+        en_set(P_LDENS, 100);
+        en_play(1);
+        run(1.0f);
+        en_lead_key(3, 1);
+        run(1.0f);
+        en_panic();
+        run(0.5f);
+        CHECK(!ld_on_now, "test_panic_frees_lead_key: the held note still on after PANIC");
+        before = ld_ons;
+        run(90.0f);
+        CHECK(ld_ons > before, "test_panic_frees_lead_key: no Lead note in 90 s after PANIC");
+    }
+
     /* (BERLIN) a piece changed while playing starts its own arc: Timewind (a long Emerge) playing, then Stratosfear (no
      * Emerge): in Flow within two bars; and back to Timewind: in Emerge */
     {
