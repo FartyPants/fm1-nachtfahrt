@@ -2,6 +2,7 @@
 /* The instrument (amb.h). One compilation unit, -O2. */
 #include "amb.h"
 #include "fastmath.h"
+#include "seq.c"
 
 #ifdef EN_HOST
 #define EN_POOL

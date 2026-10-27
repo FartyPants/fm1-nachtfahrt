@@ -25,6 +25,7 @@
  * elsewhere. Float only, no libm: fastmath.h. */
 #pragma once
 #include <stdint.h>
+#include "seq.h"
 
 #define EN_SR 44100.0f
 #define EN_NLOOP 4                     /* ping loops */
