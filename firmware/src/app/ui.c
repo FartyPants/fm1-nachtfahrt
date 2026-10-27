@@ -1206,8 +1206,6 @@ static void nudge(int layer, int how)
         if (d * d > bd * bd)
             best = p, bd = d;
     }
-    if (layer == 1 && (how == NUDGE_SHAKE || nrand(2)))   /* the pings: now and then a note of one loop, another */
-        en_ping_nudge();
     if (how == NUDGE_EVOLVE)
         return;
     {   /* said: "CHORD NUDGE  Colour +9", "CHORD SHAKE  Keys" */
@@ -2025,19 +2023,6 @@ static int draw_specks(uint32_t now)              /* 1: one still shows */
     return live;
 }
 
-static void draw_orbits(void)                    /* the ping loops, around the ripples: a dot each, going round */
-{
-    int i;
-    for (i = 0; i < EN_NLOOP; i++) {             /* (a loop a step a turn's step; the loops of unequal length) */
-        float a = 6.2831853f * (float)en_loop_pos[i] / (float)EN_LOOP_LEN[i] - 1.5707963f + (float)i * 1.9f,
-              rr = 24.0f + 6.0f * (float)i, g = en_loop_glow[i];
-        int32_t x = CX + (int32_t)(rr * fm_cosf(a) + 0.5f), y = CY + (int32_t)(rr * fm_sinf(a) + 0.5f);
-        if (!en_playing)
-            g = 0.0f;
-        cv_disc(x, y, g > 0.5f ? 3 : 2, mix(mix(K_BELL_T, K_BELL, 5), K_BELL, q16(g * 1.3f)));
-    }
-}
-
 
 /* an FM page: the voice's algorithm, as the FM synths draw it: the operators as boxes, each modulator above
  * the one it modulates, the carriers on the bottom line (they're heard), op 4's feedback a loop */
@@ -2481,8 +2466,6 @@ static void draw_main(void)
         specks_take(now);
         moving = rip_src < 0 ? (uint8_t)draw_specks(now) : 0;   /* (the noise, under the rings: on the whole only) */
         moving |= (uint8_t)draw_ripples(now);
-        if (rip_src < 0 || rip_src == 1)         /* (the ping loops: on the whole, and the Pings page) */
-            draw_orbits();
     }
     const int named = parent_of(ui.view) < 0 || scr_layer(ui.view) >= 0;   /* (a sound page: as its layer's) */
     static char ch_last[16];

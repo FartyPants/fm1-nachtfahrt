@@ -156,7 +156,6 @@ void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2);
 
 /* the voices: each layer's sounds (ALGORITHM on the layer's page) */
 #define EN_NCV 5                         /* (BERLIN) the Drone's voices: Organ, Strings, Choir, Saws, Glass */
-#define EN_NPV 5
 #define EN_NBV 5
 #define EN_NSV 5                        /* (BERLIN) the Sequence's voices: 2600, Moog, Synthi, Pulse, Glass */
 #define EN_NS2V 6                       /* Sequence 2's: the same, and Sub */
@@ -170,7 +169,7 @@ extern volatile int8_t en_lead_deg;             /* the degree the Lead sounds (p
 void en_seq_set(int layer, const seq_t *s);   /* a pattern written into a sequence (0: the Sequence, 1:
                                                * Sequence 2): played as written, from its first step */
 #define EN_NKIT 5
-extern const char *const EN_CV_NAME[EN_NCV], *const EN_PV_NAME[EN_NPV], *const EN_BV_NAME[EN_NBV],
+extern const char *const EN_CV_NAME[EN_NCV], *const EN_BV_NAME[EN_NBV],
     *const EN_KIT_NAME[EN_NKIT];
 
 /* the arrangement's sections */
@@ -257,7 +256,6 @@ extern volatile int8_t en_prog_slot[EN_NPROG][3];
 extern volatile uint32_t en_prog_gen;
 /* a walk slot's chord as written (to edit it): its root (absolute), kind and type, from the scale's degree */
 void en_walk_chord(uint32_t pool, int root, int deg, int *r, int *q, int *x);
-void en_ping_nudge(void);                      /* a nudge (ARP held): one note of one ping loop, another */
 void en_prog_rotate(void);                     /* Loop to Endless (by hand): the slot playing up to slot 1 */
 void en_prog_rewalk(void);                     /* the walk's character turned (by hand): its slots walked again, all but
                                                 * the one playing (yours and the gaps kept) */

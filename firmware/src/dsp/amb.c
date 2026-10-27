@@ -163,7 +163,6 @@ void en_piece(int i, int16_t *par, uint16_t *pool)
 }
 
 const char *const EN_CV_NAME[EN_NCV] = {"Organ", "Strings", "Choir", "Saws", "Glass"};   /* (BERLIN: the Drone's) */
-const char *const EN_PV_NAME[EN_NPV] = {"Blip", "Marimba", "Glass", "Wood", "Drop"};
 const char *const EN_BV_NAME[EN_NBV] = {"Odyssey", "Mini", "Flute", "Theremin", "Synthi"};   /* (BERLIN: the Lead's) */
 const char *const EN_KIT_NAME[EN_NKIT] = {"Tight", "Deep", "Punch", "Soft", "Dusty"};
 const char *const EN_CQ_NAME[EN_NCQ] = {"Empty", "Major", "Minor", "Sus2", "Sus4", "Dim", "Aug"};
@@ -424,7 +423,7 @@ const char *en_chord_name(const int *pcs, int n, char *buf)
 }
 
 /* ------------------------------------------------------------ commands --- */
-enum { C_SET, C_POOL, C_PLAY, C_NEXT, C_FREEZE, C_SEED, C_PANIC, C_CLOCK, C_REGROW, C_MUTE, C_PERF, C_FX, C_SEQ, C_MACRO, C_PROT, C_REWALK, C_PNUDGE, C_LOCK, C_SEQSET, C_LKEY };
+enum { C_SET, C_POOL, C_PLAY, C_NEXT, C_FREEZE, C_SEED, C_PANIC, C_CLOCK, C_REGROW, C_MUTE, C_PERF, C_FX, C_SEQ, C_MACRO, C_PROT, C_REWALK, C_LOCK, C_SEQSET, C_LKEY };
 #define QN 512u                                 /* (a piece is every parameter at once: room for twice over and more) */
 _Static_assert(QN >= 2u * (P_NPARAMS + 8), "the command queue can't hold a piece's parameters twice over");
 static uint32_t q[QN];
@@ -454,7 +453,6 @@ void en_macro(int i, int v) { post(C_MACRO, i, v + 50); }   /* (sent as 0..100) 
 void en_lock(int on) { post(C_LOCK, on != 0, 0); }
 void en_prog_rotate(void) { post(C_PROT, 0, 0); }
 void en_prog_rewalk(void) { post(C_REWALK, 0, 0); }
-void en_ping_nudge(void) { post(C_PNUDGE, 0, 0); }
 const char *const EN_FX_NAME[EN_NFX] = {"Repeat", "Time", "Tape stop", "Swell", "Low-pass", "High-pass", "Sweep",
                                         "Phaser", "Reverb", "Take-off", "Freeze", "Wash", "Octave", "Return", "Twitter",
                                         "Supernova"};
@@ -514,7 +512,7 @@ typedef struct {
 static noise_ctl_t nctl;
 static uint8_t atm_char;                        /* (BERLIN) the Atmosphere's character (render_atmos) */
 static uint32_t atm_rng;                        /* (its random: en_init's seed) */
-static float throw_mul = 1.0f, ping_dry = 0.5f, hats_lvl = 1.0f;   /* Throws, Ghost, Hats level (apply) */
+static float throw_mul = 1.0f, hats_lvl = 1.0f;   /* Throws, Hats level */
 static float chord_dry = 0.5f, chord_snd = 1.5f;   /* the chord's Ghost: its dry, its sends (apply) */
 static int ec_pp;                               /* (BERLIN) the echo ping-pongs (twice its time fits the tape) */
 static float ec_g = 0.6f, ec_lpc = 0.68f, ec_wide = 1.0f;   /* the echo's Blur, Tone, Width (and the chord's and the
@@ -794,21 +792,9 @@ static float rotor, click;                      /* Tonewheel: the rotor's turn, 
 static const fmpatch_t *const BV_PATCH[EN_NBV] = {0, &FM_PUNCH, &FM_RUBBER, &FM_PLUCK, &FM_GROWL};
 
 /* ----------------------------------------------------------------- pings --- */
-#define NBELL 6
-typedef struct {
-    float amp, adec, att, gl, gr, drop;
-    fmvoice_t fm;
-    fmpatch_t pt;                               /* its own patch: the ping's voice, as its Tone and the loop have it */
-    int32_t wait;
-    uint8_t on, note, loop;
-} bell_t;
-static bell_t bell[NBELL];
-static float bell_vol, btone;
+/* (the dub's ping loops: their pings gone, their notes still grown at a regrow, the music's dice drawn as they were) */
 static int8_t loop_note[EN_NLOOP][EN_LOOP_MAX];
-static uint8_t loop_vel[EN_NLOOP][EN_LOOP_MAX], loop_pos[EN_NLOOP];
-static const uint8_t LOOP_BASE[EN_NLOOP] = {72, 67, 79, 62};     /* each loop's register */
-static const float LOOP_PAN[EN_NLOOP] = {-0.36f, 0.21f, 0.42f, -0.15f};   /* (1.3.0: 60% of the spread) */
-static const float RATIO[5] = {1.0f, 2.0f, 3.0f, 3.5f, 4.77f};
+static uint8_t loop_vel[EN_NLOOP][EN_LOOP_MAX];
 
 /* ----------------------------------------------------------------- drums --- */
 typedef struct {
@@ -889,18 +875,6 @@ static uint8_t change_pending;
 static void scale_set(void)
 {
     nsteps = en_scale(pool, steps);
-}
-
-static int bell_note(int l, int off)            /* a loop slot's note, from the chord's degree */
-{
-    int d = deg + off, oct = d / nsteps, s = steps[d % nsteps], base, root = par[P_ROOT], n;
-    base = LOOP_BASE[l] - ((LOOP_BASE[l] - root) % 12 + 12) % 12;   /* the root at or below the register */
-    n = base + s + 12 * oct;
-    while (n > 103)
-        n -= 12;
-    while (n < 36)
-        n += 12;
-    return n;
 }
 
 /* the chord to the four voices: the voicing on the degree, its root moved the least from the last one,
@@ -1223,20 +1197,11 @@ static int rand_offset(void)                    /* scale steps above the chord's
     return 1 + 2 * irand(3);                    /* a passing note: the 2nd, 4th or 6th */
 }
 
-static int loop_count(int l)
-{
-    int i, c = 0;
-    for (i = 0; i < EN_LOOP_LEN[l]; i++)
-        c += loop_note[l][i] >= 0;
-    return c;
-}
-
 static int loop_target(void)                    /* 0..5 notes: Density, thinned in the dark */
 {
     float d = (float)pe(P_DENSITY) * 0.05f * (1.0f + 0.5f * arcm);
     return (int)(fm_clampf(d, 0.0f, 5.0f) + frand());
 }
-static uint8_t loop_rest[EN_NLOOP];             /* this pass: silent (Evolve) */
 
 static void loop_add(int l)
 {
@@ -1249,15 +1214,6 @@ static void loop_add(int l)
             return;
         }
     }
-}
-
-static int loop_pick(int l)                     /* a random sounding slot, -1 none */
-{
-    int len = EN_LOOP_LEN[l], i, s = irand(len);
-    for (i = 0; i < len; i++, s = (s + 1) % len)
-        if (loop_note[l][s] >= 0)
-            return s;
-    return -1;
 }
 
 static void loop_publish(int l)
@@ -1275,114 +1231,6 @@ static void loop_regrow(int l)
     for (i = 0; i < n; i++)
         loop_add(l);
     loop_publish(l);
-}
-
-static void loop_pass(int l)                    /* the end of a pass: grow, prune, evolve */
-{
-    int c = loop_count(l), t = loop_target(), s;
-    if (evolve < 0.005f) {                      /* Evolve 0: the loops as they are (Density changed: to it) */
-        t = (int)(fm_clampf((float)pe(P_DENSITY) * 0.05f, 0.0f, 5.0f) + 0.5f);
-        for (; c < t; c++)
-            loop_add(l);
-        for (; c > t && (s = loop_pick(l)) >= 0; c--)
-            loop_note[l][s] = -1;
-        loop_rest[l] = frand() < 0.2f * fm_maxf(-arcm, 0.0f);   /* (Motion's dark: a pass sat out, the notes kept) */
-        loop_publish(l);
-        return;
-    }
-    for (; c < t; c++)
-        loop_add(l);
-    for (; c > t && (s = loop_pick(l)) >= 0; c--)
-        loop_note[l][s] = -1;
-    loop_rest[l] = frand() < evolve * 0.2f + 0.2f * fm_maxf(-arcm, 0.0f);
-    if (frand() < evolve * 0.7f && (s = loop_pick(l)) >= 0) {
-        if (frand() < 0.5f) {
-            loop_note[l][s] = (int8_t)rand_offset();             /* another note */
-        } else {
-            int d = irand(EN_LOOP_LEN[l]);                       /* the same note, elsewhere */
-            if (loop_note[l][d] < 0) {
-                loop_note[l][d] = loop_note[l][s];
-                loop_vel[l][d] = loop_vel[l][s];
-                loop_note[l][s] = -1;
-            }
-        }
-    }
-    loop_publish(l);
-}
-
-/* each loop its own ping: index, decay and ratio a little apart */
-static const float LOOP_IDX[EN_NLOOP] = {1.0f, 0.55f, 1.5f, 0.8f}, LOOP_DEC[EN_NLOOP] = {1.0f, 1.3f, 0.7f, 1.5f};
-static const int8_t LOOP_RAT[EN_NLOOP] = {0, 0, 1, -1};
-/* the pings' voices: the modulator's ratio (0: by Ping tone, RATIO), the index, its decay and the ping's
- * length (times the Blip's), a falling pitch (Drop: from this many times its note), a level */
-static const struct {
-    float ratio, idx, idec, t60, drop, gain;
-} PV[EN_NPV] = {
-    {0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f},               /* Blip */
-    {4.0f, 1.2f, 0.4f, 0.6f, 0.0f, 1.45f},              /* Marimba: a wooden bar's fourth partial */
-    {3.5f, 0.8f, 2.0f, 1.7f, 0.0f, 0.79f},              /* Glass: a long, bright ring */
-    {1.41f, 2.5f, 0.2f, 0.25f, 0.0f, 2.4f},             /* Wood: a knock */
-    {1.0f, 0.6f, 1.0f, 0.8f, 1.0f, 1.29f},              /* Drop: the pitch falling from an octave up */
-};
-
-static void bell_voice(int l, int n, float vel, int32_t wait)
-{
-    int i, best = 0, ri, pv;
-    float lo = 9.0f, t60, p;
-    bell_t *v;
-    for (i = 0; i < NBELL; i++) {               /* a free voice, or the quietest */
-        float a = bell[i].on ? bell[i].amp : -1.0f;
-        if (a < lo) {
-            lo = a;
-            best = i;
-        }
-    }
-    v = &bell[best];
-    if (v->on)
-        midi(0x81, v->note, 0);
-    v->on = 1;
-    v->note = (uint8_t)n;
-    v->loop = (uint8_t)l;
-    pv = 0;
-    ri = (int)(btone * 100.0f + 0.5f) * 5 / 101 + LOOP_RAT[l];
-    v->drop = fm_clampf(PV[pv].drop + 0.015f * 0.0f, 0.0f, 3.0f);   /* Bend: from up to four times its note */
-    v->amp = vel * PV[pv].gain;
-    t60 = fm_clampf(0.9f - (float)(n - 60) * 0.02f, 0.25f, 1.1f) * LOOP_DEC[l] * PV[pv].t60   /* short: a ping */
-          * fm_exp2f(1.5f * 0.0f);
-    v->adec = fm_expf(-6.9f / (t60 * EN_SR));
-    /* its patch: a carrier, the modulator (Ping tone: 0 a round blip, 100 a metallic clank: its index, in radians
-     * as turns, and its decay; Ratio, the sound page's: its ratio), and two more operators for the 4-op algorithms
-     * (Glass's own: two pairs) */
-    {
-        float idx = (0.2f + 5.0f * btone * btone) * (1.0f + 0.4f * fm_maxf(perf_sw, 0.0f)) * LOOP_IDX[l] * (0.6f + 0.4f * vel) * PV[pv].idx * (1.0f / FM_TWO_PI),
-              td = (0.08f + 0.5f * btone) * PV[pv].idec * (1.0f / 6.9f);
-        fmpatch_t *pt = &v->pt;
-        pt->alg = pv == 2 ? 4 : FM_ALG2;
-        pt->fb = 0.0f;
-        pt->op[0] = (fmop_t){1.0f, 1.0f, 0.0f, 1.0f};
-        pt->op[1] = (fmop_t){(PV[pv].ratio > 0.0f ? PV[pv].ratio : RATIO[ri < 0 ? 0 : ri > 4 ? 4 : ri]) * fm_exp2f(0.8f * 0.0f),
-                             idx, td, 0.0f};
-        pt->op[2] = (fmop_t){2.0f, 0.45f, 0.0f, 1.0f};
-        pt->op[3] = (fmop_t){pv == 2 ? 5.0f : 3.0f, idx * 0.3f, td * 0.6f, 0.0f};
-        fm_note(&v->fm, pt, mtof((float)n), 1.0f, fm_q(P_PFRAT), fm_d(P_PFDEC));
-        v->fm.ph[0] = v->fm.ph[1] = v->fm.ph[2] = v->fm.ph[3] = 0.0f;
-        fm_ctl(&v->fm, pt, pt->alg, 1.0f);
-    }
-    v->att = 0.0f;
-    p = (LOOP_PAN[l] + 1.0f) * (FM_PI / 4.0f);
-    v->gl = fm_cosf(p);
-    v->gr = fm_sinf(p);
-    v->wait = wait;
-    en_loop_glow[l] = 1.0f;
-    hit(1, vel);
-    midi(0x91, (uint32_t)n, (uint32_t)(vel * 110.0f));
-}
-
-static void bell_ring(int l, int slot)
-{
-    int n = bell_note(l, loop_note[l][slot]);
-    float vel = (float)loop_vel[l][slot] * 0.01f;
-    bell_voice(l, n, vel, irand(220));           /* a hand on the grid: up to 5 ms late */
 }
 
 /* ---------------------------------------------------------------- the arc --- */
@@ -2337,7 +2185,7 @@ static int dhit(int d, int st, float *vel)
 /* the grid: one call a sixteenth (MIDI clock: 6 ticks) */
 static void tick(void)
 {
-    int st = (int)(sixteenth & 15u), l, d;
+    int st = (int)(sixteenth & 15u), d;
     float r = frand();
     gate_ctr = 0;
     if (st == 0)
@@ -2383,18 +2231,6 @@ static void tick(void)
         en_drum_pos[d] = (uint8_t)st;
     seq_tick();
     lead_tick();
-    if (EN_DUB && (sixteenth & 1u) == 0u) {     /* (the dub's loops stepped in eighths) */
-        for (l = 0; l < EN_NLOOP; l++) {
-            int s = loop_pos[l];
-            if (loop_note[l][s] >= 0 && !loop_rest[l] && !(mutes & EN_M_PINGS))
-                bell_ring(l, s);
-            en_loop_pos[l] = (uint8_t)s;
-            if (++loop_pos[l] >= EN_LOOP_LEN[l]) {
-                loop_pos[l] = 0;
-                loop_pass(l);
-            }
-        }
-    }
     sixteenth++;
     en_bars = sixteenth;
 }
@@ -2823,14 +2659,13 @@ int en_fm_alg(int layer)
 static int pulse;
 /* (1.3.0) the FM pages' fourth knob, an LFO synced to the bar: the chord's filter over two bars (+-1.5 octaves at
  * 100), the pings' FM brightness over one, the bass's bite over four; a sine from the grid's place, eased */
-static float lfo_c, lfo_p, lfo_n;      /* (lfo_n: the noise's, its rings' tone over a bar, +-1 octave at 100;
+static float lfo_c, lfo_n;      /* (lfo_n: the noise's, its rings' tone over a bar, +-1 octave at 100;
                                                  * its crest on beat 2, the chord's on beat 3: they move apart) */
 static void lfo_step(void)
 {
     const float pos = (float)(sixteenth & 63u) + (float)pulse * (1.0f / 6.0f);   /* (four bars of sixteenths) */
-    const float tc = fm_sinf(6.2831853f * pos * (1.0f / 32.0f)), tp = fm_sinf(6.2831853f * pos * (1.0f / 16.0f));
+    const float tc = fm_sinf(6.2831853f * pos * (1.0f / 32.0f));
     lfo_c += (1.5f * (float)par[P_CFDEC] * 0.01f * tc - lfo_c) * 0.2f;
-    lfo_p += (0.8f * (float)par[P_PFDEC] * 0.01f * tp - lfo_p) * 0.2f;
     lfo_n += (0.67f * (float)par[P_NLFO] * 0.01f * fm_sinf(6.2831853f * pos * (1.0f / 16.0f)) - lfo_n) * 0.2f;
 }
 static uint32_t ext_age;
@@ -2992,10 +2827,9 @@ static void pool_set(uint32_t p)
 static void regrow(void)                        /* a new piece: fresh loops, home chord, patterns home */
 {
     int l, k;
-    for (l = 0; l < EN_NLOOP; l++) {
-        loop_regrow(l);
-        loop_rest[l] = 0;
-    }
+    for (l = 0; l < EN_NLOOP; l++)
+        loop_regrow(l);                          /* (the dub's loops: no pings now, but their draws keep the music's
+                                                  * dice where they were) */
     chord_slot = -1;
     deg = 0;
     shape = cvoice == CV_KEYS || cvoice == CV_PAD || cvoice == CV_BELL;   /* these like the 9th; the rest the open 7th */
@@ -3037,8 +2871,6 @@ static void notes_off(void)
 static void quiet(void)
 {
     int i;
-    for (i = 0; i < NBELL; i++)
-        bell[i].on = 0;
     for (i = 0; i < EN_NDRUM; i++)
         drum[i].on = 0, drum[i].wait = 0;
     drone_off(0), drone_off(1);
@@ -3112,8 +2944,6 @@ void en_init(void)
     for (i = 0; i < P_NPARAMS; i++)
         apply(i, PARAMS[i].def);
     pool_set(EN_MODE_POOL[par[P_MODE]]);
-    for (i = 0; i < EN_NLOOP; i++)
-        loop_pos[i] = 0;
     regrow();
     pl_decay = pl_decay_t;
 }
@@ -3143,8 +2973,6 @@ static void play_start(int from_top)
         sixteenth = 0;
         en_bars = 0;
         bar = 0;
-        for (i = 0; i < EN_NLOOP; i++)
-            loop_pos[i] = 0;
         ar_start();                              /* (the arc from its start; the first bar line already counted) */
         ar_first = 1;
         for (i = 0; i < 2; i++) {                /* the sequences from their first step */
@@ -3307,12 +3135,6 @@ static void drain(void)
             break;
         }
         case C_LOCK: lock = (uint8_t)a; break;
-        case C_PNUDGE: {                         /* a nudge on the pings: one note of one loop, another */
-            int l = irand(EN_NLOOP), k = loop_pick(l);
-            if (k >= 0)
-                loop_note[l][k] = (int8_t)rand_offset();
-            break;
-        }
         case C_PROT:                             /* Loop to Endless: the one playing up to slot 1, all turned round */
             if (prog_pos > 0) {
                 int16_t t[3][EN_NPROG];
@@ -3520,48 +3342,6 @@ static void render_stabs(uint32_t n)
     for (i = 0; i < EN_NPAD; i++) {
         en_pad_note[i] = stab[i].note;
         en_pad_amp[i] = amp;
-    }
-}
-
-static void render_bells(uint32_t n)
-{
-    int i;
-    const float g = bell_vol * 1.4f, arate = 0.004f + 0.02f * fm_minf(btone * 2.0f, 1.0f);
-    for (i = 0; i < NBELL; i++) {
-        bell_t *v = &bell[i];
-        float amp = v->amp, att = v->att;
-        const int alg = v->pt.alg;
-        const float fb = fm_fb(P_PFB, &v->pt);
-        uint32_t j = 0;
-        if (!v->on)
-            continue;
-        if (v->wait > 0) {
-            if ((uint32_t)v->wait >= n) {
-                v->wait -= (int32_t)n;
-                continue;
-            }
-            j = (uint32_t)v->wait;
-            v->wait = 0;
-        }
-        for (; j < n; j++) {
-            float x;
-            if (!(j & 31u))
-                fm_ctl(&v->fm, &v->pt, alg, fm_exp2f(lfo_p));   /* (the LFO: brighter, darker) */
-            x = fm_sample(&v->fm, alg, fb, 1.0f + v->drop) * amp * att * g;
-            mixl[j] += x * v->gl * ping_dry;   /* (Ghost: the dry against the sends, which stay; 50: -6 dB) */
-            mixr[j] += x * v->gr * ping_dry;
-            rsend[j] += x * 0.4f;
-            esend[j] += x * 1.1f;
-            v->drop *= 0.9993f;                  /* (Drop: ~35 ms to fall) */
-            amp *= v->adec;
-            att += (1.0f - att) * arate;
-        }
-        v->amp = amp;
-        v->att = att;
-        if (amp < (SHED ? 0.006f : 0.0008f)) {   /* (shedding: a tail ends at -44 dB, not -62) */
-            v->on = 0;
-            midi(0x81, v->note, 0);
-        }
     }
 }
 
@@ -4532,7 +4312,6 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
         mixl[j] = mixr[j] = rsend[j] = esend[j] = kickb[j] = 0.0f;
     lfo_step();
     render_stabs(n);
-    render_bells(n);
     render_plucks(n);
     render_drone(n);
     render_lead(n);
