@@ -1,0 +1,19 @@
+# (BERLIN) the main screen: five meters, each its own layer's (Drone, Seq, Lead, Seq 2, Atmos), and two lanes, each
+# sequence at its own step (Stratosfear: 16 against 15, so they part and meet)
+wait 300
+turn PRESET 4
+wait 300
+expect piece 4
+peakreset
+wait 10000
+expect act0 >5
+expect act1 >5
+expect act3 >5
+expect act4 0
+expect seqapart >100
+shot main.png
+# Sunrain: Surf, the Atmosphere's meter up
+turn PRESET 1
+wait 6000
+expect piece 5
+expect act4 >5

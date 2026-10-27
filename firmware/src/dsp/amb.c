@@ -463,6 +463,9 @@ volatile int16_t en_scope[EN_SCOPE_N];
 volatile uint32_t en_scope_w;
 volatile uint32_t en_hits[5];
 volatile float en_hit_vel[5];
+volatile float en_layer_act[5];                  /* (BERLIN) each layer's activity, for the meters (layer_act) */
+volatile uint32_t en_seq_hits[2], en_seq_reps[2];   /* (BERLIN) each sequence's notes, and its repeats, so far */
+static float atm_g_out;                          /* (the Atmosphere's gain this chunk, for its meter) */
 volatile float en_echo_pk;
 volatile uint8_t en_load;
 static int32_t shed_left;                        /* samples the shedding lasts (a heavy block: half a second) */
@@ -1231,6 +1234,10 @@ static void pluck_voice(int l, int n, int vel, int rep)   /* rep: a repeat, pann
     v->gr = fm_sinf(p);
     en_loop_glow[l] = 1.0f;
     hit(1, v->amp);
+    if (rep)
+        en_seq_reps[l]++;
+    else
+        en_seq_hits[l]++;
     midi(l ? 0x93u : 0x91u, (uint32_t)n, (uint32_t)vel);
 }
 
@@ -2810,6 +2817,7 @@ static void render_atmos(uint32_t n)
     int ch;
     atm_gate += ((en_playing ? 1.0f : 0.0f) - atm_gate) * fm_minf((float)n / (0.5f * EN_SR), 1.0f);
     g = mutes & EN_M_NOISE || c == ATM_NONE ? 0.0f : crackle_vol * atm_gate * ar_atm;
+    atm_g_out = g;
     if (g < 1e-5f) {
         for (j = 0; j < n; j++)
             crl[j] = crr[j] = 0.0f;
@@ -2920,6 +2928,7 @@ static void render_crackle(uint32_t n)
     if (cr_gate < 1e-4f)
         cr_gate = 0.0f;
     g = mutes & EN_M_NOISE ? 0.0f : crackle_vol * cr_gate;   /* (muted: its level kept) */
+    atm_g_out = g;
     if (g <= 0.0f) {
         for (j = 0; j < n; j++)
             crl[j] = crr[j] = 0.0f;
@@ -3449,6 +3458,24 @@ static void render_crash(uint32_t n)
     ar_cr_f = fm_maxf(ar_cr_f * fm_exp2f(-(float)n * (5.0f / (4.0f * EN_SR))), 120.0f);
 }
 
+/* (BERLIN) the meters: each layer's activity, 0..1, at its level (a mute: 0), up at once and down over ~half a second */
+static void layer_act(void)
+{
+    float a[5] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+    int i;
+    if (!(mutes & EN_M_CHORD))
+        a[0] = fm_maxf(dr_lvl[0], dr_lvl[1]) * (float)par[P_CHORD] * 0.01f;
+    for (i = 0; i < NPLUCK; i++)
+        if (pluck[i].on)
+            a[pluck[i].layer ? 3 : 1] = fm_maxf(a[pluck[i].layer ? 3 : 1],
+                                                pluck[i].amp * (float)par[pluck[i].layer ? P_SEQ2 : P_SEQ] * 0.01f);
+    if (ld_audible())
+        a[2] = lead.env * (float)par[P_LEAD] * 0.01f;
+    a[4] = atm_g_out > 0.0f ? fm_sqrtf(atm_g_out) : 0.0f;
+    for (i = 0; i < 5; i++)
+        en_layer_act[i] = fm_maxf(fm_clampf(a[i], 0.0f, 1.0f), en_layer_act[i] * 0.97f);
+}
+
 static void render_chunk(int32_t *out, uint32_t n, float gain)
 {
     uint32_t j;
@@ -3479,6 +3506,7 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
         render_crackle(n);
     else
         render_atmos(n);
+    layer_act();
     if (fxm || tw_env > 1e-4f || fx_ph > 0.005f)
         render_fx(n);
     eg += (1.0f - eg) * fx_wash;                 /* Wash: everything into the echo */

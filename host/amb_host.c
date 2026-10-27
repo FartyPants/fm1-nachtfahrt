@@ -121,6 +121,8 @@ void plat_midi_out(uint32_t pkt)
 }
 /* the engine's MIDI out, as the device's glue sends it (USB-MIDI packet, cable 0) */
 static uint32_t notes_ch[16];                    /* (note-ons on each channel since the last peakreset) */
+static uint32_t seq_apart;                       /* (BERLIN: blocks the two sequences were at different steps, since the
+                                                  * last peakreset) */
 static int last_note[16];                        /* (the last note-on on each channel) */
 static uint32_t orph_midi, orph_out;             /* (orphans: the MIDI out and the samples, as hashes) */
 void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2)
@@ -457,6 +459,7 @@ static void run_ms(uint32_t ms)
         while (audio_due_ms <= (double)now_ms) {      /* 256-frame blocks, as the device renders them */
             double t0 = now_ns(), dt;
             en_render(blk, 256, master);
+            seq_apart += en_loop_pos[0] != en_loop_pos[1];
 #ifdef EN_WEB
             web_audio(blk, 256);
 #endif
@@ -540,6 +543,10 @@ static int expect(const char *what, const char *val)
         got = (int)proj.format;
     else if (!strncmp(what, "lastnote_ch", 11))   /* lastnote_chN: the last note-on on MIDI channel N */
         got = last_note[(atoi(what + 11) + 15) % 16];
+    else if (!strncmp(what, "act", 3) && what[3] >= '0' && what[3] <= '4')   /* (BERLIN) actN: layer N's activity x100 */
+        got = (int)(en_layer_act[what[3] - '0'] * 100.0f);
+    else if (!strcmp(what, "seqapart"))           /* blocks the two sequences were at different steps (peakreset) */
+        got = (int)seq_apart;
     else if (!strncmp(what, "notes_ch", 8))       /* notes_chN: note-ons on MIDI channel N since the last peakreset */
         got = (int)notes_ch[(atoi(what + 8) + 15) % 16];
     else if (!strcmp(what, "pingsame"))           /* 1: the ping loops as at the last pingmark */
@@ -764,7 +771,7 @@ int main(int argc, char **argv)
         } else if (!strcmp(cmd, "wavstop"))
             wav_close();
         else if (!strcmp(cmd, "peakreset"))
-            peak_out = 0.0f, memset(notes_ch, 0, sizeof notes_ch);
+            peak_out = 0.0f, memset(notes_ch, 0, sizeof notes_ch), seq_apart = 0;
         else if (!strcmp(cmd, "shot")) {
             snprintf(out, sizeof out, "%s/%s", dir, a);
             png_write(out);

@@ -158,23 +158,24 @@ static const char *const KNOB_HELP[NVIEWS][4] = {   /* (BERLIN's, a row a view, 
     {"Bars the piece takes to emerge", "Bars Sequence 2 takes to come in", "Bars before the Lead may start", "How long before it ends: 0 never"},
 };
 
-/* the screen's colours: a dark room, as a dub techno sleeve (grey on black, a cold blue). The chord and
- * the scale in teal, the pings in a paler blue, the bass in brass, the drums in amber; dub hold in red.
- * Each layer has a dark tint for the shapes at rest. */
-#define K_BG RGB(16, 20, 26)
-#define K_PANEL RGB(36, 44, 56)
-#define K_LINE RGB(64, 76, 94)
-#define K_DIM RGB(146, 160, 176)
-#define K_TEXT RGB(222, 228, 232)
-#define K_ACC RGB(92, 196, 204)          /* the accent: the page, the knob being turned, a message's word */
-#define K_BELL RGB(128, 170, 224)
-#define K_BELL_T RGB(54, 76, 112)
-#define K_PAD RGB(84, 200, 186)
-#define K_PAD_T RGB(40, 96, 98)
-#define K_PULSE RGB(236, 150, 84)
-#define K_PULSE_T RGB(106, 72, 50)
-#define K_BASS RGB(204, 180, 112)
-#define K_BASS_T RGB(98, 86, 58)
+/* (BERLIN) the screen's colours: Cosmic, on black (spec 15): lavender text, a cyan accent; the layers in their own
+ * colours, the Drone violet, the Sequence pink, the Lead gold, Sequence 2 cyan, the Atmosphere dim lavender; each with a
+ * dark tint for the shapes at rest. (The names stay DUB-1's: K_PAD the Drone, K_BELL the Sequence, K_BASS the Lead,
+ * K_PULSE Sequence 2, K_NOISE the Atmosphere.) */
+#define K_BG RGB(0, 0, 0)
+#define K_PANEL RGB(26, 23, 38)
+#define K_LINE RGB(46, 41, 66)
+#define K_DIM RGB(141, 127, 184)
+#define K_TEXT RGB(239, 231, 255)
+#define K_ACC RGB(127, 216, 255)         /* the accent: the page, the knob being turned, a message's word */
+#define K_BELL RGB(255, 106, 213)
+#define K_BELL_T RGB(96, 36, 82)
+#define K_PAD RGB(180, 140, 255)
+#define K_PAD_T RGB(58, 44, 96)
+#define K_PULSE RGB(127, 216, 255)
+#define K_PULSE_T RGB(36, 66, 84)
+#define K_BASS RGB(255, 210, 127)
+#define K_BASS_T RGB(98, 80, 44)
 #define K_FROST RGB(232, 92, 84)         /* dub hold */
 #define K_FROST_T RGB(128, 56, 52)
 #define K_RIM RGB(214, 124, 176)         /* the rim */
@@ -1737,25 +1738,12 @@ static void draw_header(void)
     cv_blit(0, 0);
 }
 
-/* the main screen: echo ripples. Each stab drops a ring in the middle that spreads and fades; the echo's
- * repeats follow it, a ring each echo time, each as loud as the echo keeps of the one before (a throw: wider
- * and brighter; dub hold: red, and the repeats don't die). The chord's name in the middle. Around it: the
- * section and its eight bars (top left), the way to the next chord (top right), the four layers' levels
- * (left), the kick's ducking (right), and the bar as it plays, a lane a layer (below: stabs, kick, hats,
- * bass), the step playing lit */
+/* (BERLIN) the main screen, Cosmic: a slow starfield; the chord a glowing body in the middle; each sequence note a
+ * particle orbiting it (the Sequence inner and pink, Sequence 2 outer and cyan), a repeat a smaller one, each with a
+ * fading trail. Around it: the section and its bars (top left), the page (top right), the five layers' meters (left),
+ * the echo's level (right), and the two sequences' lanes (below), each with its own step */
 #define CX 120
 #define CY 48
-#define RIP_N 10
-#define RIP_R 46                                 /* a ring is gone by this radius */
-#define RIP_V 0.04f                              /* px a millisecond: ~1.3 s across */
-#define RIP_K 8                                  /* a ring and up to seven repeats */
-#define RIP_W 64                                 /* a ring's outline: the sound's wave, round the circle */
-static struct {
-    uint32_t t0;
-    float a[RIP_K], l1;                          /* each repeat's strength (a[0] the note), the first echo's level */
-    uint8_t thr, on, nk, done;                   /* nk: the repeats measured so far; done: no more to come */
-    int8_t w[RIP_W];
-} rip[RIP_N];
 /* the echo's output, as measured: its peak each frame, the last few frames (a repeat's level is the peak around
  * when it's due) */
 #define EPK_N 16
@@ -1764,8 +1752,6 @@ static struct {
     float pk;
 } epk[EPK_N];
 static uint8_t epk_w;
-static uint32_t rip_stabs;
-static int8_t rip_src = -2;                      /* whose notes the ripples are: -1 the whole (the stabs), or a layer */
 static int scr_layer(int v)                      /* a layer's own page (and the Noise page): the screen that layer's */
 {
     return v == V_CHORD || v == V_TEXTURE || v == V_BASS || v == V_DRUMS || v == V_NSND || v == V_NSND2 || (v >= V_CSND && v <= V_DSND)
@@ -1783,98 +1769,13 @@ static const char *chord_now(char *nm)          /* the chord's name, as the scre
     return en_chord_name(pcs, EN_NPAD + 1, nm);
 }
 
-/* a new stab: a new ripple (into the oldest slot if all are busy). On a layer's page, that layer's notes instead,
- * in its colour (the bass and the drums: a ring, no repeats; they hardly go into the echo) */
-static void ripples_take(uint32_t now)
-{
-    const int src = scr_layer(ui.view);
-    uint32_t n = src > 0 && src < 4 ? en_hits[src] : en_stabs;
-    int i, k = 0;
-    if (src != rip_src) {                        /* (another page: the old rings gone) */
-        rip_src = (int8_t)src;
-        rip_stabs = n;
-        for (i = 0; i < RIP_N; i++)
-            rip[i].on = 0;
-        return;
-    }
-    if (n == rip_stabs)
-        return;
-    rip_stabs = n;
-    if (src >= 0 && (ui.mutes & LAYER_MUTE[src]) == LAYER_MUTE[src])   /* (a layer muted: no rings) */
-        return;
-    if (src == 4)                                /* (the Noise page: no rings) */
-        return;
-    for (i = 0; i < RIP_N; i++) {
-        if (!rip[i].on) {
-            k = i;
-            break;
-        }
-        if (rip[i].t0 < rip[k].t0)
-            k = i;
-    }
-    rip[k].t0 = now;
-    rip[k].on = 1;
-    rip[k].nk = 1;
-    rip[k].l1 = 0.0f;
-    if (src > 0) {                               /* (the pings, the bass, the drums) */
-        rip[k].thr = 0;
-        rip[k].a[0] = fm_minf(en_hit_vel[src] * 0.9f, 1.0f);
-    } else {
-        rip[k].thr = en_stab_thrown;
-        rip[k].a[0] = fm_minf(en_stab_vel * (0.6f + 0.4f * en_echo_in) * (en_stab_thrown ? 1.5f : 1.0f), 1.0f);
-    }
-    /* repeats: from the echo as it comes out (none for the bass and the drums, hardly in it; none for a note into a
-     * held echo, which plays what it holds) */
-    rip[k].done = (uint8_t)(src == 2 || src == 3 || en_frozen || (src <= 0 && en_echo_in < 0.01f));
-    {   /* its outline: the wave as it sounds now (the last 128 of the scope's samples, every other one; drawn so its
-         * ends meet), at its own peak */
-        int32_t v[RIP_W], pk = 1, j;
-        uint32_t w0 = en_scope_w - 2u * RIP_W;
-        for (j = 0; j < RIP_W; j++)
-            v[j] = en_scope[(w0 + 2u * (uint32_t)j) & (EN_SCOPE_N - 1u)];
-        for (j = 0; j < RIP_W; j++) {
-            v[j] -= (v[RIP_W - 1] - v[0]) * j / (RIP_W - 1);
-            pk = v[j] > pk ? v[j] : -v[j] > pk ? -v[j] : pk;
-        }
-        for (j = 0; j < RIP_W; j++)
-            rip[k].w[j] = (int8_t)(v[j] * 127 / pk);
-    }
-}
-
-/* the echo's level this frame (its peak since the last); then each ring's next repeat, once it's due and past: the
- * echo's peak around then, against its first repeat's. So a filtered, ducked or dropped echo shows, and the feedback
- * as it really dies away */
+/* the echo's level this frame (its peak since the last): the ECHO meter */
 static void echo_take(uint32_t now)
 {
-    const float ms = en_echo_ms > 20.0f ? en_echo_ms : 400.0f;
-    int i, j;
     epk[epk_w].t = now;
     epk[epk_w].pk = en_echo_pk;
     en_echo_pk = 0.0f;
     epk_w = (uint8_t)((epk_w + 1u) % EPK_N);
-    for (i = 0; i < RIP_N; i++) {
-        uint32_t tk;
-        float pk = 0.0f, a;
-        if (!rip[i].on || rip[i].done)
-            continue;
-        tk = rip[i].t0 + (uint32_t)((float)rip[i].nk * ms);
-        if ((int32_t)(now - tk) < 35)
-            continue;
-        for (j = 0; j < EPK_N; j++)
-            if ((int32_t)(epk[j].t - tk) >= -30 && (int32_t)(epk[j].t - tk) <= 35 && epk[j].pk > pk)
-                pk = epk[j].pk;
-        if (rip[i].nk == 1)
-            rip[i].l1 = pk;
-        if (rip[i].l1 < 0.004f)                  /* (no echo to speak of) */
-            a = 0.0f;
-        else if (rip[i].nk == 1)
-            a = rip[i].a[0] * 0.85f;
-        else                                     /* (as the echo's level fell since the first; never louder) */
-            a = fm_minf(rip[i].a[1] * pk / rip[i].l1, rip[i].a[rip[i].nk - 1]);
-        rip[i].a[rip[i].nk] = a;
-        if (++rip[i].nk >= RIP_K || a < 0.05f)
-            rip[i].done = 1;
-    }
 }
 
 static void circle(int32_t cx, int32_t cy, int32_t r, uint16_t c)   /* an outline, one pixel (midpoint) */
@@ -1895,118 +1796,93 @@ static void circle(int32_t cx, int32_t cy, int32_t r, uint16_t c)   /* an outlin
 
 static void line(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint16_t c);
 
-/* a ring: its outline the wave it was born with (smoothed a little more each repeat, as the tape darkens it), the
- * wave's depth with its strength, small near the middle */
-static void wave_ring(float r, const float *w, float d, uint16_t c)
+/* (BERLIN) the stars: a sparse field, dim, drifting left a pixel every few frames while it plays */
+#define STAR_N 36
+static uint8_t star_x[STAR_N], star_y[STAR_N], star_b[STAR_N];
+static uint8_t star_init, star_t;
+static void draw_stars(void)
 {
-    static float cs[RIP_W], sn[RIP_W];
-    int32_t x0 = 0, y0 = 0, x1, y1, xp = 0, yp = 0, j;
-    if (cs[0] == 0.0f)
-        for (j = 0; j < RIP_W; j++)
-            cs[j] = fm_cosf(6.2831853f * (float)j / RIP_W), sn[j] = fm_sinf(6.2831853f * (float)j / RIP_W);
-    d *= fm_minf(r * (1.0f / 14.0f), 1.0f);
-    for (j = 0; j <= RIP_W; j++) {
-        float rr = r + d * w[j % RIP_W];
-        x1 = CX + (int32_t)(rr * cs[j % RIP_W] + 0.5f);
-        y1 = CY + (int32_t)(rr * sn[j % RIP_W] + 0.5f);
-        if (j)
-            line(xp, yp, x1, y1, c);
-        else
-            x0 = x1, y0 = y1;
-        xp = x1, yp = y1;
-    }
-    (void)x0, (void)y0;
-}
-
-static int draw_ripples(uint32_t now)           /* 1: something still moves */
-{
-    static const uint16_t LC[4] = {K_PAD, K_BELL, K_BASS, K_PULSE};
-    const float ms = en_echo_ms > 20.0f ? en_echo_ms : 400.0f;
-    const uint16_t lc = rip_src > 0 && rip_src < 4 ? LC[rip_src] : K_PAD;
-    int i, live = 0;
-    for (i = 0; i < RIP_N; i++) {
-        float age = (float)(now - rip[i].t0), w[RIP_W], tmp[RIP_W];
-        int k, j, p = 0, seen = 0;
-        if (!rip[i].on)
-            continue;
-        for (j = 0; j < RIP_W; j++)
-            w[j] = (float)rip[i].w[j] * (1.0f / 127.0f);
-        for (k = 0; k < rip[i].nk; k++) {
-            float t = age - (float)k * ms, r = 5.0f + t * RIP_V, a = rip[i].a[k] * (1.0f - r / (float)RIP_R);
-            uint16_t c;
-            for (; p < k; p++) {                 /* (a pass of the smoothing a repeat) */
-                for (j = 0; j < RIP_W; j++)
-                    tmp[j] = 0.25f * (w[(j + RIP_W - 1) % RIP_W] + 2.0f * w[j] + w[(j + 1) % RIP_W]);
-                for (j = 0; j < RIP_W; j++)
-                    w[j] = tmp[j];
-            }
-            if (t < 0.0f || r >= (float)RIP_R || a < 0.05f)
-                continue;
-            seen = 1;
-            c = mix(K_BG, en_frozen && rip_src < 2 ? K_FROST : rip[i].thr ? K_ACC : lc, q16(a * 2.0f));
-            wave_ring(r, w, 4.0f * rip[i].a[k], c);   /* two pixels wide (a throw: three) */
-            wave_ring(r + 1.0f, w, 4.0f * rip[i].a[k], c);
-            if (rip[i].thr)
-                wave_ring(r + 2.0f, w, 4.0f * rip[i].a[k], c);
+    int i;
+    if (!star_init) {                            /* (the same sky every start) */
+        uint32_t r = 0x2545F491u;
+        for (i = 0; i < STAR_N; i++) {
+            r = r * 1664525u + 1013904223u, star_x[i] = (uint8_t)(r >> 24);
+            r = r * 1664525u + 1013904223u, star_y[i] = (uint8_t)((r >> 24) % 92u);
+            r = r * 1664525u + 1013904223u, star_b[i] = (uint8_t)(2u + (r >> 24) % 5u);
         }
-        if (!seen && rip[i].done && age > 200.0f)
-            rip[i].on = 0;                       /* its last repeat has faded */
-        else
-            live = 1;
+        star_init = 1;
     }
-    return live;
+    if (en_playing && ++star_t >= 4u) {
+        star_t = 0;
+        for (i = 0; i < STAR_N; i++)
+            star_x[i]--;                         /* (past the left edge: back in at the right, 16 px later) */
+    }
+    for (i = 0; i < STAR_N; i++)
+        if (star_x[i] < 240)
+            cv_rect(star_x[i], star_y[i], 1, 1, mix(K_BG, K_DIM, star_b[i]));
 }
 
-/* the noise in the ripples: a speck for each click that shows (en_nev_*), somewhere round the middle, on its side,
- * as big and bright as it sounds, fading fast; a pop brighter and bigger; a dust grain a soft, slower blob */
-#define SPK_N 24
+/* (BERLIN) the orbits: each note a particle round the chord, fading; its trail the last few places it was */
+#define ORB_N 24
 static struct {
-    uint32_t t0;
-    int16_t x, y;
-    uint8_t k, s;
-} spk[SPK_N];
-static uint32_t spk_r, spk_rng = 12345u;
-static void specks_take(uint32_t now)
+    float a, life;
+    uint8_t on, layer, rep;
+} orb[ORB_N];
+static uint32_t orb_hits[2], orb_reps[2];
+static void orb_add(int layer, int rep)
 {
-    uint32_t w = en_nev_w;
-    if (w - spk_r > EN_NEV_N)                    /* (too far behind: the newest only) */
-        spk_r = w - EN_NEV_N;
-    for (; spk_r != w; spk_r++) {
-        int i, o = 0;
-        float a, r, p;
-        for (i = 0; i < SPK_N; i++)              /* (into the oldest) */
-            if (spk[i].t0 < spk[o].t0)
-                o = i;
-        spk_rng = spk_rng * 1664525u + 1013904223u;
-        a = (float)(spk_rng >> 8) * (6.2831853f / 16777216.0f);
-        spk_rng = spk_rng * 1664525u + 1013904223u;
-        r = 10.0f + 34.0f * (float)(spk_rng >> 8) * (1.0f / 16777216.0f);
-        p = (float)en_nev_p[spk_r % EN_NEV_N] * (1.0f / 255.0f) - 0.5f;
-        spk[o].t0 = now | 1u;
-        spk[o].x = (int16_t)(CX + (int32_t)(r * fm_cosf(a) + 40.0f * p));
-        spk[o].y = (int16_t)(CY + (int32_t)(r * 0.8f * fm_sinf(a)));
-        spk[o].k = en_nev_k[spk_r % EN_NEV_N];
-        spk[o].s = en_nev_s[spk_r % EN_NEV_N];
+    int i, k = 0;
+    for (i = 0; i < ORB_N; i++) {
+        if (!orb[i].on) {
+            k = i;
+            break;
+        }
+        if (orb[i].life < orb[k].life)
+            k = i;
+    }
+    orb[k].on = 1;
+    orb[k].layer = (uint8_t)layer;
+    orb[k].rep = (uint8_t)rep;
+    orb[k].life = rep ? 0.55f : 1.0f;
+    orb[k].a = 0.39f * (float)(orb_hits[layer] + orb_reps[layer]) + (layer ? 3.0f : 0.0f);
+}
+static void orbits_take(void)                    /* the sequences' new notes and repeats, a particle each (3 at most) */
+{
+    int l, k;
+    for (l = 0; l < 2; l++) {
+        const uint32_t h = en_seq_hits[l], r = en_seq_reps[l];
+        const int muted = (ui.mutes & LAYER_MUTE[l ? 3 : 1]) == LAYER_MUTE[l ? 3 : 1];
+        for (k = 0; orb_hits[l] != h; k++)
+            if (orb_hits[l]++, k < 3 && !muted)
+                orb_add(l, 0);
+        for (k = 0; orb_reps[l] != r; k++)
+            if (orb_reps[l]++, k < 2 && !muted)
+                orb_add(l, 1);
     }
 }
-static int draw_specks(uint32_t now)              /* 1: one still shows */
+static int draw_orbits(void)                     /* 1: one still moves */
 {
-    int i, live = 0;
-    for (i = 0; i < SPK_N; i++) {
-        uint32_t age = now - spk[i].t0, life = spk[i].k == 2 ? 700u : spk[i].k == 1 ? 500u : 350u;
-        float s = (float)spk[i].s * (1.0f / 255.0f), f;
-        if (!spk[i].t0 || age >= life)
+    int i, k, any = 0;
+    for (i = 0; i < ORB_N; i++) {
+        const float rx = orb[i].layer ? 44.0f : 31.0f, ry = rx * 0.68f;
+        const uint16_t c = en_frozen ? K_FROST : orb[i].layer ? K_PULSE : K_BELL;
+        if (!orb[i].on)
             continue;
-        live = 1;
-        f = (0.45f + 0.55f * fm_minf(s * 2.0f, 1.0f)) * (1.0f - (float)age / (float)life);
-        if (spk[i].k == 2)
-            cv_disc(spk[i].x, spk[i].y, 3, mix(K_BG, K_NOISE, q16(f * 0.5f)));
-        else
-            cv_disc(spk[i].x, spk[i].y, spk[i].k == 1 ? 3 : 2, mix(K_BG, spk[i].k == 1 ? K_TEXT : K_NOISE, q16(f)));
+        for (k = 3; k >= 0; k--) {               /* the trail first, the particle on top */
+            const float a = orb[i].a - 0.09f * (float)k, f = orb[i].life * (1.0f - 0.22f * (float)k);
+            const int32_t x = CX + (int32_t)(rx * fm_cosf(a)), y = CY + (int32_t)(ry * fm_sinf(a)),
+                          d = orb[i].rep || k ? 2 : 3;
+            if (f > 0.03f)
+                cv_round(x - d / 2, y - d / 2, d, d, 1, mix(K_BG, c, (int)(f * 16.0f)));
+        }
+        orb[i].a += orb[i].layer ? 0.045f : 0.06f;
+        orb[i].life -= 0.016f;
+        if (orb[i].life <= 0.0f)
+            orb[i].on = 0;
+        any = 1;
     }
-    return live;
+    return any;
 }
-
 
 static void line(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint16_t c)   /* Bresenham */
 {
@@ -2028,24 +1904,16 @@ static void line(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint16_t c)   /
     }
 }
 
-static void draw_meters(void)                    /* left: the four layers */
+static void draw_meters(void)                    /* (BERLIN) left: the five layers, each its own activity at its level */
 {
-    static const uint16_t C[4] = {K_PAD, K_BELL, K_BASS, K_PULSE}, T[4] = {K_PAD_T, K_BELL_T, K_BASS_T, K_PULSE_T};
-    float lv[4], bm = 0.0f, dm = 0.0f;
+    static const uint16_t C[5] = {K_PAD, K_BELL, K_BASS, K_PULSE, K_NOISE},
+                          T[5] = {K_PAD_T, K_BELL_T, K_BASS_T, K_PULSE_T, K_PANEL};
     int i;
-    for (i = 0; i < EN_NLOOP; i++)
-        bm = fm_maxf(bm, en_loop_glow[i]);
-    for (i = 0; i < EN_NDRUM; i++)
-        dm = fm_maxf(dm, en_drum_glow[i]);
-    lv[0] = en_pad_level * (float)proj.par[P_CHORD] * 0.01f;
-    lv[1] = bm * (float)proj.par[P_SEQ] * 0.01f;
-    lv[2] = en_bass_level * (float)proj.par[P_LEAD] * 0.01f;
-    lv[3] = dm * (float)proj.par[P_SEQ2] * 0.01f;
-    for (i = 0; i < 4; i++) {
-        int32_t x = 8 + i * 11, h = (int32_t)(fm_clampf(lv[i], 0.0f, 1.0f) * 52.0f + 0.5f);
-        cv_round(x, 32, 8, 56, 3, T[i]);
+    for (i = 0; i < 5; i++) {
+        int32_t x = 8 + i * 9, h = (int32_t)(fm_clampf(en_layer_act[i], 0.0f, 1.0f) * 52.0f + 0.5f);
+        cv_round(x, 32, 6, 56, 2, T[i]);
         if (h > 0)
-            cv_round(x, 32 + 56 - h - 2, 8, h + 2, 3, C[i]);
+            cv_round(x, 32 + 56 - h - 2, 6, h + 2, 2, C[i]);
     }
 }
 
@@ -2063,82 +1931,30 @@ static void draw_duck(void)                      /* (BERLIN) right: the echo's l
     cv_text(216 - text_w(&FONT_XS, "ECHO"), 76, &FONT_XS, "ECHO", K_DIM);
 }
 
-/* below: the bar, a lane a layer. On a layer's page (and its sound pages) its lanes as ever, the others in grey (the
- * pings and the noise have none: all grey) */
+/* (BERLIN) below: the two sequences, a lane each, as long as it is, each with its own step (white): the steps that
+ * play in its colour, the rests a dot; on a layer's page the other lane greyed */
 static void draw_lanes(void)
 {
-    static const uint16_t C0[6] = {K_PAD, K_PULSE, K_TEXT, K_RIM, K_CLAP, K_BASS},
-                          T0[6] = {K_PAD_T, K_PULSE_T, K_LINE, K_RIM_T, K_CLAP_T, K_BASS_T};
-    static const int8_t DR[6] = {-1, 0, 1, 3, 4, -1};   /* each lane's drum (its chance) */
-    static const int8_t LL[6] = {0, 3, 3, 3, 3, 2};     /* each lane's layer (oct_layer's) */
+    static const uint16_t C[2] = {K_BELL, K_PULSE}, T[2] = {K_BELL_T, K_PULSE_T};
     const int lay = oct_layer(ui.view);
-    uint16_t C[6], T[6], dot[6], dot4[6];
-    int l, i, k, pos = en_drum_pos[0];
-    for (l = 0; l < 6; l++) {
-        int lit = lay < 0 || LL[l] == lay;
-        C[l] = lit ? C0[l] : K_LINE;
-        T[l] = lit ? T0[l] : mix(K_BG, K_LINE, 8);
-        dot[l] = lit ? K_LINE : mix(K_BG, K_LINE, 9);
-        dot4[l] = lit ? K_DIM : K_LINE;
-    }
-    float ghost[16];
-    if (en_playing)                              /* the step playing: a column */
-        cv_round(38 + pos * 11, 94, 10, 50, 2, K_PANEL);
-    for (i = 0; i < 16; i++)
-        ghost[i] = 0.0f;
-    if (!en_ext && proj.par[P_TEMPO] > 0) {      /* the stabs' echoes: where each repeat lands, as faint as it is */
-        float e = en_echo_ms * (float)proj.par[P_TEMPO] * (1.0f / 15000.0f), g = en_echo_in;   /* (in sixteenths) */
-        for (i = 0; i < 16; i++)
-            if (en_lane[0] >> i & 1u) {
-                float a = g;
-                for (k = 1; k <= 6; k++) {
-                    int q = (int)((float)i + (float)k * e + 0.5f) % 16;
-                    a *= en_echo_g;
-                    if (a < 0.06f)
-                        break;
-                    if (a > ghost[q])
-                        ghost[q] = a;
-                }
-            }
-    }
-    for (l = 0; l < 6; l++) {                    /* (in the layers' colours: stabs, kick, hats, rim, clap, bass) */
-        uint32_t p = en_lane[l];
-        int32_t y = 96 + l * 8;
-        int maybe = DR[l] >= 0 && (proj.par[P_SMODE] ? proj.par[P_SCH0 + DR[l]] < 50 : DR[l] == 4);
-        cv_round(29, y + 1, 5, 4, 1, C[l]);
-        for (i = 0; i < 16; i++) {
-            int32_t x = 40 + i * 11;
-            if (p >> i & 1u && maybe) {          /* a hit that only sometimes comes: a ring; filled when it does */
-                uint16_t c = en_playing && i == pos && en_drum_glow[DR[l]] > 0.5f ? (C[l] == K_LINE ? K_DIM : K_TEXT) : mix(T[l], C[l], 10);
-                if (en_playing && i == pos && en_drum_glow[DR[l]] > 0.5f) {
-                    cv_round(x - 1, y - 1, 8, 8, 3, c);
-                } else {
-                    cv_rect(x + 1, y, 4, 1, c), cv_rect(x + 1, y + 5, 4, 1, c);
-                    cv_rect(x, y + 1, 1, 4, c), cv_rect(x + 5, y + 1, 1, 4, c);
-                }
-            } else if (p >> i & 1u) {
-                cv_round(x, y, 6, 6, 2, en_playing && i == pos ? C[l] : mix(T[l], C[l], 10));
-            } else if (l == 0 && ghost[i] > 0.0f && (lay < 0 || lay == 0)) {   /* an echo's repeat: a ring; as the
-                                                                                  * playhead hits it, a flash */
-                if (en_playing && i == pos) {
-                    cv_round(x - 1, y - 1, 8, 8, 3, K_TEXT);
-                } else {
-                    uint16_t c = mix(K_BG, K_PAD, 9 + q16(ghost[i]) * 7 / 16);
-                    cv_rect(x + 1, y, 4, 1, c), cv_rect(x + 1, y + 5, 4, 1, c);
-                    cv_rect(x, y + 1, 1, 4, c), cv_rect(x + 5, y + 1, 1, 4, c);
-                }
-            } else if (i & 3) {
-                cv_rect(x + 2, y + 2, 2, 2, dot[l]);
-            } else {
-                cv_rect(x + 2, y + 2, 2, 2, dot4[l]);
-            }
+    int l, i;
+    for (l = 0; l < 2; l++) {
+        const uint32_t p = lane_steps(l);
+        const int len = proj.par[l ? P_SEQ2LEN : P_SEQLEN], pos = en_loop_pos[l],
+                  lit = lay < 0 || lay == (l ? 3 : 1);
+        const int32_t y = 108 + l * 16;
+        for (i = 0; i < len && i < 16; i++) {
+            const int32_t x = 32 + i * 12;
+            if (en_playing && i == pos)
+                cv_round(x - 3, y - 3, 7, 7, 3, lit ? K_TEXT : K_DIM);
+            else if (p >> i & 1u)
+                cv_round(x - 2, y - 2, 5, 5, 2, lit ? C[l] : T[l]);
+            else
+                cv_rect(x, y, 1, 1, lit ? K_LINE : K_PANEL);
         }
     }
 }
 
-
-/* the effects grid, in the main screen's place while REC is held: four rows of four, the first of each lit
- * as the group's (its key lit too), the ones held filled */
 static void grid_band(int32_t oy)                 /* the whole screen, in two bands of 240 x 120 */
 {
     static const char *const GROUP[4] = {"ECHO", "FILTER", "SPACE", "MOVES"};   /* (BERLIN's) */
@@ -2308,12 +2124,24 @@ static void draw_card(uint32_t now)
     text_c(CX, y + 28, &FONT_XS, ui.card_text, tc);
 }
 
+/* (BERLIN) the chord's glow: nested pills, w x h the brightest, each wider one darker; a new chord flares it */
+static void glow(int32_t w, int32_t h, uint32_t age)
+{
+    static const uint8_t LV[4] = {2, 4, 7, 14};
+    const uint16_t core = en_frozen ? K_FROST : age < 900u ? mix(K_ACC, K_TEXT, (int)(age * 16u / 900u)) : K_TEXT;
+    int k;
+    for (k = 0; k < 4; k++) {
+        const int32_t g = (3 - k) * 5, ww = w + 2 * g, hh = h + 2 * g;
+        cv_round(CX - ww / 2, CY - hh / 2, ww, hh, hh / 2, mix(K_BG, k == 3 ? core : K_PAD, LV[k]));
+    }
+}
+
 static void draw_main(void)
 {
     uint32_t now = plat_ms(), h = hash(2166136261u, (uint32_t)en_frozen << 16 | proj.piece << 24 | (uint32_t)en_playing << 17), i;
     static uint8_t moving;
-    echo_take(now);                              /* (the ripples: each frame, so the repeats are measured on time) */
-    ripples_take(now);
+    echo_take(now);                              /* (the ECHO meter: each frame) */
+    orbits_take();
     if (ui.frame % 3u)                           /* 20 frames a second is plenty */
         return;
     if (grid_up()) {                             /* REC held: the effects grid (ui_frame draws it, whole;
@@ -2382,9 +2210,8 @@ static void draw_main(void)
         return;
     ui.sig[1] = h;
     cv_begin(240, MAIN_H, K_BG);
-    specks_take(now);
-    moving = rip_src < 0 ? (uint8_t)draw_specks(now) : 0;   /* (the noise, under the rings: on the whole only) */
-    moving |= (uint8_t)draw_ripples(now);
+    draw_stars();
+    moving = (uint8_t)(draw_orbits() | en_playing);
     const int named = parent_of(ui.view) < 0 || scr_layer(ui.view) >= 0;   /* (a sound page: as its layer's) */
     static char ch_last[16];
     static uint32_t ch_t;
@@ -2400,22 +2227,22 @@ static void draw_main(void)
         memcpy(ch_last, nm, sizeof ch_last);
     }
     ch_age = ch_t ? now - ch_t : 1000u;
-    ch_c = en_frozen ? K_FROST : ch_age < 900u ? mix(K_ACC, K_TEXT, (int)(ch_age * 16u / 900u)) : K_TEXT;
+    ch_c = en_frozen ? K_FROST : RGB(30, 12, 54);   /* (dark on the glow; a new chord: the glow flares, below) */
     if (ch_age < 900u)
         moving = 1;
     if (named) {                                 /* the chord, in the middle */
         if ((ch_age < 200u || (ch_age >= 400u && ch_age < 600u)) && text_w(&FONT_L, nm) <= 96) {   /* (big, small, big,
                                                                                          * small: a ping-pong) */
             int32_t w = text_w(&FONT_L, nm);
-            cv_round(CX - w / 2 - 4, CY - 15, w + 8, 30, 6, K_BG);
+            glow(w + 8, 30, ch_age);
             text_c(CX, CY - 16, &FONT_L, nm, ch_c);
         } else if (text_w(&FONT_C, nm) <= 66) {  /* (the bigger face, the rings behind it; a long name, smaller) */
             int32_t w = text_w(&FONT_C, nm);
-            cv_round(CX - w / 2 - 3, CY - 9, w + 6, 19, 5, K_BG);
+            glow(w + 6, 19, ch_age);
             text_c(CX, CY - 11, &FONT_C, nm, ch_c);
         } else if (text_w(&FONT_B, nm) <= 72) {
             int32_t w = text_w(&FONT_B, nm);
-            cv_round(CX - w / 2 - 3, CY - 7, w + 6, 15, 4, K_BG);
+            glow(w + 6, 15, ch_age);
             text_c(CX, CY - 8, &FONT_B, nm, ch_c);
         }
         else
