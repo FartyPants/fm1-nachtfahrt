@@ -56,7 +56,7 @@ enum {
     P_CLOUD,                                          /* the granular reverb */
     P_SVOICE, P_BVOICE, P_S2VOICE,                        /* the pings' voice, the bass's, the drums' kit */
     /* the sound pages: each relative to the voice as it is (0), -50 .. +50 (the kick's tune: semitones) */
-    P_CATT, P_CCOL, P_CRES, P_CENV,                   /* the chord: attack, colour, resonance, the filter's envelope */
+    P_CATT, P_CCOL, P_CRES, P_DREL,                   /* the chord: attack, colour, resonance, the filter's envelope */
     P_PTON, P_PRAT, P_PLEN, P_PBEND,                  /* the pings: tone, ratio, length, bend */
     P_BBITE, P_BSHAPE, P_BLEN, P_BSLIDE,              /* the bass: bite, shape, length, slide */
     P_KTUNE, P_KLEN, P_KPUNCH, P_HTONE,               /* the drums: the kick's tune, length, punch; the hats' tone */
@@ -90,7 +90,7 @@ enum {
      * sound pass left it; 0: +6 dB; 100: about -20 dB, almost all echo); the bass's notes in its groove (100: every
      * note; less, left out at random, the bar's first kept); the shaker and open hat against the kick (50: x1,
      * about +-12 dB at the ends) */
-    P_CTHROW, P_PGHOST, P_BNOTES, P_HATSLVL,
+    P_PHASER, P_PGHOST, P_BNOTES, P_HATSLVL,
     /* 1.3.0's echo and density (format 14), 0..100: the chord's dry against its sends (as the pings' Ghost; 50: -6 dB,
      * its echo x1.35); the kick's density (its shapes by phrase: 0 none .. 100 four on the floor, always); the echo's
      * blur (0 clean copies .. 50 each repeat a little more dissolved .. 100 a wash), its tone (darker .. brighter),
@@ -154,7 +154,7 @@ void en_render(int32_t *out_lr, uint32_t n, uint32_t gain_q12);
 void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2);
 
 /* the voices: each layer's sounds (ALGORITHM on the layer's page) */
-#define EN_NCV 7
+#define EN_NCV 5                         /* (BERLIN) the Drone's voices: Organ, Strings, Choir, Saws, Glass */
 #define EN_NPV 5
 #define EN_NBV 5
 #define EN_NSV 5                        /* (BERLIN) the Sequence's voices: 2600, Moog, Synthi, Pulse, Glass */

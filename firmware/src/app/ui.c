@@ -86,14 +86,14 @@ static const char *const LANE_NAME[EN_NDRUM] = {"Kick", "Shaker", "Open", "Rim",
 _Static_assert(P_NPARAMS <= K_LEDS, "the knobs' own codes must come after the parameters");
 static const uint16_t VIEW_KNOB[NVIEWS][4] = {
     {K_FILTER, P_EVOLVE, P_MOTION, P_DRIFT},
-    {P_SEQLEN, P_CTHROW, P_CGHOST, P_CUTOFF},
+    {P_SEQLEN, P_PHASER, P_CGHOST, P_CUTOFF},
     {P_DENSITY, P_SEQOCT, P_PGHOST, P_CLOUD},
     {P_BNOTES, P_SEQ2OCT, P_SEQGRID, P_TRANS},
     {P_SEQ2LEN, P_TAPA, P_HATSLVL, P_HTONE},       /* (Duck: PERFORM's, a master action) */
     {P_ECHO, P_ETIME, P_FEEDBACK, P_REVERB},
     {P_TUNE, P_MIDI, K_LEDS, K_SAVE},
     {P_CHORD, P_SEQ, P_BASS, P_SEQ2},
-    {P_CATT, P_DECAY, P_CCOL, P_CRES},           /* (Env, P_CENV, off the page: the voices and the recipes set it) */
+    {P_CATT, P_DECAY, P_CCOL, P_CRES},           /* (Env, P_DREL, off the page: the voices and the recipes set it) */
     {P_PTON, P_PRAT, P_PLEN, P_PBEND},
     {P_BBITE, P_BSHAPE, P_BLEN, P_BSLIDE},
     {P_KTUNE, P_KLEN, P_KPUNCH, P_HLEN},         /* (1.4.0: the kick's rumble here, in Hat len's place: EN_RUMBLE) */

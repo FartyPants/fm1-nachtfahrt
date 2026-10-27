@@ -29,7 +29,8 @@ static uint8_t kick_bar[KBARS], bar_sec[KBARS];
  * notes sounding (note-ons less note-offs); note-ons on channel 10 and above (the drums', which are gone) */
 #define SQN 8192
 static uint32_t sq_n, sq_at[SQN], drum_ch_ons, s2_n, s2_at[SQN];
-static uint8_t sq_note[SQN], sq_vel[SQN], s2_note[SQN];
+static uint8_t sq_note[SQN], sq_vel[SQN], s2_note[SQN], dr_note[SQN];
+static uint32_t dr_n, dr_at[SQN];
 static int sounding[16][128];
 void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2)
 {
@@ -41,6 +42,8 @@ void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2)
             drum_ch_ons++;
         if ((st & 15u) == 1u && sq_n < SQN)
             sq_at[sq_n] = en_bars, sq_note[sq_n] = (uint8_t)d1, sq_vel[sq_n] = (uint8_t)d2, sq_n++;
+        if ((st & 15u) == 0u && dr_n < SQN)
+            dr_at[dr_n] = en_bars, dr_note[dr_n] = (uint8_t)d1, dr_n++;
         if ((st & 15u) == 3u && s2_n < SQN)
             s2_at[s2_n] = en_bars, s2_note[s2_n] = (uint8_t)d1, s2_n++;
     } else if ((st & 0xF0u) == 0x80u || (st & 0xF0u) == 0x90u)
@@ -116,7 +119,7 @@ static void fresh(void)
     en_bars = 0;
     bad = 0;
     memset(kick_bar, 0, sizeof kick_bar);
-    sq_n = s2_n = 0;
+    sq_n = s2_n = dr_n = 0;
     memset(bar_sec, 0xFF, sizeof bar_sec);
 }
 
@@ -292,9 +295,9 @@ int main(void)
         en_param_text(P_ETIME, 5, t);
         CHECK(!strcmp(t, "1 bar"), "etime 5: %s", t);
         en_param_text(P_CVOICE, 0, t);
-        CHECK(!strcmp(t, "Saws"), "ctone 0: %s", t);
+        CHECK(!strcmp(t, "Organ"), "ctone 0: %s", t);
         en_param_text(P_CVOICE, 1, t);
-        CHECK(!strcmp(t, "Keys"), "ctone 1: %s", t);
+        CHECK(!strcmp(t, "Strings"), "ctone 1: %s", t);
         en_param_text(P_TAPAT, 1, t);
         CHECK(!strcmp(t, "1/8."), "repeat A time 1: %s", t);
         en_param_text(P_TAPBT, 2, t);
@@ -416,47 +419,6 @@ int main(void)
             moved += chord_sig() != held;
         }
         CHECK(moved, "the chord stayed after the freeze");
-    }
-
-    /* Evolve 0, Motion 0: a strict loop, every stab every bar */
-    {
-        uint32_t first = 0, t0;
-        int k, diff = 0;
-        fresh();
-        en_set(P_EVOLVE, 0);
-        en_set(P_MOTION, 0);
-        en_set(P_DRIFT, 6);
-        en_regrow();
-        en_play(1);
-        run(2.5f);
-        first = en_stab_pat;
-        t0 = en_throws;
-        for (k = 0; k < 60; k++) {
-            run(2.0f);
-            diff += en_stab_pat != first;
-        }
-        CHECK(first && !diff && en_throws == t0, "Evolve 0: the stabs changed (%d of 60, %u throws)", diff, en_throws - t0);
-    }
-
-    /* Throws: 0 none (Motion 0: no fills), 100 well over 50 (the same draws) */
-    {
-        uint32_t n[3];
-        int k;
-        static const int TV[3] = {0, 50, 100};
-        for (k = 0; k < 3; k++) {
-            fresh();
-            en_seed(7);
-            en_set(P_EVOLVE, 100);
-            en_set(P_MOTION, 0);
-            en_set(P_CTHROW, TV[k]);
-            en_regrow();
-            en_play(1);
-            n[k] = en_throws;
-            run(60.0f);
-            n[k] = en_throws - n[k];
-        }
-        printf("  throws in a minute at Throws 0 / 50 / 100: %u / %u / %u\n", n[0], n[1], n[2]);
-        CHECK(n[0] == 0 && n[1] > 0 && n[2] * 2u > n[1] * 3u, "Throws: %u / %u / %u", n[0], n[1], n[2]);
     }
 
     /* a piece's parameters all at once (a piece change, the boot): none of them, nor PLAY after them, dropped */
@@ -711,26 +673,6 @@ int main(void)
             else
                 CHECK(secs[SEC_FULL] == 600, "Motion 0 left Full (%d s Full)", secs[SEC_FULL]);
         }
-    }
-
-    /* throws: with Evolve high, stabs go into the echo */
-    {
-        uint32_t t0, lo, hi;
-        fresh();
-        en_set(P_EVOLVE, 0);
-        en_set(P_MOTION, 0);
-        en_play(1);
-        t0 = en_throws;
-        run(120.0f);
-        lo = en_throws - t0;
-        fresh();
-        en_set(P_EVOLVE, 100);
-        en_play(1);
-        t0 = en_throws;
-        run(120.0f);
-        hi = en_throws - t0;
-        printf("  throws in 2 min: %u at Evolve 0, %u at Evolve 100\n", lo, hi);
-        CHECK(hi >= 3u && lo == 0u, "throws: %u at Evolve 100, %u at 0", hi, lo);   /* (fewer fills since the classics pass: a fill throws its last stab) */
     }
 
     /* a new key while playing: the chord's notes in it at once */
@@ -991,6 +933,48 @@ int main(void)
               off, sq_n, en_bars / 16u);
         en_set(P_SMODE, 0);
     }
+
+    /* (BERLIN) the Drone holds: Drift 32 bars, two minutes at 96 (48 bars): its notes (channel 1) start only when a
+     * chord starts, on a bar line (no stabs), three to five of them, in the scale */
+    {
+        uint32_t i, groups = 0, offbar = 0, outscale = 0, badsize = 0, last = 0xFFFFFFFFu, size = 0;
+        const uint32_t pl = EN_MODE_POOL[MODE_AEOLIAN];
+        fresh();
+        en_set(P_ROOT, 2);
+        en_pool(pl);
+        en_set(P_CHORD, 60);
+        en_set(P_DRIFT, 4);
+        en_play(1);
+        run(120.0f);
+        for (i = 0; i < dr_n; i++) {
+            if (dr_at[i] != last) {
+                if (groups && (size < 3u || size > 5u))
+                    badsize++;
+                groups++, size = 0, last = dr_at[i];
+            }
+            size++;
+            offbar += (dr_at[i] & 15u) != 0u;
+            outscale += !(pl >> ((dr_note[i] + 120 - 2) % 12) & 1u);
+        }
+        if (groups && (size < 3u || size > 5u))
+            badsize++;
+        CHECK(groups >= 1u && groups <= en_bars / 16u / 32u + 2u, "test_drone_holds: %u chords in %u bars", groups,
+              en_bars / 16u);
+        CHECK(!badsize && !outscale, "test_drone_holds: %u chords not of 3-5 notes, %u notes off the scale", badsize,
+              outscale);
+        CHECK(!offbar, "test_drone_no_stabs: %u notes off the bar line", offbar);
+    }
+
+    /* (BERLIN) the phaser at full: the Drone alone, a minute, bounded */
+    fresh();
+    en_set(P_SEQ, 0);
+    en_set(P_CHORD, 100);
+    en_set(P_PHASER, 100);
+    en_set(P_CVOICE, 1);                         /* (Strings: the ensemble too) */
+    en_play(1);
+    peak = 0.0f;
+    run(60.0f);
+    CHECK(!bad && peak > 0.01f && peak < 0.95f, "test_phaser_bounded: peak %f", (double)peak);
 
     /* (BERLIN) every note-on has its note-off: two minutes of piece changes, tempo changes, freeze, mutes, PANIC and
      * stops with repeats pending, then stop and let it ring out */

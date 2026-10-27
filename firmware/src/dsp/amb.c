@@ -28,7 +28,7 @@ const uint8_t EN_DRUM_N[EN_NDRUM] = {16, 16, 16, 16, 16};
 const char *const EN_SEC_NAME[EN_NSEC] = {"Full", "Break", "Groove", "Thin"};
 
 static const en_param_t PARAMS[P_NPARAMS] = {
-    {"Chord", 0, 100, 0},    {"Sequence", 0, 100, 70},    {"Bass", 0, 100, 0},     {"Sequence 2", 0, 100, 0},
+    {"Chord", 0, 100, 60},    {"Sequence", 0, 100, 70},    {"Bass", 0, 100, 0},     {"Sequence 2", 0, 100, 0},
     {"Density", 0, 100, 60},  {"Evolve", 0, 100, 40},   {"Drift", 0, 6, 4},       {"Repeat A", 0, 100, 100},
     {"Echo", 0, 100, 55},     {"Echo time", 0, 5, 1},   {"Reverb", 0, 100, 35},   {"Feedback", 0, 100, 60},
     {"Cutoff", 0, 100, 45},   {"Decay", 0, 100, 35},    {"Sweep", 0, 100, 50}, {"Motion", 0, 100, 50},
@@ -39,7 +39,7 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Length", 3, 16, 8},    {"Crackle", 0, 100, 35},  {"Repeat B time", 0, 5, 2},     {"Size", 0, 100, 55},
     {"Cloud", 0, 100, 30},
     {"Seq voice", 0, EN_NSV - 1, 0}, {"Bass voice", 0, EN_NBV - 1, 0}, {"Seq2 voice", 0, EN_NS2V - 1, 1},
-    {"Attack", 0, 100, 0},   {"Colour", -50, 50, 0},   {"Resonance", -50, 50, 0}, {"Env amount", -50, 50, 0},
+    {"Attack", 0, 100, 40},   {"Colour", -50, 50, 0},   {"Resonance", -50, 50, 0}, {"Release", 0, 100, 50},
     {"Tone", -50, 50, 0},     {"Ratio", -50, 50, 0},    {"Ping len", -50, 50, 0}, {"Bend", 0, 100, 0},
     {"Bite", -50, 50, 0},     {"Shape", -50, 50, 0},    {"Bass len", -50, 50, 0}, {"Slide", -50, 50, 0},
     {"Kick tune", -12, 12, 0}, {"Kick len", -50, 50, 0}, {"Punch", -50, 50, 0},   {"Hat tone", -50, 50, 0},
@@ -62,7 +62,7 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Accent", 0, 100, 50}, {"Seq play", 0, 1, 0},
     {"Noise tone", -50, 50, 0}, {"Noise density", -50, 50, 0}, {"Air", -50, 50, 0}, {"Noise drift", -50, 50, 0},
     {"Noise", 0, EN_NNCHAR - 1, 0},
-    {"Throws", 0, 100, 50},   {"Wet", 0, 100, 50},    {"Notes", 0, 100, 100},   {"Hats level", 0, 100, 50},
+    {"Phaser", 0, 100, 40},   {"Wet", 0, 100, 50},    {"Notes", 0, 100, 100},   {"Hats level", 0, 100, 50},
     {"Chord wet", 0, 100, 50}, {"Length 2", 3, 16, 7}, {"Blur", 0, 100, 50}, {"Echo tone", 0, 100, 50},
     {"Width", 0, 100, 50},    {"Noise decay", 0, 100, 50},
     {"Noise width", 0, 100, 50}, {"Noise plate", 0, 100, 50}, {"Noise echo", 0, 100, 50}, {"Hat len", -50, 50, 0},
@@ -183,17 +183,18 @@ void en_piece(int i, int16_t *par, uint16_t *pool)
      * dub's chord and bass silent) */
     static const uint8_t NEW[] = {P_SEQ, P_SEQ2, P_DENSITY, P_TAPA, P_TAPAT, P_TAPB, P_TAPBT, P_SEQLEN, P_SEQ2LEN, P_SEQGRID,
                                   P_TRANS, P_SEQOCT, P_SEQ2OCT, P_SVOICE, P_S2VOICE, P_SWEEP, P_SACCENT, P_SGATE0,
-                                  P_SGATE1, P_SOCT0, P_SOCT1, P_SSKIP0, P_SACC0, P_SACC1, P_SCH0, P_SCH1, P_SMODE};
+                                  P_SGATE1, P_SOCT0, P_SOCT1, P_SSKIP0, P_SACC0, P_SACC1, P_SCH0, P_SCH1, P_SMODE,
+                                  P_CVOICE, P_CATT, P_DREL, P_PHASER};
     unsigned k;
     for (p = 0; p < P_NPARAMS; p++)
         par[p] = PIECES[i].v[p];
     for (k = 0; k < sizeof NEW; k++)
         par[NEW[k]] = PARAMS[NEW[k]].def;
-    par[P_CHORD] = par[P_BASS] = 0;
+    par[P_BASS] = 0;
     *pool = EN_MODE_POOL[PIECES[i].v[P_MODE]];
 }
 
-const char *const EN_CV_NAME[EN_NCV] = {"Saws", "Keys", "Organ", "Pad", "Bell", "Tonewheel", "Noise"};
+const char *const EN_CV_NAME[EN_NCV] = {"Organ", "Strings", "Choir", "Saws", "Glass"};   /* (BERLIN: the Drone's) */
 const char *const EN_PV_NAME[EN_NPV] = {"Blip", "Marimba", "Glass", "Wood", "Drop"};
 const char *const EN_BV_NAME[EN_NBV] = {"Sub", "Punch", "Rubber", "Pluck", "Growl"};
 const char *const EN_KIT_NAME[EN_NKIT] = {"Tight", "Deep", "Punch", "Soft", "Dusty"};
@@ -616,6 +617,14 @@ static inline float sine(float ph)              /* ph in turns, any value >= 0 *
     float f = x - (float)i;
     return sint[i] + (sint[i + 1] - sint[i]) * f;
 }
+static float orgt[SN + 1];                      /* (BERLIN) the Drone's Organ: four drawbars, 1, 1/2, 1/3, 1/4, in one */
+static inline float organ(float ph)
+{
+    float x = ph * (float)SN;
+    int i = (int)x;
+    float f = x - (float)i;
+    return orgt[i] + (orgt[i + 1] - orgt[i]) * f;
+}
 
 static inline float blep_saw(float t, float dt)
 {
@@ -807,10 +816,10 @@ static float fx_gate, gate_g, gate_dec;
  * 0.035 ~0.6 ms .. 0.00012 ~190 ms), its length (times Decay's), how far its own envelope opens the filter
  * (octaves), its modulator's ratio and index (FM voices, in turns: the index at the strike, and at rest),
  * and a level to match the others */
-enum { CV_SAWS, CV_KEYS, CV_ORGAN, CV_PAD, CV_BELL, CV_WHEEL, CV_NOISE };
+enum { CV_SAWS, CV_KEYS, CV_ORGAN, CV_PAD, CV_BELL, CV_WHEEL, CV_NOISE, NSTABV };   /* (the dub's stabs, silent) */
 static const struct {
     float att, dec, fenv, ratio, idx_hi, idx_lo, gain;
-} CV[EN_NCV] = {
+} CV[NSTABV] = {
     /* (1.3.0: each strike opens further, and closes sooner) */
     {0.035f, 1.0f, 2.5f, 0.0f, 0.0f, 0.0f, 1.0f},        /* Saws: two saws a voice, 7 cents apart */
     {0.035f, 1.3f, 1.4f, 1.0f, 0.41f, 0.06f, 1.23f},     /* Keys: FM at the carrier's pitch, an electric piano */
@@ -955,6 +964,54 @@ static int bell_note(int l, int off)            /* a loop slot's note, from the 
 /* the chord to the four voices: the voicing on the degree, its root moved the least from the last one,
  * in C3..B3 (as a chord memory: the shape kept, transposed whole; 1.3.0 up from F#2..F3, out of the low-mids) */
 static int chord_slot = -1;                     /* the slot whose chord sounds (-1: one of the scale) */
+/* ------------------------------------------------------------------ the drone --- */
+/* (BERLIN) the Drone: the chord held, its four notes and the root an octave under (a pedal), swelling in over Attack
+ * and away over Release; a new chord swells in on the other bank while the old one dies. Its voices: Organ
+ * (drawbars), Strings (a saw, into the ensemble), Choir (a saw through two formants), Saws (two, apart), Glass (FM);
+ * the bus through the phaser. MIDI channel 1: a chord's notes on as it starts, off as it goes */
+#define NDR 5
+typedef struct {
+    uint8_t note;
+    float ph, ph2, dt, gl, gr, s[2], f1[2], f2[2];
+} drv_t;
+static drv_t drv[2][NDR];
+static uint8_t dr_bank, dr_on[2];
+static float dr_lvl[2], dr_up = 0.0001f, dr_down = 0.00005f, ph_depth, ph_lfo, phz[2][6], ph_last[2];
+static uint32_t dr_rng = 0x6A09E667u;          /* (its own: the voices' phases leave the music's draws alone) */
+
+static void drone_off(int b)                     /* a bank dies away: its notes off */
+{
+    int i;
+    if (!dr_on[b])
+        return;
+    dr_on[b] = 0;
+    for (i = 0; i < NDR; i++)
+        midi(0x80, drv[b][i].note, 0);
+}
+
+static void drone_chord(void)                    /* the chord as voiced (stab[].note), swelling in on the other bank */
+{
+    static const float PAN[NDR] = {-0.45f, 0.4f, -0.15f, 0.2f, 0.0f};
+    const int nb = dr_bank ^ 1;
+    int i;
+    drone_off(dr_bank);
+    drone_off(nb);
+    for (i = 0; i < NDR; i++) {
+        drv_t *v = &drv[nb][i];
+        const int n = i < EN_NPAD ? stab[i].note : stab[0].note - 12;   /* (the low root: the pedal) */
+        const float p = (PAN[i] + 1.0f) * (FM_PI / 4.0f);
+        v->note = (uint8_t)n;
+        v->dt = mtof((float)n) * (1.0f / EN_SR);
+        v->ph = (float)(seq_rand(&dr_rng) >> 8) * (1.0f / 16777216.0f);
+        v->ph2 = (float)(seq_rand(&dr_rng) >> 8) * (1.0f / 16777216.0f);
+        v->gl = fm_cosf(p);
+        v->gr = fm_sinf(p);
+        midi(0x90, (uint32_t)n, 70);
+    }
+    dr_on[nb] = 1;
+    dr_bank = (uint8_t)nb;
+}
+
 static void voice_chord(void)
 {
     int iv[4], i, pc, n;
@@ -993,6 +1050,8 @@ static void voice_chord(void)
     }
     en_chord_root = (uint8_t)chord_pcs[0];
     en_chord_n = (uint8_t)chord_nt;
+    if (en_playing)
+        drone_chord();
 }
 
 static int bass_note(int pc)                    /* E1..Eb2, an octave up or down (E0..Eb1: felt more than heard) */
@@ -2119,7 +2178,7 @@ static void tick(void)
         const uint32_t first = bar_bass & (0u - bar_bass), below = bar_bass & ((1u << st) - 1u);
         bass_hit(first >> st & 1u, ph.oct >= 0 && pcount(below) == ph.oct % (pcount(bar_bass) > 1 ? pcount(bar_bass) : 1) && st);
     }
-    if (en_stab_pat >> st & 1u) {               /* (the random draws made muted or not: the music goes on the same) */
+    if (EN_DUB && en_stab_pat >> st & 1u) {               /* (the random draws made muted or not: the music goes on the same) */
         uint32_t later = en_stab_pat >> (st + 1);
         int last = !later, thr = (fill && last) || frand() < fm_minf(0.12f * loose() * (sec == SEC_BREAK ? 1.5f : 1.0f) * throw_mul, 0.6f);
         float vel = st == (int)__builtin_ctz(en_stab_pat) ? 0.9f + 0.1f * frand() : 0.65f + 0.25f * frand();
@@ -2582,7 +2641,7 @@ void en_env_shape(int layer, float *lvl, float *aux, int n, float *secs)
         a = fm_clampf(CV[cvoice].att * fm_exp2f(-(xa > 0.0f ? 9.0f : 3.0f) * xa), 0.00004f, 0.3f);
         t60 = st_t60;
         ft = 0.25f * st_t60 + 0.02f;
-        fe = fm_clampf(CV[cvoice].fenv * fm_maxf(1.0f + rel(P_CENV), 0.0f) / 3.4f, 0.0f, 1.0f);
+        fe = fm_clampf(CV[cvoice].fenv * 1.0f / 3.4f, 0.0f, 1.0f);
         T = fm_clampf(t60 * 1.2f, 0.25f, 4.0f);
         break;
     }
@@ -2716,9 +2775,9 @@ static void apply(int p, int v)
     case P_NROOM: nctl.room = (float)v * 0.02f; break;
     case P_NDRIFT: nctl.drift = (float)v * 0.02f; break;
     case P_NCHAR: nctl.character = (uint8_t)((unsigned)v < EN_NNCHAR ? v : 0); break;
-    case P_CTHROW:                               /* the stabs' throws: x0 .. x1 (50) .. x3 */
-        throw_mul = v <= 50 ? (float)v * 0.02f : 1.0f + (float)(v - 50) * 0.04f;
-        break;
+    case P_PHASER: ph_depth = (float)v * 0.01f; break;
+    case P_CATT: dr_up = 1.0f / (0.5f * fm_exp2f((float)v * 0.0458f) * EN_SR); break;    /* a swell of 0.5 .. 12 s */
+    case P_DREL: dr_down = 1.0f / (fm_exp2f((float)v * 0.039f) * EN_SR); break;         /* dying in 1 .. 15 s */
     case P_PGHOST:                               /* the pings' dry: 0 dB (0), -6 dB (50), -20 dB (100) */
         ping_dry = 0.5f * fm_exp2f((v <= 50 ? 6.0f * (float)(50 - v) : -14.0f * (float)(v - 50)) * 0.02f * 0.16609640f);
         break;
@@ -2844,6 +2903,8 @@ static void quiet(void)
         bell[i].on = 0;
     for (i = 0; i < EN_NDRUM; i++)
         drum[i].on = 0, drum[i].wait = 0;
+    drone_off(0), drone_off(1);
+    dr_lvl[0] = dr_lvl[1] = 0.0f;
     for (i = 0; i < NPLUCK; i++)
         if (pluck[i].on) {
             pluck[i].on = 0;
@@ -2860,6 +2921,8 @@ void en_init(void)
     int i;
     for (i = 0; i <= SN; i++)
         sint[i] = fm_sinf((float)i * (FM_TWO_PI / (float)SN));
+    for (i = 0; i <= SN; i++)
+        orgt[i] = sint[i % SN] + 0.5f * sint[2 * i % SN] + 0.3f * sint[3 * i % SN] + 0.2f * sint[4 * i % SN];
     plate_init();
     for (i = 0; i < TAPE_N; i++)
         tape[i] = 0;
@@ -2946,6 +3009,7 @@ static void play_start(int from_top)
     pulse_left = 0.0f;
     tick_wait = 0;
     en_playing = 1;
+    drone_chord();
     if (!en_ext)
         midi(from_top ? 0xFA : 0xFB, 0, 0);
 }
@@ -2958,6 +3022,7 @@ static void play_stop(void)
     tick_wait = 0;
     en_playing = 0;
     bass.gate = 0;
+    drone_off(dr_bank);
     if (!en_ext)
         midi(0xFC, 0, 0);
     notes_off();
@@ -3204,7 +3269,7 @@ static void render_stabs(uint32_t n)
                 k = fm_clampf(1.1f - 0.6f * fm_clampf(0.5f + 0.5f * arcm, 0.0f, 1.0f) - 0.55f * rel(P_CRES) -
                                  0.22f * fm_maxf(perf_sw, 0.0f), 0.12f, 2.0f);   /* (Open: it sings) */
     const float att = fm_clampf(CV[cv].att * fm_exp2f(-(xa > 0.0f ? 9.0f : 3.0f) * xa), 0.00004f, 0.3f),
-                fe = CV[cv].fenv * fm_maxf(1.0f + rel(P_CENV), 0.0f);
+                fe = CV[cv].fenv * 1.0f;
     float pc = 0.0f, ck = click;
     const float dk = st_dec + (gate_dec - st_dec) * fx_gate;   /* (the grid's Gate: the chord rings on, to be chopped) */
     const fmpatch_t *pt = cv_patch(cv);
@@ -4064,6 +4129,123 @@ static void render_plucks(uint32_t n)
     }
 }
 
+/* (BERLIN) the Drone's sound: its two banks, each voice low-passed (Colour), into a bus; Strings through the
+ * ensemble (three taps of a short line, swaying 120 degrees apart, and a faster shimmer); the bus through the phaser
+ * (six all-passes a side, swept slowly between ~200 Hz and ~2 kHz, the right a quarter turn on; Phaser: its depth and
+ * feedback); then into the mix, the plate and a little echo */
+#define ENS_N 1024
+static int16_t ens_buf[ENS_N] EN_POOL;           /* (int16 at 1/8192: +-4) */
+static uint32_t ens_w;
+static float ens_ph, ens_ph2, drl[BLK], drr[BLK];
+static float ens_tap(float d)                    /* d samples back, between two */
+{
+    const int i = (int)d;
+    const float f = d - (float)i, a = (float)ens_buf[(ens_w - (uint32_t)i) & (ENS_N - 1u)],
+                b = (float)ens_buf[(ens_w - (uint32_t)i - 1u) & (ENS_N - 1u)];
+    return (a + (b - a) * f) * (1.0f / 8192.0f);
+}
+static void render_drone(uint32_t n)
+{
+    const int cv = cvoice < EN_NCV ? cvoice : 0;
+    const float g = chord_vol * 0.32f, fc = 1800.0f * fm_exp2f(2.0f * rel(P_CCOL)), k = fm_clampf(1.2f - 0.9f * rel(P_CRES), 0.2f, 2.0f);
+    float c[4], cf1[4], cf2[4];
+    uint32_t j;
+    int b, i;
+    if (!dr_on[0] && !dr_on[1] && dr_lvl[0] <= 0.0f && dr_lvl[1] <= 0.0f)
+        return;
+    svf_coefs(c, fc, k);
+    svf_coefs(cf1, 650.0f, 0.3f);                /* (Choir: two formants, an 'ah') */
+    svf_coefs(cf2, 1080.0f, 0.35f);
+    for (j = 0; j < n; j++)
+        drl[j] = drr[j] = 0.0f;
+    for (b = 0; b < 2; b++) {
+        float lvl = dr_lvl[b];
+        const float to = dr_on[b] ? 1.0f : 0.0f;
+        if (!dr_on[b] && lvl <= 0.0f)
+            continue;
+        for (j = 0; j < n; j++) {
+            float a;
+            lvl = to > lvl ? fm_minf(lvl + dr_up, 1.0f) : fm_maxf(lvl - dr_down, 0.0f);
+            a = lvl * lvl * g;
+            for (i = 0; i < NDR; i++) {
+                drv_t *v = &drv[b][i];
+                float x, bp;
+                switch (cv) {
+                case 0: x = organ(v->ph); break;
+                case 1: x = blep_saw(v->ph, v->dt); break;
+                case 2: {
+                    float f1, f2, s0 = blep_saw(v->ph, v->dt);
+                    svf_lp(cf1, v->f1, s0, &f1);
+                    svf_lp(cf2, v->f2, s0, &f2);
+                    x = 1.6f * f1 + 1.2f * f2;
+                    break;
+                }
+                case 3: x = 0.6f * (blep_saw(v->ph, v->dt) + blep_saw(v->ph2, v->dt * 1.006f)); break;
+                default: x = sine(v->ph + 2.0f + 0.7f * sine(v->ph2)); break;
+                }
+                v->ph += v->dt;
+                if (v->ph >= 1.0f)
+                    v->ph -= 1.0f;
+                v->ph2 += cv == 4 ? 3.5f * v->dt : 1.006f * v->dt;
+                if (v->ph2 >= 1.0f)
+                    v->ph2 -= (float)(int)v->ph2;
+                x = svf_lp(c, v->s, x, &bp) * a * (i == EN_NPAD ? 0.7f : 1.0f);
+                drl[j] += x * v->gl;
+                drr[j] += x * v->gr;
+            }
+        }
+        dr_lvl[b] = lvl;
+    }
+    if (cv == 1) {                               /* Strings: the ensemble */
+        const float r = 0.6f * (1.0f / EN_SR), r2 = 6.0f * (1.0f / EN_SR);
+        for (j = 0; j < n; j++) {
+            float m = 0.5f * (drl[j] + drr[j]), t0, t1, t2;
+            ens_buf[ens_w & (ENS_N - 1u)] = (int16_t)(fm_clampf(m, -3.99f, 3.99f) * 8192.0f);
+            t0 = ens_tap(441.0f + 130.0f * sine(ens_ph) + 6.0f * sine(ens_ph2));
+            t1 = ens_tap(441.0f + 130.0f * sine(ens_ph + 0.3333f) + 6.0f * sine(ens_ph2 + 0.3333f));
+            t2 = ens_tap(441.0f + 130.0f * sine(ens_ph + 0.6667f) + 6.0f * sine(ens_ph2 + 0.6667f));
+            drl[j] = 0.3f * drl[j] + 0.5f * (t0 + 0.5f * t1);
+            drr[j] = 0.3f * drr[j] + 0.5f * (t2 + 0.5f * t1);
+            ens_w++;
+            ens_ph += r;
+            if (ens_ph >= 1.0f)
+                ens_ph -= 1.0f;
+            ens_ph2 += r2;
+            if (ens_ph2 >= 1.0f)
+                ens_ph2 -= 1.0f;
+        }
+    }
+    if (ph_depth > 0.005f) {                     /* the phaser */
+        int ch, st;
+        for (ch = 0; ch < 2; ch++) {
+            const float sw = 0.5f + 0.5f * sine(ph_lfo + (ch ? 0.25f : 0.0f)),
+                        t = fm_tanf(FM_PI * 200.0f * fm_exp2f(3.3f * sw) * (1.0f / EN_SR)), ca = (1.0f - t) / (1.0f + t),
+                        fb = 0.55f * ph_depth, wet = 0.5f * ph_depth;
+            float *bus = ch ? drr : drl, *z = phz[ch], last = ph_last[ch];
+            for (j = 0; j < n; j++) {
+                float y = bus[j] + fb * last;
+                for (st = 0; st < 6; st++) {
+                    const float o = ca * y + z[st];
+                    z[st] = y - ca * o;
+                    y = o;
+                }
+                last = y;
+                bus[j] = bus[j] * (1.0f - wet) + y * wet;
+            }
+            ph_last[ch] = last;
+        }
+        ph_lfo += (float)n * (0.07f / EN_SR);     /* (a turn in ~14 s) */
+        if (ph_lfo >= 1.0f)
+            ph_lfo -= 1.0f;
+    }
+    for (j = 0; j < n; j++) {
+        mixl[j] += drl[j];
+        mixr[j] += drr[j];
+        rsend[j] += 0.5f * (drl[j] + drr[j]);
+        esend[j] += 0.12f * (drl[j] + drr[j]);
+    }
+}
+
 static void render_chunk(int32_t *out, uint32_t n, float gain)
 {
     uint32_t j;
@@ -4097,6 +4279,7 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
                 tapb[j] = -(mixl[j] + mixr[j]);
         render_bells(n);
         render_plucks(n);
+        render_drone(n);
         widen(n);                                /* (the chord's and the pings' dry, wider) */
         if (tl == 2)
             for (j = 0; j < n; j++)
