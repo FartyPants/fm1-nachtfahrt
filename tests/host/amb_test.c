@@ -25,10 +25,27 @@ static uint32_t midi_count, kicks, kick_off_beat, drum_notes37, claps;
 static int bass_lo = 999, bass_hi = -1, bass_pcs;  /* the bass's note-ons (channel 3): its range, its pitch classes */
 #define KBARS 512
 static uint8_t kick_bar[KBARS], bar_sec[KBARS];
+/* (BERLIN) the sequence's note-ons (channel 2) in order: the sixteenth, the note, the velocity; every channel's
+ * notes sounding (note-ons less note-offs); note-ons on channel 10 and above (the drums', which are gone) */
+#define SQN 8192
+static uint32_t sq_n, sq_at[SQN], drum_ch_ons;
+static uint8_t sq_note[SQN], sq_vel[SQN];
+static int sounding[16][128];
 void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2)
 {
     uint32_t b = en_bars / 16u;
     midi_count++;
+    if ((st & 0xF0u) == 0x90u && d2 > 0u) {
+        sounding[st & 15u][d1 & 127u]++;
+        if ((st & 15u) >= 9u)
+            drum_ch_ons++;
+        if ((st & 15u) == 1u && sq_n < SQN)
+            sq_at[sq_n] = en_bars, sq_note[sq_n] = (uint8_t)d1, sq_vel[sq_n] = (uint8_t)d2, sq_n++;
+    } else if ((st & 0xF0u) == 0x80u || (st & 0xF0u) == 0x90u)
+        sounding[st & 15u][d1 & 127u]--;
+    else if ((st & 0xF0u) == 0xB0u && d1 == 123u && (st & 15u) != 1u && (st & 15u) != 3u)
+        memset(sounding[st & 15u], 0, sizeof sounding[0]);   /* all notes off: the channel quiet, as a synth takes it
+                                                              * (but the sequences', which end each note themselves) */
     if ((st & 0xF0u) == 0x90u && d2 > 0u && b < KBARS)
         bar_sec[b] = en_section;
     if (st == 0x92u && d2 > 0u) {
@@ -88,7 +105,6 @@ static void run(float secs)
 }
 
 /* a new engine, stopped, the count from the top (en_init leaves the transport, en_bars, as they were) */
-static int chord_root_pc(void) { return en_chord_root % 12; }
 
 static void fresh(void)
 {
@@ -98,7 +114,74 @@ static void fresh(void)
     en_bars = 0;
     bad = 0;
     memset(kick_bar, 0, sizeof kick_bar);
+    sq_n = 0;
     memset(bar_sec, 0xFF, sizeof bar_sec);
+}
+
+/* (BERLIN) a pattern written into the Sequence: len steps, gate bits, the degrees; nothing varies it (Motion and
+ * Evolve 0), the chord held (Drift Hold), so every pass is the same */
+static void seq_write(int len, uint16_t gate, const int8_t *degs)
+{
+    seq_t s;
+    int i;
+    memset(&s, 0, sizeof s);
+    s.len = s.base_len = (uint8_t)len;
+    s.gate = gate;
+    s.acc = 1u;
+    for (i = 0; i < len; i++)
+        s.deg[i] = degs[i];
+    en_set(P_MOTION, 0);
+    en_set(P_EVOLVE, 0);
+    en_set(P_DRIFT, 6);
+    en_seq_set(0, &s);
+}
+
+/* the sequence's note-ons in sixteenth s: how many, and the first's note and velocity */
+static int seq_at(uint32_t s, int *note, int *vel)
+{
+    uint32_t i;
+    int c = 0;
+    for (i = 0; i < sq_n; i++)
+        if (sq_at[i] == s) {
+            if (!c)
+                *note = sq_note[i], *vel = sq_vel[i];
+            c++;
+        }
+    return c;
+}
+
+/* bars b0..b1-1 of the record: each has `even` note-ons on its even sixteenths and `odd` on its odd ones, each odd
+ * one the note (and velocity) three sixteenths before it; returns the bars that did not */
+static int bars_tap_a(uint32_t b0, uint32_t b1, int even, int odd)
+{
+    uint32_t b, k;
+    int badbars = 0;
+    for (b = b0; b < b1; b++) {
+        int ne = 0, no = 0, ok = 1;
+        for (k = 0; k < 16u; k++) {
+            int n = 0, v = 0, n3 = 0, v3 = 0, c = seq_at(16u * b + k, &n, &v);
+            if (k & 1u) {
+                no += c;
+                if (c && (!seq_at(16u * b + k - 3u, &n3, &v3) || n3 != n || v3 != v))
+                    ok = 0;
+            } else
+                ne += c;
+        }
+        badbars += !ok || ne != even || no != odd;
+    }
+    return badbars;
+}
+
+static void piece(int i)                         /* a piece, as the UI changes to one */
+{
+    int16_t pp[P_NPARAMS];
+    uint16_t pl;
+    int p;
+    en_piece(i, pp, &pl);
+    for (p = 0; p < P_NPARAMS; p++)
+        en_set(p, pp[p]);
+    en_pool(pl);
+    en_regrow();
 }
 
 static uint32_t chord_sig(void)
@@ -196,8 +279,6 @@ int main(void)
     /* texts */
     {
         char t[12];
-        static const char *const GRV[5] = {"Drone", "Offbeat", "Dotted", "Sync", "Roller"};   /* (the Groove knob, sparse
-                                                                                              * to busy; Notes thins it) */
         en_param_text(P_DRIFT, 6, t);
         CHECK(!strcmp(t, "Hold"), "drift 6: %s", t);
         en_param_text(P_DRIFT, 4, t);
@@ -208,18 +289,22 @@ int main(void)
         CHECK(!strcmp(t, "1/8."), "etime 1: %s", t);
         en_param_text(P_ETIME, 5, t);
         CHECK(!strcmp(t, "1 bar"), "etime 5: %s", t);
-        for (i = 0; i < 5; i++) {
-            en_param_text(P_GROOVE, i, t);
-            CHECK(!strcmp(t, GRV[i]), "groove %d: %s", i, t);
-        }
         en_param_text(P_CVOICE, 0, t);
         CHECK(!strcmp(t, "Saws"), "ctone 0: %s", t);
         en_param_text(P_CVOICE, 1, t);
         CHECK(!strcmp(t, "Keys"), "ctone 1: %s", t);
-        en_param_text(P_SWING, 0, t);
-        CHECK(!strcmp(t, "50%"), "swing 0: %s", t);
-        en_param_text(P_BASSOCT, 1, t);
-        CHECK(!strcmp(t, "+1"), "bass oct: %s", t);
+        en_param_text(P_TAPAT, 1, t);
+        CHECK(!strcmp(t, "1/8."), "repeat A time 1: %s", t);
+        en_param_text(P_TAPBT, 1, t);
+        CHECK(!strcmp(t, "1/4"), "repeat B time 1: %s", t);
+        en_param_text(P_SEQGRID, 0, t);
+        CHECK(!strcmp(t, "8ths"), "grid 0: %s", t);
+        en_param_text(P_TRANS, 2, t);
+        CHECK(!strcmp(t, "Bed"), "transpose 2: %s", t);
+        en_param_text(P_SVOICE, 0, t);
+        CHECK(!strcmp(t, "2600"), "seq voice 0: %s", t);
+        en_param_text(P_SEQ2OCT, 1, t);
+        CHECK(!strcmp(t, "+1"), "seq2 oct: %s", t);
         en_param_text(P_MODE, MODE_DORIAN, t);
         CHECK(!strcmp(t, "Dorian"), "mode: %s", t);
         for (i = 0; i < P_NPARAMS; i++) {
@@ -233,7 +318,6 @@ int main(void)
 
     /* the render: silent at rest, sound when playing, never NaN, bounded */
     en_init();
-    CHECK(en_drum_pat[0] == 0x1111u, "four on the floor: %x", en_drum_pat[0]);
     en_set(P_CRACKLE, 0);
     run(1.0f);
     CHECK(peak == 0.0f, "silent before play (%f)", (double)peak);
@@ -245,29 +329,7 @@ int main(void)
     CHECK(peak > 0.1f && peak < 0.95f, "peak %f", (double)peak);
     printf("  20 s playing: peak %.3f, rms %.4f, bars %u, kicks %u\n", (double)peak,
            (double)sqrtf(sum2 / (20.0f * 44100.0f * 2.0f)), en_bars / 16u, kicks);
-    CHECK(en_bars / 16u >= 9u, "the grid ran (%u sixteenths)", en_bars);
-
-    /* the kick: four on the floor, on the beats, while Full (Motion 0: always Full; a fill halves a phrase's
-     * last bar) */
-    {
-        uint32_t b, full = 0, two = 0, other = 0;
-        fresh();
-        en_set(P_MOTION, 0);
-        kicks = kick_off_beat = 0;
-        en_play(1);
-        run(200.0f);
-        for (b = 0; b + 1 < en_bars / 16u && b < KBARS; b++) {
-            if (kick_bar[b] == 4)
-                full++;
-            else if (kick_bar[b] == 2 && (b & 7u) == 7u)
-                two++;
-            else
-                other++;
-        }
-        CHECK(!kick_off_beat, "%u kicks off the beat", kick_off_beat);
-        CHECK(!other && full > 80u, "kick bars: %u of four, %u fills, %u else", full, two, other);
-        printf("  200 s at Motion 0: %u bars of four kicks, %u fills\n", full, two);
-    }
+    CHECK(en_bars / 16u >= 7u, "the grid ran (%u sixteenths: 8 bars in 20 s at 96)", en_bars);
 
     /* the chord drifts: at 2 bars, it moves every 4 s or so; never onto a diminished fifth; in the pool */
     {
@@ -382,7 +444,6 @@ int main(void)
             en_seed(7);
             en_set(P_EVOLVE, 100);
             en_set(P_MOTION, 0);
-            en_set(P_STABS, 100);
             en_set(P_CTHROW, TV[k]);
             en_regrow();
             en_play(1);
@@ -392,97 +453,6 @@ int main(void)
         }
         printf("  throws in a minute at Throws 0 / 50 / 100: %u / %u / %u\n", n[0], n[1], n[2]);
         CHECK(n[0] == 0 && n[1] > 0 && n[2] * 2u > n[1] * 3u, "Throws: %u / %u / %u", n[0], n[1], n[2]);
-    }
-
-    /* the kick's shapes, a phrase at a time: Density 100 four on the floor in every bar it plays; 90 mostly four, some
-     * half-time and the downbeat alone */
-    {
-        int k, b, four[2] = {0, 0}, half[2] = {0, 0}, one[2] = {0, 0}, played[2] = {0, 0};
-        static const int KD[2] = {100, 90};
-        for (k = 0; k < 2; k++) {
-            fresh();
-            en_seed(11);
-            en_set(P_KDENS, KD[k]);
-            en_set(P_MOTION, 0);
-            en_regrow();
-            en_play(1);
-            run(1.0f);
-            for (b = 0; b < 240; b++) {
-                uint16_t p;
-                run(60.0f / 122.0f * 4.0f);      /* (a bar at 122) */
-                p = en_lane[1];
-                if (!p)
-                    continue;
-                played[k]++;
-                four[k] += p == 0x1111u;
-                half[k] += p == 0x0101u;
-                one[k] += p == 0x0001u;
-            }
-        }
-        printf("  the kick, Density 100: four in %d of %d bars; 90: four %d, half %d, one %d of %d\n", four[0], played[0],
-               four[1], half[1], one[1], played[1]);
-        CHECK(played[0] > 100 && four[0] == played[0], "Density 100: four in %d of %d", four[0], played[0]);
-        CHECK(played[1] > 100 && four[1] > played[1] / 3 && four[1] < played[1] * 9 / 10 && half[1] + one[1] > played[1] / 12,
-              "Density 90: four %d, half %d, one %d of %d", four[1], half[1], one[1], played[1]);
-    }
-
-    /* the drums' and the bass's phrase plan: A A A B A A A B, the A bars the same, the two B bars the same */
-    {
-        int ph_n = 0, ok = 0, b, k;
-        uint16_t lane[8][3];
-        fresh();
-        en_seed(5);
-        en_set(P_BNOTES, 75);
-        en_set(P_MOTION, 0);                    /* (no Breaks: the bass and hats in every phrase) */
-        en_regrow();
-        en_play(1);
-        run(2.0f);
-        for (b = 0; b < 64 && ph_n < 4; b++) {
-            int last = en_phrase_bar;
-            for (k = 0; k < 4000 && en_phrase_bar == last; k++)
-                run(0.006f);                     /* (a block at a time, to the bar's start) */
-            run(0.2f);
-            lane[en_phrase_bar][0] = en_lane[5], lane[en_phrase_bar][1] = en_lane[2], lane[en_phrase_bar][2] = en_lane[1];
-            if (en_phrase_bar == 7) {            /* (a whole phrase seen) */
-                int a = 1, j, q;
-                for (q = 0; q < 3; q++) {
-                    for (j = 1; j < 3; j++)
-                        a &= lane[j][q] == lane[0][q];
-                    for (j = 4; j < 7; j++)
-                        a &= lane[j][q] == lane[0][q];
-                    a &= q || lane[3][q] == lane[7][q];   /* (B: the bass; the drums' bar 8 may carry the fill) */
-                }
-                ok += a;
-                ph_n++;
-            }
-        }
-        printf("  the phrase plan: %d of %d phrases A A A B A A A B\n", ok, ph_n);
-        CHECK(ph_n >= 3 && ok >= ph_n - 1, "the phrase plan: %d of %d", ok, ph_n);
-    }
-
-    /* the bass: Octave -1 a true octave under 0 (E0..Eb1); with Drone, Fifth gives whole bars of the fifth */
-    {
-        int lo0, hi0;
-        fresh();
-        en_set(P_DRIFT, 6);
-        en_set(P_GROOVE, 4);                     /* (Roller, the knob's top) */
-        en_set(P_FIFTH, 0);
-        en_regrow();
-        en_play(1);
-        bass_lo = 999, bass_hi = -1;
-        run(20.0f);
-        lo0 = bass_lo, hi0 = bass_hi;
-        en_set(P_BASSOCT, -1);
-        bass_lo = 999, bass_hi = -1;
-        run(20.0f);
-        CHECK(lo0 >= 28 && hi0 <= 51 && bass_lo == lo0 - 12, "Octave -1: %d..%d, at 0 %d..%d", bass_lo, bass_hi, lo0, hi0);
-        en_set(P_BASSOCT, 0);
-        en_set(P_GROOVE, 0);
-        en_set(P_FIFTH, 100);
-        run(4.0f);
-        bass_pcs = 0;
-        run(20.0f);
-        CHECK(bass_pcs == 1 << ((chord_root_pc() + 7) % 12), "Drone at Fifth 100: only the fifth (%x)", bass_pcs);
     }
 
     /* a piece's parameters all at once (a piece change, the boot): none of them, nor PLAY after them, dropped */
@@ -673,47 +643,6 @@ int main(void)
         }
     }
 
-    /* the drums' pattern: Play on Pattern plays the written steps only (the kick on 1 and 11 here), Chance 0 a
-     * lane silent, the rim heard; Auto's kick is four on the floor */
-    {
-        int k, bars = 0, off = 0, ok_rim;
-        fresh();
-        en_set(P_MOTION, 0);
-        en_set(P_DPAT0, (int)(int16_t)(uint16_t)0x0401u);   /* steps 1 and 11 */
-        en_set(P_DPAT3, (int)(int16_t)(uint16_t)0x1010u);   /* the rim on 5 and 13 */
-        en_set(P_DMODE, 1);
-        en_regrow();
-        en_play(1);
-        kicks = kick_off_beat = 0;
-        memset(kick_bar, 0, sizeof kick_bar);
-        run(20.0f);
-        for (k = 1; k < 9; k++)
-            bars += kick_bar[k] == 2;
-        CHECK(bars >= 7, "Pattern: two kicks a bar, %d of 8 bars", bars);
-        (void)off;
-        CHECK(en_lane[1] == 0x0401u && en_lane[3] == 0x1010u, "the lanes: kick %04x, rim %04x", en_lane[1], en_lane[3]);
-        ok_rim = drum_notes37 > 10u;
-        CHECK(ok_rim, "the rim: %u hits", drum_notes37);
-        en_set(P_DCH0, 0);
-        kicks = 0;
-        run(10.0f);
-        CHECK(kicks == 0u, "Chance 0: still %u kicks", kicks);
-        en_set(P_DMODE, 0);
-        kicks = 0;
-        memset(kick_bar, 0, sizeof kick_bar);
-        run(10.0f);
-        CHECK(kicks >= 16u, "Auto again: %u kicks", kicks);
-        claps = 0;                               /* the clap, in Auto: now and then, never every time */
-        run(120.0f);
-        CHECK(claps >= 2u && claps <= 40u, "Auto's claps in 2 min: %u (of ~120 chances)", claps);
-        en_set(P_DMODE, 1);
-        en_set(P_DPAT4, (int)(int16_t)(uint16_t)0x1010u);
-        en_set(P_DCH4, 100);
-        claps = 0;
-        run(10.0f);
-        CHECK(claps >= 8u, "the clap at Chance 100: %u in 10 s", claps);
-    }
-
     /* the effects grid: each effect alone, then all sixteen at once, then let go: no NaN, under full scale,
      * and back to the music after */
     {
@@ -742,12 +671,13 @@ int main(void)
 
     /* every voice of every layer: it sounds, without NaN, under full scale */
     {
-        static const int VP[4] = {P_CVOICE, P_PVOICE, P_BVOICE, P_KIT};
+        static const int VP[3] = {P_CVOICE, P_SVOICE, P_BVOICE}, LV[3] = {P_CHORD, P_SEQ, P_BASS};
         int l, v;
-        for (l = 0; l < 4; l++)
+        for (l = 0; l < 3; l++)
             for (v = en_param_info(VP[l])->lo; v <= en_param_info(VP[l])->hi; v++) {
                 fresh();
                 en_set(P_DENSITY, 80);
+                en_set(LV[l], 70);
                 en_set(VP[l], v);
                 en_regrow();
                 en_play(1);
@@ -768,17 +698,6 @@ int main(void)
             for (k = 0; k < 600; k++) {
                 run(1.0f);
                 secs[en_section < EN_NSEC ? en_section : 0]++;
-            }
-            if (MOT[m]) {                        /* the kick: four a bar while Full (but a fill), none in a Break */
-                uint32_t b, kf = 0, kb = 0, nb = 0;
-                for (b = 0; b + 1 < en_bars / 16u && b < KBARS; b++) {
-                    if (bar_sec[b] == SEC_FULL && (b & 7u) != 7u)
-                        kf += kick_bar[b] != 4;
-                    if (bar_sec[b] == SEC_BREAK)
-                        nb++, kb += kick_bar[b];
-                }
-                CHECK(!kf && !kb && nb > 20u, "Motion 100: %u Full bars without four kicks, %u kicks in %u Break bars",
-                      kf, kb, nb);
             }
             printf("  10 min at Motion %d: Full %d s, Break %d, Groove %d, Thin %d\n", MOT[m], secs[SEC_FULL],
                    secs[SEC_BREAK], secs[SEC_GROOVE], secs[SEC_THIN]);
@@ -808,23 +727,6 @@ int main(void)
         hi = en_throws - t0;
         printf("  throws in 2 min: %u at Evolve 0, %u at Evolve 100\n", lo, hi);
         CHECK(hi >= 3u && lo == 0u, "throws: %u at Evolve 100, %u at 0", hi, lo);   /* (fewer fills since the classics pass: a fill throws its last stab) */
-    }
-
-    /* the loops evolve: with Evolve at 100, the phrases change */
-    {
-        int8_t before[EN_NLOOP][EN_LOOP_MAX];
-        int diff = 0, l;
-        en_set(P_DENSITY, 80);
-        run(5.0f);
-        memcpy(before, (const void *)en_loop_note, sizeof before);
-        run(60.0f);
-        for (l = 0; l < EN_NLOOP; l++)
-            for (i = 0; i < EN_LOOP_MAX; i++)
-                diff += before[l][i] != en_loop_note[l][i];
-        CHECK(diff > 0, "the loops evolved");
-        for (l = 0; l < EN_NLOOP; l++)
-            for (i = EN_LOOP_LEN[l]; i < EN_LOOP_MAX; i++)
-                CHECK(en_loop_note[l][i] == -1, "loop %d slot %d past its end", l, i);
     }
 
     /* a new key while playing: the chord's notes in it at once */
@@ -895,6 +797,130 @@ int main(void)
             en_set(p, en_param_info(p)->lo);
         run(30.0f);
         CHECK(!bad, "all at min: NaN");
+    }
+
+    /* (BERLIN) no drums: nothing on channel 10 or above in a minute */
+    fresh();
+    drum_ch_ons = 0;
+    en_play(1);
+    run(60.0f);
+    CHECK(!drum_ch_ons, "test_no_drums: %u note-ons on the drum channels", drum_ch_ons);
+
+    /* (BERLIN) the sequence on its grid: eighths, every note-on on an even sixteenth (no repeats); sixteenths, on odd
+     * ones too */
+    {
+        uint32_t i, odd = 0;
+        static const int8_t D[8] = {0, 4, 7, 2, 0, 4, 7, 5};
+        fresh();
+        en_set(P_TAPA, 0);
+        en_set(P_TAPB, 0);
+        seq_write(8, 0x00FFu, D);
+        en_play(1);
+        run(20.0f);
+        for (i = 0; i < sq_n; i++)
+            odd += sq_at[i] & 1u;
+        CHECK(sq_n > 40u && !odd, "test_seq_on_grid: eighths: %u of %u on odd sixteenths", odd, sq_n);
+        fresh();
+        en_set(P_TAPA, 0);
+        en_set(P_TAPB, 0);
+        en_set(P_SEQGRID, 1);
+        seq_write(8, 0x00FFu, D);
+        en_play(1);
+        run(20.0f);
+        for (i = odd = 0; i < sq_n; i++)
+            odd += sq_at[i] & 1u;
+        CHECK(odd > 20u, "test_seq_on_grid: sixteenths: %u on odd sixteenths", odd);
+        en_set(P_SEQGRID, 0);
+    }
+
+    /* (BERLIN) Repeat A: eight notes on the eighths, a dotted-eighth repeat at the same level, once: each bar eight
+     * originals on the even sixteenths and eight repeats on the odd ones, each the note three sixteenths before;
+     * at 96, 60 and 160 BPM alike (test_taps_tempo_extremes) */
+    {
+        static const int8_t D[8] = {0, 4, 7, 2, 0, 4, 7, 5};
+        static const int TEMPI[3] = {96, 60, 160};
+        int k;
+        for (k = 0; k < 3; k++) {
+            int badbars;
+            fresh();
+            en_set(P_TEMPO, TEMPI[k]);
+            en_set(P_TAPA, 100);
+            en_set(P_TAPAT, 1);
+            en_set(P_TAPB, 0);
+            seq_write(8, 0x00FFu, D);
+            en_play(1);
+            run(45.0f);
+            badbars = bars_tap_a(1u, en_bars / 16u - 1u, 8, 8);
+            CHECK(en_bars / 16u > 8u && !badbars, "test_tap_a at %d BPM: %d of %u bars wrong", TEMPI[k], badbars,
+                  en_bars / 16u - 2u);
+        }
+        en_set(P_TEMPO, en_param_info(P_TEMPO)->def);
+    }
+
+    /* (BERLIN) Repeat B (a quarter) only into a rest: step 5 rested, it fills that eighth with the note four
+     * sixteenths before (step 3's), and nowhere else; at 60 and 160 BPM */
+    {
+        static const int8_t D[8] = {0, 4, 7, 2, 0, 4, 7, 5};
+        static const int TEMPI[2] = {60, 160};
+        uint32_t b;
+        int k;
+        for (k = 0; k < 2; k++) {
+            int badbars = 0;
+            fresh();
+            en_set(P_TEMPO, TEMPI[k]);
+            en_set(P_TAPA, 0);
+            en_set(P_TAPB, 100);
+            en_set(P_TAPBT, 1);
+            seq_write(8, 0x00DFu, D);
+            en_play(1);
+            run(45.0f);
+            for (b = 1u; b + 1u < en_bars / 16u; b++) {
+                int n10 = 0, v10 = 0, n6 = 0, v6 = 0, total = 0, n, v;
+                uint32_t kk;
+                for (kk = 0; kk < 16u; kk++)
+                    total += seq_at(16u * b + kk, &n, &v);
+                if (total != 8 || seq_at(16u * b + 10u, &n10, &v10) != 1 || !seq_at(16u * b + 6u, &n6, &v6) ||
+                    n10 != n6 || v10 != v6)
+                    badbars++;
+            }
+            CHECK(en_bars / 16u > 8u && !badbars, "test_tap_b_into_rests at %d BPM: %d bars wrong", TEMPI[k], badbars);
+        }
+        en_set(P_TEMPO, en_param_info(P_TEMPO)->def);
+    }
+
+    /* (BERLIN) every note-on has its note-off: two minutes of piece changes, tempo changes, freeze, mutes, PANIC and
+     * stops with repeats pending, then stop and let it ring out */
+    {
+        int c, nt, k, stuck = 0;
+        fresh();
+        memset(sounding, 0, sizeof sounding);
+        en_set(P_TAPA, 100);
+        en_set(P_TAPB, 100);
+        en_play(1);
+        for (k = 0; k < 40; k++) {
+            switch (k % 8) {
+            case 0: piece((k / 8) % EN_NPIECES); break;
+            case 1: en_set(P_TEMPO, 60 + (k * 37) % 101); break;
+            case 2: en_freeze(1); break;
+            case 3: en_freeze(0); break;
+            case 4: en_mute(EN_M_PINGS); break;
+            case 5: en_mute(0); break;
+            case 6: en_panic(); break;
+            default: en_play(0), run(0.5f), en_play(1); break;
+            }
+            run(3.0f);
+        }
+        en_play(0);
+        run(10.0f);
+        for (c = 0; c < 16; c++)
+            for (nt = 0; nt < 128; nt++)
+                if (sounding[c][nt] > 0 || ((c == 1 || c == 3) && sounding[c][nt])) {   /* (an extra note-off is
+                                                  * harmless, but the sequences' must pair exactly) */
+                    if (!stuck)
+                        printf("  stuck: channel %d note %d (%d)\n", c + 1, nt, sounding[c][nt]);
+                    stuck++;
+                }
+        CHECK(!stuck, "test_no_stuck_notes: %d notes left sounding", stuck);
     }
 
     /* stop: the tails die away (but the vinyl turns on) */

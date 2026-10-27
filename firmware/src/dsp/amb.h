@@ -44,17 +44,17 @@ extern const uint8_t EN_DRUM_N[EN_NDRUM];
 
 /* parameters: value ranges in en_param_info() */
 enum {
-    P_CHORD, P_PINGS, P_BASS, P_DRUMS,                /* layer levels */
-    P_DENSITY, P_EVOLVE, P_DRIFT, P_HITS,             /* motion: the pings' notes, change, the chord's bars, the shaker */
+    P_CHORD, P_SEQ, P_BASS, P_SEQ2,                /* layer levels */
+    P_DENSITY, P_EVOLVE, P_DRIFT, P_TAPA,             /* motion: the pings' notes, change, the chord's bars, the shaker */
     P_ECHO, P_ETIME, P_REVERB, P_FEEDBACK,            /* space */
-    P_CUTOFF, P_DECAY, P_PTONE, P_MOTION,             /* the stab's filter and length, the pings' tone, the arrangement */
-    P_TUNE, P_MIDI, P_TEMPO, P_ROOT, P_MODE, P_POCT,  /* setup, panel encoders, the pings' octave */
+    P_CUTOFF, P_DECAY, P_SWEEP, P_MOTION,             /* the stab's filter and length, the pings' tone, the arrangement */
+    P_TUNE, P_MIDI, P_TEMPO, P_ROOT, P_MODE, P_SEQOCT,  /* setup, panel encoders, the pings' octave */
     P_CVOICE,                                         /* the chord's voice (EN_CV_NAME) */
-    P_BASSOCT, P_GROOVE, P_FIFTH,                     /* bass: its octave, its pattern, how often the fifth */
-    P_SWING, P_HATS,                                  /* drums: swing, the hats' colour */
-    P_STABS, P_CRACKLE, P_DUCK, P_SIZE,               /* stabs a bar, the vinyl, the kick's ducking, the plate */
+    P_SEQ2OCT, P_SEQGRID, P_TRANS,                     /* bass: its octave, its pattern, how often the fifth */
+    P_TAPAT, P_TAPB,                                  /* drums: swing, the hats' colour */
+    P_SEQLEN, P_CRACKLE, P_TAPBT, P_SIZE,               /* stabs a bar, the vinyl, the kick's ducking, the plate */
     P_CLOUD,                                          /* the granular reverb */
-    P_PVOICE, P_BVOICE, P_KIT,                        /* the pings' voice, the bass's, the drums' kit */
+    P_SVOICE, P_BVOICE, P_S2VOICE,                        /* the pings' voice, the bass's, the drums' kit */
     /* the sound pages: each relative to the voice as it is (0), -50 .. +50 (the kick's tune: semitones) */
     P_CATT, P_CCOL, P_CRES, P_CENV,                   /* the chord: attack, colour, resonance, the filter's envelope */
     P_PTON, P_PRAT, P_PLEN, P_PBEND,                  /* the pings: tone, ratio, length, bend */
@@ -80,7 +80,7 @@ enum {
     P_DPAT0, P_DPAT1, P_DPAT2, P_DPAT3, P_DPAT4,
     P_DACC0, P_DACC1, P_DACC2, P_DACC3, P_DACC4,
     P_DCH0, P_DCH1, P_DCH2, P_DCH3, P_DCH4,
-    P_DACCENT, P_DMODE,
+    P_SACCENT, P_DMODE,
     /* the noise (SAVE's Noise page, 1.3.0): Colour, Grain, Room, Drift, -50..+50 around the piece's own (0), and a
      * character (EN_NCHAR_NAME: Vinyl, Tape, Dust, Room, Machine); Crackle (the Noise page's Level) is its level.
      * (Room is off the page: the recipes and the characters still set it) */
@@ -95,7 +95,7 @@ enum {
      * its echo x1.35); the kick's density (its shapes by phrase: 0 none .. 100 four on the floor, always); the echo's
      * blur (0 clean copies .. 50 each repeat a little more dissolved .. 100 a wash), its tone (darker .. brighter),
      * its width (0 mono .. 100 wide); the noise's Decay (how long its hits ring: 0 a knock .. 100 a hum) */
-    P_CGHOST, P_KDENS, P_EBLUR, P_ETONE, P_EWIDTH, P_NTUNE,
+    P_CGHOST, P_SEQ2LEN, P_EBLUR, P_ETONE, P_EWIDTH, P_NTUNE,
     /* (format 15) the Noise page's second (SAVE again): its width (0 mono, 50 as it was, 100 wide), how much of it
      * into the plate and into the echo (50 as it was, 0 none, 100 twice); the hats' length (-50..+50 around the kit's) */
     P_NWIDTH, P_NPLATE, P_NECHO, P_HLEN,
@@ -158,6 +158,11 @@ void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2);
 #define EN_NCV 7
 #define EN_NPV 5
 #define EN_NBV 5
+#define EN_NSV 5                        /* (BERLIN) the Sequence's voices: 2600, Moog, Synthi, Pulse, Glass */
+#define EN_NS2V 6                       /* Sequence 2's: the same, and Sub */
+extern const char *const EN_SV_NAME[EN_NS2V];
+void en_seq_set(int layer, const seq_t *s);   /* a pattern written into a sequence (0: the Sequence, 1:
+                                               * Sequence 2): played as written, from its first step */
 #define EN_NKIT 5
 extern const char *const EN_CV_NAME[EN_NCV], *const EN_PV_NAME[EN_NPV], *const EN_BV_NAME[EN_NBV],
     *const EN_KIT_NAME[EN_NKIT];

@@ -4,6 +4,9 @@
 #include "fastmath.h"
 #include "seq.c"
 
+#define EN_DUB 0                                /* (BERLIN: the dub's drums and ping loops, silent; their code goes
+                                                 * once the arrangement no longer leans on it) */
+
 #ifdef EN_HOST
 #define EN_POOL
 #else
@@ -25,17 +28,17 @@ const uint8_t EN_DRUM_N[EN_NDRUM] = {16, 16, 16, 16, 16};
 const char *const EN_SEC_NAME[EN_NSEC] = {"Full", "Break", "Groove", "Thin"};
 
 static const en_param_t PARAMS[P_NPARAMS] = {
-    {"Chord", 0, 100, 70},    {"Pings", 0, 100, 35},    {"Bass", 0, 100, 60},     {"Drums", 0, 100, 65},
-    {"Density", 0, 100, 30},  {"Evolve", 0, 100, 40},   {"Drift", 0, 6, 4},       {"Hits", 0, 100, 50},
+    {"Chord", 0, 100, 0},    {"Sequence", 0, 100, 70},    {"Bass", 0, 100, 0},     {"Sequence 2", 0, 100, 0},
+    {"Density", 0, 100, 60},  {"Evolve", 0, 100, 40},   {"Drift", 0, 6, 4},       {"Repeat A", 0, 100, 100},
     {"Echo", 0, 100, 55},     {"Echo time", 0, 5, 1},   {"Reverb", 0, 100, 35},   {"Feedback", 0, 100, 60},
-    {"Cutoff", 0, 100, 45},   {"Decay", 0, 100, 35},    {"Ping tone", 0, 100, 40}, {"Motion", 0, 100, 50},
-    {"Tune", -50, 50, 0},     {"MIDI out", 0, 1, 1},    {"Tempo", 90, 140, 122},  {"Root", 0, 11, 5},
-    {"Mode", 0, EN_NMODES - 1, MODE_DORIAN}, {"Ping oct", -2, 2, 0}, {"Chord voice", 0, EN_NCV - 1, 0},
-    {"Bass oct", -1, 1, 0},   {"Groove", 0, 4, 1},      {"Fifth", 0, 100, 20},
-    {"Swing", 0, 100, 10},    {"Hats", 0, 100, 50},
-    {"Stabs", 0, 100, 30},    {"Crackle", 0, 100, 35},  {"Duck", 0, 100, 50},     {"Size", 0, 100, 55},
+    {"Cutoff", 0, 100, 45},   {"Decay", 0, 100, 35},    {"Sweep", 0, 100, 50}, {"Motion", 0, 100, 50},
+    {"Tune", -50, 50, 0},     {"MIDI out", 0, 1, 1},    {"Tempo", 60, 160, 96},  {"Root", 0, 11, 5},
+    {"Mode", 0, EN_NMODES - 1, MODE_DORIAN}, {"Seq oct", -2, 2, 0}, {"Chord voice", 0, EN_NCV - 1, 0},
+    {"Seq2 oct", -2, 1, -1},   {"Grid", 0, 1, 0},      {"Transpose", 0, 2, 0},
+    {"Repeat A time", 0, 2, 1},    {"Repeat B", 0, 100, 0},
+    {"Length", 3, 16, 8},    {"Crackle", 0, 100, 35},  {"Repeat B time", 0, 2, 1},     {"Size", 0, 100, 55},
     {"Cloud", 0, 100, 30},
-    {"Ping voice", 0, EN_NPV - 1, 0}, {"Bass voice", 0, EN_NBV - 1, 0}, {"Kit", 0, EN_NKIT - 1, 0},
+    {"Seq voice", 0, EN_NSV - 1, 0}, {"Bass voice", 0, EN_NBV - 1, 0}, {"Seq2 voice", 0, EN_NS2V - 1, 1},
     {"Attack", 0, 100, 0},   {"Colour", -50, 50, 0},   {"Resonance", -50, 50, 0}, {"Env amount", -50, 50, 0},
     {"Tone", -50, 50, 0},     {"Ratio", -50, 50, 0},    {"Ping len", -50, 50, 0}, {"Bend", 0, 100, 0},
     {"Bite", -50, 50, 0},     {"Shape", -50, 50, 0},    {"Bass len", -50, 50, 0}, {"Slide", -50, 50, 0},
@@ -60,7 +63,7 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Noise tone", -50, 50, 0}, {"Noise density", -50, 50, 0}, {"Air", -50, 50, 0}, {"Noise drift", -50, 50, 0},
     {"Noise", 0, EN_NNCHAR - 1, 0},
     {"Throws", 0, 100, 50},   {"Wet", 0, 100, 50},    {"Notes", 0, 100, 100},   {"Hats level", 0, 100, 50},
-    {"Chord wet", 0, 100, 50}, {"Kick density", 0, 100, 100}, {"Blur", 0, 100, 50}, {"Echo tone", 0, 100, 50},
+    {"Chord wet", 0, 100, 50}, {"Length 2", 3, 16, 7}, {"Blur", 0, 100, 50}, {"Echo tone", 0, 100, 50},
     {"Width", 0, 100, 50},    {"Noise decay", 0, 100, 50},
     {"Noise width", 0, 100, 50}, {"Noise plate", 0, 100, 50}, {"Noise echo", 0, 100, 50}, {"Hat len", -50, 50, 0},
     {"Noise LFO", 0, 100, 0}, {"Rumble", 0, 100, 0},
@@ -176,8 +179,16 @@ void en_piece(int i, int16_t *par, uint16_t *pool)
 {
     int p;
     i = (unsigned)i < EN_NPIECES ? i : 0;
+    /* (BERLIN, until its own recipes: DUB-1's, with the parameters that mean something new at their defaults and the
+     * dub's chord and bass silent) */
+    static const uint8_t NEW[] = {P_SEQ, P_SEQ2, P_DENSITY, P_TAPA, P_TAPAT, P_TAPB, P_TAPBT, P_SEQLEN, P_SEQ2LEN, P_SEQGRID,
+                                  P_TRANS, P_SEQOCT, P_SEQ2OCT, P_SVOICE, P_S2VOICE, P_SWEEP, P_SACCENT};
+    unsigned k;
     for (p = 0; p < P_NPARAMS; p++)
         par[p] = PIECES[i].v[p];
+    for (k = 0; k < sizeof NEW; k++)
+        par[NEW[k]] = PARAMS[NEW[k]].def;
+    par[P_CHORD] = par[P_BASS] = 0;
     *pool = EN_MODE_POOL[PIECES[i].v[P_MODE]];
 }
 
@@ -189,12 +200,11 @@ const char *const EN_CQ_NAME[EN_NCQ] = {"Empty", "Major", "Minor", "Sus2", "Sus4
 const char *const EN_CX_NAME[EN_NCX] = {"Triad", "6", "7", "Maj7", "9", "11", "Add9"};
 static const char *const ETIME_NAME[6] = {"1/8", "1/8.", "1/4", "1/4.", "1/2", "1 bar"};
 static const float ETIME_BEATS[6] = {0.5f, 0.75f, 1.0f, 1.5f, 2.0f, 4.0f};
-/* the Groove knob (P_GROOVE): the five patterns from sparse to busy (GROOVE_PAT: the engine's GROOVE below); Notes
+/* the Groove knob (P_SEQGRID): the five patterns from sparse to busy (GROOVE_PAT: the engine's GROOVE below); Notes
  * (P_BNOTES) how many of its notes play (the rest left out at random, bar by bar); Energy (PERFORM) thins it further,
  * or fills a thin one */
 #define NGROOVE 5
 static const uint8_t GROOVE_PAT[NGROOVE] = {0, 1, 2, 4, 3};
-static const char *const GROOVE_NAME[NGROOVE] = {"Drone", "Offbeat", "Dotted", "Sync", "Roller"};
 /* the bass's grooves (bit i: a note on sixteenth i) and how long each note holds, in sixteenths (Offbeat's
  * held past the next kick, and Roller's nearly to its next note: the kick lands on a bass the duck shapes, not
  * in silence) */
@@ -236,12 +246,12 @@ void en_param_text(int i, int v, char *b)
         s = ONOFF[v ? 1 : 0];
     else if (i == P_CVOICE)
         s = EN_CV_NAME[(unsigned)v < EN_NCV ? v : 0];
-    else if (i == P_PVOICE)
-        s = EN_PV_NAME[(unsigned)v < EN_NPV ? v : 0];
+    else if (i == P_SVOICE)
+        s = EN_SV_NAME[(unsigned)v < EN_NSV ? v : 0];
     else if (i == P_BVOICE)
         s = EN_BV_NAME[(unsigned)v < EN_NBV ? v : 0];
-    else if (i == P_KIT)
-        s = EN_KIT_NAME[(unsigned)v < EN_NKIT ? v : 0];
+    else if (i == P_S2VOICE)
+        s = EN_SV_NAME[(unsigned)v < EN_NS2V ? v : 0];
     else if (i >= P_CR0 && i <= P_CR7)
         s = EN_NOTE_NAME[(unsigned)v < 12u ? v : 0];
     else if (i >= P_CQ0 && i <= P_CQ7)
@@ -254,8 +264,14 @@ void en_param_text(int i, int v, char *b)
         s = EN_NCHAR_NAME[(unsigned)v < EN_NNCHAR ? v : 0];
     else if (i == P_DMODE)
         s = v ? "Pattern" : "Auto";
-    else if (i == P_GROOVE)
-        s = GROOVE_NAME[(unsigned)v < NGROOVE ? v : 0];
+    else if (i == P_SEQGRID)
+        s = v ? "16ths" : "8ths";
+    else if (i == P_TAPAT)
+        s = ETIME_NAME[(unsigned)v < 3u ? v : 0];          /* 1/8, 1/8., 1/4 */
+    else if (i == P_TAPBT)
+        s = ETIME_NAME[(unsigned)v < 3u ? v + 1 : 1];      /* 1/8., 1/4, 1/4. */
+    else if (i == P_TRANS)
+        s = v == 2 ? "Bed" : v ? "Diatonic" : "Parallel";
     else if (i == P_MODE)
         s = EN_MODE_NAME[(unsigned)v < EN_NMODES ? v : 0];
     else if (i == P_ROOT)
@@ -291,12 +307,6 @@ void en_param_text(int i, int v, char *b)
         *b = 0;
         return;
     }
-    if (i == P_SWING) {                          /* as a swing percentage: 50% (straight) .. 70% */
-        b = itoa_s(50 + v / 5, b);
-        *b++ = '%';
-        *b = 0;
-        return;
-    }
     if ((i == P_CALG || i == P_PALG || i == P_BALG)) {
         if (!v) {
             b[0] = 'V', b[1] = 'o', b[2] = 'i', b[3] = 'c', b[4] = 'e', b[5] = 0;   /* the voice's own */
@@ -307,7 +317,7 @@ void en_param_text(int i, int v, char *b)
         }
         return;
     }
-    if ((i == P_TUNE || i == P_POCT || i == P_BASSOCT || (i >= P_CATT && i < P_CR0) || (i >= P_NCOL && i <= P_NDRIFT)) && v > 0)
+    if ((i == P_TUNE || i == P_SEQOCT || i == P_SEQ2OCT || (i >= P_CATT && i < P_CR0) || (i >= P_NCOL && i <= P_NDRIFT)) && v > 0)
         *b++ = '+';
     itoa_s(v, b);
 }
@@ -447,7 +457,7 @@ const char *en_chord_name(const int *pcs, int n, char *buf)
 }
 
 /* ------------------------------------------------------------ commands --- */
-enum { C_SET, C_POOL, C_PLAY, C_NEXT, C_FREEZE, C_SEED, C_PANIC, C_CLOCK, C_REGROW, C_MUTE, C_PERF, C_FX, C_PINGS, C_MACRO, C_PROT, C_REWALK, C_PNUDGE, C_LOCK };
+enum { C_SET, C_POOL, C_PLAY, C_NEXT, C_FREEZE, C_SEED, C_PANIC, C_CLOCK, C_REGROW, C_MUTE, C_PERF, C_FX, C_PINGS, C_MACRO, C_PROT, C_REWALK, C_PNUDGE, C_LOCK, C_SEQSET };
 #define QN 512u                                 /* (a piece is every parameter at once: room for twice over and more) */
 _Static_assert(QN >= 2u * (P_NPARAMS + 8), "the command queue can't hold a piece's parameters twice over");
 static uint32_t q[QN];
@@ -541,7 +551,7 @@ static float throw_mul = 1.0f, ping_dry = 0.5f, hats_lvl = 1.0f;   /* Throws, Gh
 static float chord_dry = 0.5f, chord_snd = 1.5f;   /* the chord's Ghost: its dry, its sends (apply) */
 static float ec_g = 0.6f, ec_lpc = 0.68f, ec_wide = 1.0f;   /* the echo's Blur, Tone, Width (and the chord's and the
                                                              * pings': widen) */
-static int gpat(void) { return GROOVE_PAT[(unsigned)par[P_GROOVE] < NGROOVE ? par[P_GROOVE] : 0]; }   /* the pattern */
+static int gpat(void) { return GROOVE_PAT[1]; }   /* (BERLIN: the bass's Offbeat, until the Lead replaces it) */   /* the pattern */
 static int8_t mac[EN_NMAC];                     /* the master actions, -50..50 */
 static int8_t pofs[P_NPARAMS];
 static float dub_up;                            /* Dub turned up, 0..1: the echo darker, feeding back past its knob */                  /* what they add to the piece's parameters */
@@ -935,7 +945,7 @@ static int bell_note(int l, int off)            /* a loop slot's note, from the 
 {
     int d = deg + off, oct = d / nsteps, s = steps[d % nsteps], base, root = par[P_ROOT], n;
     base = LOOP_BASE[l] - ((LOOP_BASE[l] - root) % 12 + 12) % 12;   /* the root at or below the register */
-    n = base + s + 12 * oct + 12 * par[P_POCT];
+    n = base + s + 12 * oct;
     while (n > 103)
         n -= 12;
     while (n < 36)
@@ -988,7 +998,7 @@ static void voice_chord(void)
 
 static int bass_note(int pc)                    /* E1..Eb2, an octave up or down (E0..Eb1: felt more than heard) */
 {
-    return 28 + ((pc - 4) % 12 + 12) % 12 + 12 * par[P_BASSOCT];
+    return 28 + ((pc - 4) % 12 + 12) % 12;
 }
 
 /* the chords' slots: how far the progression runs (to its last filled slot; 0: none, or Play at Random), a
@@ -1370,7 +1380,7 @@ static void bell_voice(int l, int n, float vel, int32_t wait)
     v->on = 1;
     v->note = (uint8_t)n;
     v->loop = (uint8_t)l;
-    pv = (unsigned)par[P_PVOICE] < EN_NPV ? par[P_PVOICE] : 0;
+    pv = 0;
     ri = (int)(btone * 100.0f + 0.5f) * 5 / 101 + LOOP_RAT[l];
     v->drop = fm_clampf(PV[pv].drop + 0.015f * (float)par[P_PBEND], 0.0f, 3.0f);   /* Bend: from up to four times its note */
     v->amp = vel * PV[pv].gain;
@@ -1412,13 +1422,141 @@ static void bell_ring(int l, int slot)
     bell_voice(l, n, vel, irand(220));           /* a hand on the grid: up to 5 ms late */
 }
 
+/* ------------------------------------------------------------- the sequences --- */
+/* (BERLIN) two step sequences (seq.c: the pattern, its performer, its pitch, the repeats' history), each note a
+ * pluck (render_plucks): the Sequence (layer 0, MIDI channel 2) with its two repeats, played again as notes
+ * (Repeat A, Repeat B: only into a rest), and Sequence 2 (layer 1, channel 4). A pattern grown here is thinned by
+ * Density as it plays; one written (en_seq_set) plays as written */
+#define NPLUCK 6
+typedef struct {
+    uint8_t on, note, layer, voice;
+    float ph, ph2, dt, dt2, amp, att, adec, env, edec, gl, gr, cut, c1[4], c2[4], s1[2], s2[2];
+} pluck_t;
+static pluck_t pluck[NPLUCK];
+static seq_t sq[2], sq_pend[2];
+static seq_hist_t sq_hist[2];
+static int sq_pos[2];
+static uint8_t sq_wrap[2], sq_bars[2], sq_written[2], sq_prio[2][SEQ_MAX];
+static uint32_t sq_rng = 0x2545F491u;
+static float seq_vol, seq2_vol, sq_cut = 600.0f, sq_edec = 0.9995f, sq_adec = 0.9997f;
+const char *const EN_SV_NAME[EN_NS2V] = {"2600", "Moog", "Synthi", "Pulse", "Glass", "Sub"};
+
+void en_seq_set(int l, const seq_t *p)
+{
+    sq_pend[l & 1] = *p;
+    post(C_SEQSET, l & 1, 0);
+}
+
+static int sq_audible(int l)
+{
+    return l ? seq2_vol > 0.0f && !(mutes & (EN_M_KICK | EN_M_HATS)) : seq_vol > 0.0f && !(mutes & EN_M_PINGS);
+}
+
+static void pluck_voice(int l, int n, int vel, int rep)   /* rep: a repeat, panned across from the note */
+{
+    int i, best = 0;
+    float lo = 9.0f, p;
+    pluck_t *v;
+    if (!sq_audible(l) || vel <= 0)
+        return;
+    for (i = 0; i < NPLUCK; i++) {               /* a free voice, or the quietest */
+        float a = pluck[i].on ? pluck[i].amp : -1.0f;
+        if (a < lo)
+            lo = a, best = i;
+    }
+    v = &pluck[best];
+    if (v->on)
+        midi(v->layer ? 0x83u : 0x81u, v->note, 0);
+    v->on = 1;
+    v->note = (uint8_t)n;
+    v->layer = (uint8_t)l;
+    v->voice = (uint8_t)(l ? ((unsigned)par[P_S2VOICE] < EN_NS2V ? par[P_S2VOICE] : 0)
+                           : ((unsigned)par[P_SVOICE] < EN_NSV ? par[P_SVOICE] : 0));
+    v->dt = mtof((float)n) * (1.0f / EN_SR);
+    v->dt2 = v->dt * (v->voice == 1 ? 1.004f : v->voice == 4 ? 3.5f : 0.5f);   /* Moog's second saw, Glass's
+                                                                                * modulator, Sub's octave under */
+    v->ph = v->ph2 = 0.0f;
+    v->amp = (float)vel * (1.0f / 127.0f);
+    v->att = 0.0f;
+    v->env = 1.0f;
+    v->adec = sq_adec;
+    v->edec = sq_edec;
+    v->cut = sq_cut * (l ? 0.7f : 1.0f);
+    v->s1[0] = v->s1[1] = v->s2[0] = v->s2[1] = 0.0f;
+    p = ((l ? 0.0f : rep ? 0.35f : -0.25f) + 1.0f) * (FM_PI / 4.0f);
+    v->gl = fm_cosf(p);
+    v->gr = fm_sinf(p);
+    en_loop_glow[l] = 1.0f;
+    hit(1, v->amp);
+    midi(l ? 0x93u : 0x91u, (uint32_t)n, (uint32_t)vel);
+}
+
+static void seq_regrow(int l)                    /* a pattern grown afresh: every step, Density thins it as it plays */
+{
+    int i;
+    seq_grow(&sq[l], &sq_rng, nsteps ? nsteps : 7, 100, l ? par[P_SEQ2LEN] : par[P_SEQLEN]);
+    for (i = 0; i < SEQ_MAX; i++)
+        sq_prio[l][i] = (uint8_t)(seq_rand(&sq_rng) % 100u);
+    sq_prio[l][0] = 0;                           /* (the root, always) */
+    sq_written[l] = 0;
+    sq_pos[l] = 0;
+    sq_bars[l] = sq_wrap[l] = 0;
+    seq_hist_clear(&sq_hist[l]);
+}
+
+static int seq_note(int l, int s)                /* step s's note, transposed by the chord as the piece says */
+{
+    const int root = par[P_ROOT] % 12, tr = par[P_TRANS],
+              off = tr == 2 ? 0 : ((int)en_chord_root % 12 - root + 12) % 12,
+              base = 48 + root + 12 * (l ? par[P_SEQ2OCT] : par[P_SEQOCT]),
+              n = seq_pitch(&sq[l], s, steps, nsteps, base, tr == 0, off);
+    return n < 24 ? 24 : n > 108 ? 108 : n;
+}
+
+static void seq_tick(void)                       /* a sixteenth: the sequences' steps, the repeats */
+{
+    static const uint8_t DTA[3] = {2, 3, 4}, DTB[3] = {3, 4, 6};   /* the repeats' times, in sixteenths */
+    const int on_grid = par[P_SEQGRID] || !(sixteenth & 1u);
+    int l;
+    if (!(sixteenth & 15u))                      /* a bar line: the performer, when a pass ended on it (at most every
+                                                  * 4 bars), or every 16 */
+        for (l = 0; l < 2; l++)
+            if (++sq_bars[l] >= 16u || (sq_wrap[l] && sq_bars[l] >= 4u)) {
+                if (!lock && !sq_written[l])
+                    seq_vary(&sq[l], &sq_rng, nsteps ? nsteps : 7, pe(P_MOTION), pe(P_EVOLVE));
+                sq_bars[l] = 0;
+            }
+    for (l = 0; l < 2; l++) {
+        int played = -1, vel = 0, n, v;
+        if (on_grid) {
+            const int st = sq_pos[l] < sq[l].len ? sq_pos[l] : 0;
+            if ((sq[l].gate >> st & 1u) && !(sq[l].skip >> st & 1u) &&
+                (sq_written[l] || sq_prio[l][st] < 25 + 3 * pe(P_DENSITY) / 4)) {
+                played = seq_note(l, st);
+                vel = sq[l].acc >> st & 1u ? 120 : 77;   /* the root accented (as Synth Seeker's 121 and 77) */
+                pluck_voice(l, played, vel, 0);
+            }
+            sq_pos[l] = seq_next(&sq[l], st);
+            sq_wrap[l] = (uint8_t)(sq_pos[l] <= st);
+            en_loop_pos[l] = (uint8_t)st;
+        }
+        if (!l) {                                /* the repeats: A always, B only into a rest */
+            if (par[P_TAPA] && (n = seq_tap(&sq_hist[0], DTA[par[P_TAPAT] % 3], &v)) >= 0)
+                pluck_voice(0, n, v * par[P_TAPA] / 100, 1);
+            if (par[P_TAPB] && (!on_grid || played < 0) && (n = seq_tap(&sq_hist[0], DTB[par[P_TAPBT] % 3], &v)) >= 0)
+                pluck_voice(0, n, v * par[P_TAPB] / 100, 1);
+        }
+        seq_hist_push(&sq_hist[l], played, vel);
+    }
+}
+
 /* ------------------------------------------------------------- the stabs --- */
 static int stab_k, stab_kb, stab_rot;
 static uint32_t stab_home;                      /* the pattern, before this bar's gaps */
 
 static void stabs_home(void)                    /* Stabs: one a bar .. six, off the beat */
 {
-    stab_kb = stab_k = 1 + (pe(P_STABS) * 5 + 50) / 100;
+    stab_kb = stab_k = 1 + (30 * 5 + 50) / 100;
     stab_rot = 2;
     stab_home = en_euclid(stab_k, 16, stab_rot);
 }
@@ -1498,7 +1636,7 @@ static void stab_fire(float vel, int throw_it)
 static void hats_publish(void)
 {
     uint32_t c = 0, o = 0;
-    int i, k = pe(P_HITS), ko = k < 15 ? 0 : k < 40 ? 2 : 4;
+    int i, k = 50, ko = k < 15 ? 0 : k < 40 ? 2 : 4;
     for (i = 0; i < hat_k && i < 12; i++)
         c |= 1u << hat_order[i];
     if (ko >= 2)
@@ -1522,7 +1660,7 @@ static void hats_home(void)                     /* Hits: the shaker's count, its
     int i;
     for (i = 0; i < 12; i++)
         hat_order[i] = HAT_ORDER[i];
-    hat_kb = hat_k = (pe(P_HITS) * 12 + 50) / 100;
+    hat_kb = hat_k = (50 * 12 + 50) / 100;
     hats_publish();
 }
 
@@ -1630,8 +1768,8 @@ static void drums_wait_step(int32_t k)          /* k samples went by: hits whose
 /* ----------------------------------------------------------------- bass --- */
 static void bass_hit(int first, int up)
 {
-    int pc = chord_pcs[0], n, g = par[P_GROOVE];
-    if ((!first || g == 0) && chord_nt >= 3 && frand() < (float)par[P_FIFTH] * 0.01f)
+    int pc = chord_pcs[0], n, g = 1;
+    if ((!first || g == 0) && chord_nt >= 3 && frand() < 0.2f)
         pc = chord_pcs[2];                      /* the fifth (with Drone: a whole bar of it) */
     n = bass_note(pc);
     if (!first && up)
@@ -1776,12 +1914,12 @@ static void ph_bar(int pb)
     bar_op = ph_thin(op, pcount(op) - (int)(0.6f * lo * (float)pcount(op) + 0.5f), 0u, 2u);
     bar_k = k;
     if (b && ph.busy) {                          /* (B, busy: a ghost kick before the next bar, the hats all in) */
-        if (pe(P_KDENS) < 100 && k)
+        if (0 && k)
             bar_k = k | 1u << 14;
         bar_sh = sh | 1u << 15;
         bar_op = op;
     } else if (b) {                              /* (B, sparse: the kick's downbeat, the shaker on the eighths) */
-        if (pe(P_KDENS) < 100)
+        if (0)
             bar_k = k & 1u;
         bar_sh &= 0x5555u;
         bar_op = 0;
@@ -1857,7 +1995,7 @@ static void bar_start(void)
  * and after a Break the kick comes back whole (the user: start on four on the floor, then let it evolve) */
 static int kick_draw(int next)
 {
-    const int v = pe(P_KDENS);
+    const int v = 100;
     const uint32_t phr = (bar + 1u) >> 3;       /* (the next phrase's number: 0 at the top) */
     float x = (float)v * 0.04f, lam = 1.4f - evolve, w[KS_N], t = 0.0f, r;
     int k;
@@ -1892,8 +2030,8 @@ static uint32_t dpat(int d) { return par[P_DMODE] ? (uint32_t)(uint16_t)par[P_DP
 /* the screen's lanes, the bar as it plays: what is muted or at level 0, gone at once */
 static void lanes(void)
 {
-    const int kick = lay_kick && !(mutes & EN_M_KICK) && !(perf & EN_PF_KICKDROP) && par[P_DRUMS] > 0,
-              hats = !(mutes & EN_M_HATS) && par[P_DRUMS] > 0;
+    const int kick = lay_kick && !(mutes & EN_M_KICK) && !(perf & EN_PF_KICKDROP) && EN_DUB,
+              hats = !(mutes & EN_M_HATS) && EN_DUB;
     en_lane[0] = (uint16_t)(mutes & EN_M_CHORD || !par[P_CHORD] ? 0u : en_stab_pat);
     en_lane[1] = (uint16_t)(kick ? bar_k & (fill ? 0x00FFu : 0xFFFFu) : 0u);
     en_lane[2] = (uint16_t)(hats ? (lay_hats ? bar_sh : 0u) | (lay_open || fill ? bar_op : 0u) : 0u);
@@ -1910,7 +2048,7 @@ static int dhit(int d, int st, float *vel)
     if (par[P_DCH0 + d] < 100 && frand() * 100.0f >= (float)par[P_DCH0 + d])
         return 0;
     if (!((uint32_t)(uint16_t)par[P_DACC0 + d] >> st & 1u))
-        *vel *= 1.0f - 0.006f * (float)par[P_DACCENT];   /* (the unaccented, quieter as Accent turns up) */
+        *vel *= 1.0f - 0.006f * 50.0f;   /* (the unaccented, quieter as Accent turns up) */
     return 1;
 }
 
@@ -1924,7 +2062,7 @@ static void tick(void)
         bar_start();
     const int kick = lay_kick && !(mutes & EN_M_KICK) && !(perf & EN_PF_KICKDROP), hats = !(mutes & EN_M_HATS);
     lanes();
-    {
+    if (EN_DUB) {
         const float fv = (float)ph.vel[st] * (1.0f / 255.0f);   /* (the phrase's feel: this step's accent) */
         float v0 = st ? 0.88f : 1.0f, v1 = fv, v2 = 0.55f + 0.35f * fv, v3 = 0.75f + 0.15f * r;
         ph_st = st;
@@ -1934,7 +2072,7 @@ static void tick(void)
             v0 *= 0.32f;                         /* (two and four ghosted, -10 dB) */
         if (kick && bar_k >> st & 1u && !(fill && st >= 8) && dhit(0, st, &v0))
             drum_hit(0, v0, 0);
-        else if (!(st & 3) && par[P_DRUMS] > 0) {   /* the ghost duck: the music breathes on every beat, the kick
+        else if (!(st & 3) && EN_DUB) {   /* the ghost duck: the music breathes on every beat, the kick
                                                     * or not (lighter without one; lightest in a Break) */
             const float gd = lay_kick ? 0.7f : 0.45f;
             duck_x = fm_maxf(duck_x, gd);
@@ -1968,7 +2106,8 @@ static void tick(void)
     noise_step((int)(sixteenth & 31u));         /* (the noise's groove: two bars) */
     for (d = 0; d < EN_NDRUM; d++)
         en_drum_pos[d] = (uint8_t)st;
-    if ((sixteenth & 1u) == 0u) {               /* the loops step in eighths */
+    seq_tick();
+    if (EN_DUB && (sixteenth & 1u) == 0u) {     /* (the dub's loops stepped in eighths) */
         for (l = 0; l < EN_NLOOP; l++) {
             int s = loop_pos[l];
             if (loop_note[l][s] >= 0 && !loop_rest[l] && !(mutes & EN_M_PINGS))
@@ -2406,7 +2545,7 @@ int en_fm_alg(int layer)
         const fmpatch_t *p = BV_PATCH[(unsigned)par[P_BVOICE] < EN_NBV ? par[P_BVOICE] : 0];
         return p ? fm_alg_of(P_BALG, p) : 0;
     }
-    return par[P_PALG] ? par[P_PALG] - 1 : par[P_PVOICE] == 2 ? 4 : FM_ALG2;
+    return par[P_PALG] ? par[P_PALG] - 1 : 0 ? 4 : FM_ALG2;
 }
 
 /* a layer's envelope, for a sound page (computed from the values, as the render would play them) */
@@ -2425,7 +2564,7 @@ void en_env_shape(int layer, float *lvl, float *aux, int n, float *secs)
         break;
     }
     case 1: {
-        int pv = (unsigned)par[P_PVOICE] < EN_NPV ? par[P_PVOICE] : 0;
+        int pv = 0;
         t60 = 0.8f * PV[pv].t60 * fm_exp2f(1.5f * rel(P_PLEN));
         a = 0.004f + 0.02f * fm_minf(btone * 2.0f, 1.0f);
         fe = fm_clampf(PV[pv].drop + 0.015f * (float)par[P_PBEND], 0.0f, 3.0f) / 3.0f;   /* the bend */
@@ -2491,15 +2630,14 @@ static void apply(int p, int v)
     v = pe(p);                                   /* (as the master actions move it) */
     switch (p) {
     case P_CHORD: chord_vol = (float)(v * v) * 0.0001f; lanes(); break;
-    case P_PINGS: bell_vol = (float)(v * v) * 0.0001f; break;
+    case P_SEQ: seq_vol = (float)(v * v) * 0.0001f; break;
     case P_BASS: bass_vol = (float)(v * v) * 0.0001f; lanes(); break;
-    case P_DRUMS: pulse_vol = (float)(v * v) * 0.0001f; lanes(); break;
-    case P_HITS: hats_home(); break;
+    case P_SEQ2: seq2_vol = (float)(v * v) * 0.0001f; break;
     case P_DMODE: case P_DPAT0: case P_DPAT1: case P_DPAT2: case P_DPAT3: case P_DPAT4: lanes(); break;
-    case P_STABS: stabs_home(); break;
-    case P_SWING: swing = (float)v * 0.004f; break;      /* the off sixteenths up to 0.4 of a step late */
-    case P_HATS: case P_HTONE: {                 /* the piece's colour, moved by the sound page's Hats */
-        float h = fm_clampf((float)(pe(P_HATS) + par[P_HTONE]), 0.0f, 100.0f);
+    case P_SEQLEN: seq_regrow(0); break;
+    case P_SEQ2LEN: seq_regrow(1); break;
+    case P_HTONE: {                              /* the hats' colour (BERLIN: the dub's, silent) */
+        float h = fm_clampf((float)(50 + par[P_HTONE]), 0.0f, 100.0f);
         hat_f = 0.25f + 0.0045f * h;                      /* the high-pass: ~1.8 kHz dark .. ~5 kHz bright */
         hat_open = 0.4f - 0.0025f * h;                    /* the open hat: long and soft .. short and crisp */
         break;
@@ -2509,21 +2647,27 @@ static void apply(int p, int v)
     case P_REVERB: rev_send = (float)(v * v) * 0.0001f; break;
     case P_FEEDBACK: echo_t60 = 1.5f * fm_exp2f((float)v * (1.0f / 30.0f)); break;   /* the tail: 1.5 s .. 15 s (heads_step) */
     case P_SIZE: pl_decay_t = 0.5f + 0.0045f * (float)v; break;      /* to 0.95 */
-    case P_CUTOFF: cut_base = 110.0f * fm_exp2f((float)v * 0.055f); break;   /* 110 Hz .. 5.4 kHz */
+    case P_CUTOFF:                               /* 110 Hz .. 5.4 kHz: the stab's; the plucks' (the sequences) */
+        cut_base = sq_cut = 110.0f * fm_exp2f((float)v * 0.055f);
+        break;
     case P_DECAY: case P_CVOICE:                 /* 60 ms .. 1.5 s (times the voice's); the filter's envelope, quicker */
         cvoice = (unsigned)par[P_CVOICE] < EN_NCV ? par[P_CVOICE] : 0;
         st_t60 = 0.06f * fm_exp2f((float)pe(P_DECAY) * 0.0464f) * CV[cvoice].dec;
         st_dec = fm_expf(-6.9f / (st_t60 * EN_SR));
         st_fdec = fm_expf(-6.9f * 32.0f / ((0.25f * st_t60 + 0.02f) * EN_SR));   /* (1.3.0: a shorter strike) */
+        {   /* the plucks: the filter's envelope 80 .. 250 ms to -60 dB, the sound half as long again */
+            const float t = 0.08f * fm_exp2f((float)pe(P_DECAY) * 0.0164f);
+            sq_edec = fm_expf(-6.9f / (t * EN_SR));
+            sq_adec = fm_expf(-6.9f / (1.5f * t * EN_SR));
+        }
         break;
-    case P_PTONE: case P_PTON: btone = fm_clampf((float)(par[P_PTONE] + par[P_PTON]), 0.0f, 100.0f) * 0.01f; break;
+    case P_PTON: btone = fm_clampf((float)(40 + par[P_PTON]), 0.0f, 100.0f) * 0.01f; break;
     case P_MOTION: motion = (float)v * 0.01f; break;
     case P_EVOLVE: evolve = (float)v * 0.01f; break;
     case P_CRACKLE:                              /* (1.3.0: straight, not squared: a bed at 15 too; 35 as before,
                                                   * 100 -9 dB; the palette widening as it turns up) */
         crackle_vol = (float)v * 0.0035f;
         break;
-    case P_DUCK: duck_depth = (float)v * 0.0075f; break;   /* to -12 dB */
     case P_CLOUD: cloud_amt = (float)v * 0.01f; break;
     case P_CR0: case P_CR1: case P_CR2: case P_CR3: case P_CR4: case P_CR5: case P_CR6: case P_CR7:
     case P_CQ0: case P_CQ1: case P_CQ2: case P_CQ3: case P_CQ4: case P_CQ5: case P_CQ6: case P_CQ7:
@@ -2544,7 +2688,6 @@ static void apply(int p, int v)
         en_prog_pos = (int8_t)prog_pos;
         prog_publish();
         break;
-    case P_KIT: kit = (unsigned)v < EN_NKIT ? v : 0; break;
     case P_NCOL: nctl.colour = (float)v * 0.02f; break;   /* the noise's controls, -1..+1 (render_crackle) */
     case P_NGRAIN: nctl.grain = (float)v * 0.02f; break;
     case P_NROOM: nctl.room = (float)v * 0.02f; break;
@@ -2574,17 +2717,6 @@ static void apply(int p, int v)
         ec_lpc = 1.0f - fm_expf(-2.0f * FM_PI * fm_clampf(2000.0f * fm_exp2f((float)(v - 50) * 0.04f), 400.0f, 5000.0f) / TAPE_SR);
         break;
     case P_EWIDTH: ec_wide = (float)v * 0.02f; break;   /* the heads' spread: 0 mono, 1 (50), 2 wide */
-    case P_POCT:                                 /* let it be heard now: a ping from the first loop */
-        if (en_playing && nsteps) {
-            int l, k;
-            for (l = 0; l < EN_NLOOP; l++)
-                for (k = 0; k < EN_LOOP_LEN[l]; k++)
-                    if (loop_note[l][k] >= 0) {
-                        bell_ring(l, k);
-                        return;
-                    }
-        }
-        break;
     case P_TUNE: tunefac = fm_exp2f((float)v * (1.0f / 1200.0f)); break;
     case P_TEMPO:
         tempo_set();
@@ -2666,6 +2798,8 @@ static void regrow(void)                        /* a new piece: fresh loops, hom
     prog_publish();
     stabs_home();
     hats_home();
+    seq_regrow(0);
+    seq_regrow(1);
     section_set(SEC_FULL);
     sec_next = SEC_FULL;
     chord_bars = 0;
@@ -2687,6 +2821,11 @@ static void quiet(void)
         bell[i].on = 0;
     for (i = 0; i < EN_NDRUM; i++)
         drum[i].on = 0, drum[i].wait = 0;
+    for (i = 0; i < NPLUCK; i++)
+        if (pluck[i].on) {
+            pluck[i].on = 0;
+            midi(pluck[i].layer ? 0x83u : 0x81u, pluck[i].note, 0);
+        }
     st_env = st_amp = 0.0f;
     bass.env = 0.0f;
     bass.gate = 0;
@@ -2767,6 +2906,11 @@ static void play_start(int from_top)
         bar = 0;
         for (i = 0; i < EN_NLOOP; i++)
             loop_pos[i] = 0;
+        for (i = 0; i < 2; i++) {                /* the sequences from their first step */
+            sq_pos[i] = 0;
+            sq_bars[i] = sq_wrap[i] = 0;
+            seq_hist_clear(&sq_hist[i]);
+        }
         section_set(SEC_FULL);
         sec_next = SEC_FULL;
         kick_shape = kick_next = (uint8_t)kick_draw(SEC_FULL);
@@ -2804,9 +2948,9 @@ static void macro(int i, int v)
         {P_CGHOST, 50}, {P_PGHOST, 50}, {P_ECHO, 30},  /* (1.3.0) Wet: the whole music dry, or drowned in the echo (the
                                                           * chord's and the pings' Wet, the echo's send; the noise too:
                                                           * render_crackle) */
-        {P_DENSITY, 85}, {P_HITS, 85}, {P_STABS, 85},    /* Energy: the notes and hits, */
-        {P_PINGS, 40}, {P_HATS, 45}, {P_DECAY, 30}, {P_KDENS, 30},   /* the pings' level, the hats' colour, the stabs' length, the kick
-                                                          * (and the hats' level, the phrases: render_drums, bar_start) */
+        {P_DENSITY, 85}, {P_SEQ, 30}, {P_SEQ2, 30},       /* Energy (BERLIN): the sequences' notes and levels, */
+        {P_SWEEP, 40}, {P_DECAY, 30}, {P_TAPB, 40}, {P_CUTOFF, 20},   /* their sweep, length, second repeat,
+                                                                       * cutoff */
     };
     static const uint8_t OF[] = {EN_MAC_DUB, EN_MAC_DUB, EN_MAC_DUB, EN_MAC_ENERGY, EN_MAC_ENERGY, EN_MAC_ENERGY,
                                  EN_MAC_ENERGY, EN_MAC_ENERGY, EN_MAC_ENERGY, EN_MAC_ENERGY};
@@ -2868,6 +3012,12 @@ static void drain(void)
             }
             break;
         case C_PANIC: quiet(); break;
+        case C_SEQSET:                           /* a pattern written: played as written, from its first step */
+            sq[a & 1] = sq_pend[a & 1];
+            sq_written[a & 1] = 1;
+            sq_pos[a & 1] = 0;
+            seq_hist_clear(&sq_hist[a & 1]);
+            break;
         case C_REGROW:
             regrow();
             if (pings_have)                      /* (a piece's own loops, kept) */
@@ -3836,6 +3986,61 @@ static inline float mfx(float x, float *s)
 }
 
 static float ms_lp1, ms_lp2;                     /* the side's lows (mono below ~150 Hz) */
+/* (BERLIN) the plucks: a saw (2600), two a little apart (Moog), a square (Synthi), a narrow pulse (Pulse), an FM
+ * bell (Glass) or a sine and its octave under (Sub), through two low-passes (24 dB, the second resonant) swept down
+ * by the envelope from three and a half octaves over the cutoff */
+static inline float frac1(float x) { return x - (float)(int)x; }
+static void render_plucks(uint32_t n)
+{
+    int i;
+    const float g0 = seq_vol * 1.2f, g1 = seq2_vol * 1.2f;
+    for (i = 0; i < NPLUCK; i++) {
+        pluck_t *v = &pluck[i];
+        float amp = v->amp, env = v->env, att = v->att, ph = v->ph, ph2 = v->ph2;
+        const float g = v->layer ? g1 : g0, dt = v->dt, dt2 = v->dt2, adec = v->adec, edec = v->edec;
+        uint32_t j;
+        if (!v->on)
+            continue;
+        for (j = 0; j < n; j++) {
+            float x, bp;
+            if (!(j & 15u)) {
+                const float f = v->cut * fm_exp2f(3.5f * env);
+                svf_coefs(v->c1, f, 1.4f);
+                svf_coefs(v->c2, f, 0.6f);
+            }
+            switch (v->voice) {
+            case 0: x = blep_saw(ph, dt); break;
+            case 1: x = 0.6f * (blep_saw(ph, dt) + blep_saw(ph2, dt2)); break;
+            case 2: x = blep_saw(ph, dt) - blep_saw(frac1(ph + 0.5f), dt); break;
+            case 3: x = blep_saw(ph, dt) - blep_saw(frac1(ph + 0.18f), dt); break;
+            case 4: x = sine(ph + 2.0f + 1.8f * env * sine(ph2)); break;
+            default: x = sine(ph) + 0.6f * sine(ph2); break;
+            }
+            ph += dt;
+            if (ph >= 1.0f)
+                ph -= 1.0f;
+            ph2 += dt2;
+            if (ph2 >= 1.0f)
+                ph2 -= 1.0f;
+            x = svf_lp(v->c1, v->s1, x, &bp);
+            x = svf_lp(v->c2, v->s2, x, &bp);
+            x *= amp * att * g;
+            mixl[j] += x * v->gl;
+            mixr[j] += x * v->gr;
+            rsend[j] += x * 0.35f;
+            esend[j] += x * 0.6f;
+            amp *= adec;
+            env *= edec;
+            att += (1.0f - att) * 0.03f;
+        }
+        v->amp = amp, v->env = env, v->att = att, v->ph = ph, v->ph2 = ph2;
+        if (amp < 0.0008f) {
+            v->on = 0;
+            midi(v->layer ? 0x83u : 0x81u, v->note, 0);
+        }
+    }
+}
+
 static void render_chunk(int32_t *out, uint32_t n, float gain)
 {
     uint32_t j;
@@ -3868,6 +4073,7 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
             for (j = 0; j < n; j++)
                 tapb[j] = -(mixl[j] + mixr[j]);
         render_bells(n);
+        render_plucks(n);
         widen(n);                                /* (the chord's and the pings' dry, wider) */
         if (tl == 2)
             for (j = 0; j < n; j++)

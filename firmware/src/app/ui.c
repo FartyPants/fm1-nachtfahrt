@@ -86,13 +86,13 @@ static const char *const LANE_NAME[EN_NDRUM] = {"Kick", "Shaker", "Open", "Rim",
 _Static_assert(P_NPARAMS <= K_LEDS, "the knobs' own codes must come after the parameters");
 static const uint16_t VIEW_KNOB[NVIEWS][4] = {
     {K_FILTER, P_EVOLVE, P_MOTION, P_DRIFT},
-    {P_STABS, P_CTHROW, P_CGHOST, P_CUTOFF},
-    {P_DENSITY, P_POCT, P_PGHOST, P_CLOUD},
-    {P_BNOTES, P_BASSOCT, P_GROOVE, P_FIFTH},
-    {P_KDENS, P_HITS, P_HATSLVL, P_HTONE},       /* (Duck: PERFORM's, a master action) */
+    {P_SEQLEN, P_CTHROW, P_CGHOST, P_CUTOFF},
+    {P_DENSITY, P_SEQOCT, P_PGHOST, P_CLOUD},
+    {P_BNOTES, P_SEQ2OCT, P_SEQGRID, P_TRANS},
+    {P_SEQ2LEN, P_TAPA, P_HATSLVL, P_HTONE},       /* (Duck: PERFORM's, a master action) */
     {P_ECHO, P_ETIME, P_FEEDBACK, P_REVERB},
     {P_TUNE, P_MIDI, K_LEDS, K_SAVE},
-    {P_CHORD, P_PINGS, P_BASS, P_DRUMS},
+    {P_CHORD, P_SEQ, P_BASS, P_SEQ2},
     {P_CATT, P_DECAY, P_CCOL, P_CRES},           /* (Env, P_CENV, off the page: the voices and the recipes set it) */
     {P_PTON, P_PRAT, P_PLEN, P_PBEND},
     {P_BBITE, P_BSHAPE, P_BLEN, P_BSLIDE},
@@ -101,9 +101,9 @@ static const uint16_t VIEW_KNOB[NVIEWS][4] = {
     {P_PALG, P_PFRAT, P_PFB, P_PFDEC},
     {P_BALG, P_BFRAT, P_BFB, P_BFDEC},
     {K_SLOT, K_CQ, K_CX, K_PLAY},
-    {K_LANE, P_DACCENT, K_LCH, P_DMODE},
-    {K_FILTER, K_DUB, K_ENERGY, P_DUCK},         /* (Wet, Energy: offsets for playing; Duck the piece's own) */
-    {P_TEMPO, P_ROOT, K_MODE, P_SWING},
+    {K_LANE, P_SACCENT, K_LCH, P_DMODE},
+    {K_FILTER, K_DUB, K_ENERGY, P_TAPBT},         /* (Wet, Energy: offsets for playing; Duck the piece's own) */
+    {P_TEMPO, P_ROOT, K_MODE, P_TAPAT},
     {P_NGRAIN, P_NROOM, P_NCOL, P_NTUNE},     /* (the level on OCT- / OCT+, as the layers'; Drift the recipes') */
     {P_EBLUR, P_ETONE, P_EWIDTH, P_SIZE},
     {P_NWIDTH, P_NPLATE, P_NECHO, P_NLFO},       /* (the Noise page's second: SAVE again; its Change the recipes') */
@@ -647,7 +647,7 @@ static void set_mode(int m)
 static int view_voice(int v)
 {
     v = page_of(v);
-    return v == V_CHORD ? P_CVOICE : v == V_TEXTURE ? P_PVOICE : v == V_BASS ? P_BVOICE : v == V_DRUMS ? P_KIT : -1;
+    return v == V_CHORD ? P_CVOICE : v == V_TEXTURE ? P_SVOICE : v == V_BASS ? P_BVOICE : v == V_DRUMS ? P_S2VOICE : -1;
 }
 static void set_voice(int p, int v)
 {
@@ -658,7 +658,7 @@ static void set_voice(int p, int v)
     proj.par[p] = (int16_t)v;
     en_set(p, v);
     en_param_text(p, v, t);
-    say(p == P_KIT ? "KIT" : "VOICE", t);
+    say(p == P_S2VOICE ? "KIT" : "VOICE", t);
     mark_dirty();
 }
 
@@ -1021,7 +1021,7 @@ static void button(int b)
 #define OCT_QUICK 1000u
 #define OCT_SHOW 1200u                           /* the ring up after the last press, then OCT_FADE fading */
 #define OCT_FADE 250u
-static const uint8_t LAYER_LEVEL[NLAYER] = {P_CHORD, P_PINGS, P_BASS, P_DRUMS, P_CRACKLE};
+static const uint8_t LAYER_LEVEL[NLAYER] = {P_CHORD, P_SEQ, P_BASS, P_SEQ2, P_CRACKLE};
 static const char *const LAYER_NAME[NLAYER] = {"CHORD", "PINGS", "BASS", "DRUMS", "NOISE"};
 static const uint32_t LAYER_MUTE[NLAYER] = {EN_M_CHORD, EN_M_PINGS, EN_M_BASS, EN_M_KICK | EN_M_HATS, EN_M_NOISE};
 static void oct_show(int l)                      /* the ring up (from where it was, if it was: it glides) */
@@ -1129,7 +1129,7 @@ static const char *const NUDGE_NAME[NNUDGE] = {"CHORD", "PINGS", "BASS", "DRUMS"
 static const uint8_t NUDGE_PAR[NNUDGE][8] = {   /* (the FM ones, the last two of the first three, on an FM voice only) */
     {P_CATT, P_CCOL, P_CRES, P_DECAY, P_CATT, P_CUTOFF, P_CFRAT, P_CFB},   /* (Env, on no page now, left be) */
     {P_PTON, P_PRAT, P_PLEN, P_PBEND, P_PGHOST, P_PLEN, P_PFRAT, P_PFB},   /* (Ghost: the dry against the echo) */
-    {P_BBITE, P_BSHAPE, P_BLEN, P_BSLIDE, P_FIFTH, P_BLEN, P_BFRAT, P_BFB},
+    {P_BBITE, P_BSHAPE, P_BLEN, P_BSLIDE, P_TRANS, P_BLEN, P_BFRAT, P_BFB},
     {P_KTUNE, P_KLEN, P_KPUNCH, P_HTONE, P_KLEN, P_HATSLVL, P_HTONE, P_KTUNE},   /* (Hats: their level, against the kick) */
     {P_ECHO, P_FEEDBACK, P_REVERB, P_SIZE, P_CLOUD, P_ECHO, P_ECHO, P_ECHO},   /* (the space: FX; its shake, a new echo time) */
     {P_NCOL, P_NGRAIN, P_NTUNE, P_NROOM, P_NCOL, P_NGRAIN, P_NTUNE, P_NCOL},   /* (the noise: SAVE; its shake, a new character) */
@@ -1144,12 +1144,12 @@ static int nrand(int n)
  * piece's own as often as not (pull: 0..100, how likely back when it isn't the piece's) */
 static void groove_step(int recipe, int pull)
 {
-    int g = proj.par[P_GROOVE], hi = en_param_info(P_GROOVE)->hi, d;
+    int g = proj.par[P_SEQGRID], hi = en_param_info(P_SEQGRID)->hi, d;
     if (g != recipe && nrand(100) < pull)
         d = g > recipe ? -1 : 1;
     else
         d = g == 0 ? 1 : g == hi ? -1 : nrand(2) ? 1 : -1;
-    knob_set(P_GROOVE, g + d);
+    knob_set(P_SEQGRID, g + d);
 }
 enum { NUDGE_EVOLVE, NUDGE_HAND, NUDGE_SHAKE };
 /* how a nudge goes: EVOLVE (Evolve's, 1-2 values, half steps, nothing said), HAND (the button held: 3-4 values, steps
@@ -1160,7 +1160,7 @@ static uint8_t nudge_quiet;                      /* (HOME held on: the shakes al
 static void nudge(int layer, int how)
 {
     static const uint8_t SND[NNUDGE] = {V_CSND, V_PSND, V_BSND, V_DSND, V_SPACE, V_NSND};
-    static const uint8_t VOICE[NNUDGE] = {P_CVOICE, P_PVOICE, P_BVOICE, P_KIT, P_ETIME, P_NCHAR};
+    static const uint8_t VOICE[NNUDGE] = {P_CVOICE, P_SVOICE, P_BVOICE, P_S2VOICE, P_ETIME, P_NCHAR};
     int16_t rec[P_NPARAMS];
     uint16_t pool;
     int j, best = -1, bd = 0, fm, n, np = 0;
@@ -1184,7 +1184,7 @@ static void nudge(int layer, int how)
     en_piece(proj.piece, rec, &pool);
     if (how == NUDGE_SHAKE && layer == 2) {      /* the bass's shake: a new groove too, a neighbour */
         int k = 0;
-        groove_step(rec[P_GROOVE], 50);
+        groove_step(rec[P_SEQGRID], 50);
         while (vn[k] && k < 10)
             k++;
         vn[k++] = ',';
@@ -1193,7 +1193,7 @@ static void nudge(int layer, int how)
         {
             char gn[12];
             int i;
-            en_param_text(P_GROOVE, proj.par[P_GROOVE], gn);
+            en_param_text(P_SEQGRID, proj.par[P_SEQGRID], gn);
             for (i = 0; gn[i] && k < 23; i++)
                 vn[k++] = gn[i];
             vn[k] = 0;
@@ -1292,7 +1292,7 @@ static void nudge_tick(void)                     /* Evolve's nudges: on a phrase
         int16_t rec[P_NPARAMS];
         uint16_t pool;
         en_piece(proj.piece, rec, &pool);
-        groove_step(rec[P_GROOVE], 70);
+        groove_step(rec[P_SEQGRID], 70);
     }
 }
 static void input(void)
@@ -2318,9 +2318,9 @@ static void draw_meters(void)                    /* left: the four layers */
     for (i = 0; i < EN_NDRUM; i++)
         dm = fm_maxf(dm, en_drum_glow[i]);
     lv[0] = en_pad_level * (float)proj.par[P_CHORD] * 0.01f;
-    lv[1] = bm * (float)proj.par[P_PINGS] * 0.01f;
+    lv[1] = bm * (float)proj.par[P_SEQ] * 0.01f;
     lv[2] = en_bass_level * (float)proj.par[P_BASS] * 0.01f;
-    lv[3] = dm * (float)proj.par[P_DRUMS] * 0.01f;
+    lv[3] = dm * (float)proj.par[P_SEQ2] * 0.01f;
     for (i = 0; i < 4; i++) {
         int32_t x = 8 + i * 11, h = (int32_t)(fm_clampf(lv[i], 0.0f, 1.0f) * 52.0f + 0.5f);
         cv_round(x, 32, 8, 56, 3, T[i]);
@@ -2331,7 +2331,7 @@ static void draw_meters(void)                    /* left: the four layers */
 
 static void draw_duck(void)                      /* right: the kick's ducking, falling from the top */
 {
-    int32_t h = (int32_t)(fm_clampf(en_duck * (float)proj.par[P_DUCK] * 0.01f, 0.0f, 1.0f) * 52.0f + 0.5f);
+    int32_t h = (int32_t)(fm_clampf(en_duck * (float)proj.par[P_TAPBT] * 0.01f, 0.0f, 1.0f) * 52.0f + 0.5f);
     cv_round(220, 32, 8, 56, 3, K_PULSE_T);
     if (h > 0)
         cv_round(220, 32, 8, h + 2, 3, K_PULSE);
@@ -2651,7 +2651,7 @@ static void draw_main(void)
     if (parent_of(ui.view) >= 0) {               /* a sound or FM page: redrawn as its values move */
         for (i = 0; i < 4; i++)
             h = hash(h, (uint32_t)(proj.par[VIEW_KNOB[ui.view][i]] + 64));
-        h = hash(h, (uint32_t)proj.par[view_voice(ui.view)] | (uint32_t)proj.par[P_DECAY] << 8 | (uint32_t)proj.par[P_GROOVE] << 16);
+        h = hash(h, (uint32_t)proj.par[view_voice(ui.view)] | (uint32_t)proj.par[P_DECAY] << 8 | (uint32_t)proj.par[P_SEQGRID] << 16);
     }
     h = hash(h, (uint32_t)card_on(now) | (en_phrase_bar == 7 && en_change_next ? (now / 200u & 1u) << 1 : 0u));
     if (h == ui.sig[1] && !moving && !oct_ring_on(now) && !card_on(now))
@@ -3029,7 +3029,7 @@ static void sp_page(int all)
     } else if (view_voice(ui.view) >= 0) {
         char vn[12];
         en_param_text(view_voice(ui.view), proj.par[view_voice(ui.view)], vn);
-        sp_cat(view_voice(ui.view) == P_KIT ? ", kit " : ", voice ");
+        sp_cat(view_voice(ui.view) == P_S2VOICE ? ", kit " : ", voice ");
         sp_cat(vn);
     }
     if (ui.view == V_CHORDS) {
@@ -3112,7 +3112,7 @@ static void sp_garden(void)
             last = pc;
         }
     }
-    if (en_pulse_rest && proj.par[P_DRUMS])
+    if (en_pulse_rest && proj.par[P_SEQ2])
         sp_cat(". Kick out");
 }
 
