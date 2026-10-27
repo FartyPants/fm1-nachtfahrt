@@ -1009,6 +1009,81 @@ int main(void)
               (double)peak);
     }
 
+    /* (BERLIN) PERFORM finished: the Lead muted stops its note (and a key held while muted plays nothing); the Drone
+     * muted sends no MIDI (its notes let go at the mute); Energy's Repeat B works; Wet moves every layer's echo alike */
+    {
+        uint32_t ons;
+        int k, held = 0;
+        fresh();
+        en_set(P_MOTION, 0);
+        en_set(P_LDIN, 0);
+        en_play(1);
+        run(1.0f);
+        en_lead_key(3, 1);
+        run(0.3f);
+        CHECK(ld_on_now, "test_lead_mute_stops: the key's note not on");
+        en_mute(EN_M_BASS);
+        run(0.05f);
+        CHECK(!ld_on_now, "test_lead_mute_stops: still sounding 50 ms after the mute");
+        en_lead_key(3, 0);
+        ons = ld_ons;
+        en_lead_key(5, 1);
+        run(1.0f);
+        CHECK(ld_ons == ons, "test_lead_mute_stops: a key played the muted Lead");
+        en_lead_key(5, 0);
+        en_mute(0);
+
+        fresh();
+        en_set(P_DRIFT, 0);                      /* (a chord every two bars) */
+        en_play(1);
+        run(3.0f);
+        en_mute(EN_M_CHORD);
+        run(0.05f);
+        for (k = 0; k < 128; k++)
+            held += sounding[0][k] > 0;
+        CHECK(held == 0, "test_drone_mute_midi: %d channel-1 notes still on at the mute", held);
+        dr_n = 0;
+        run(120.0f);
+        CHECK(dr_n == 0, "test_drone_mute_midi: %u channel-1 notes while muted", dr_n);
+        en_mute(0);
+
+        fresh();
+        en_set(P_TAPA, 0);
+        en_set(P_TAPB, 0);
+        en_set(P_DENSITY, 0);                    /* (Energy fills the steps too: from 0, rests stay for Repeat B) */
+        en_play(1);
+        run(1.0f);
+        en_macro(EN_MAC_ENERGY, 50);
+        k = (int)en_seq_reps[0];
+        run(10.0f);
+        CHECK((int)en_seq_reps[0] > k, "test_energy_repeat_b: Energy +50, no Repeat B note");
+        en_macro(EN_MAC_ENERGY, 0);
+    }
+    {   /* Wet: the Sequence alone and Sequence 2 alone, the echo's peak at Wet 0 and -50: down alike */
+        float pk[2][2];
+        int l, w;
+        for (l = 0; l < 2; l++)
+            for (w = 0; w < 2; w++) {
+                fresh();
+                en_set(P_CHORD, 0);
+                en_set(P_LEAD, 0);
+                en_set(P_NCHAR, 0);
+                en_set(l ? P_SEQ : P_SEQ2, 0);
+                en_set(l ? P_SEQ2 : P_SEQ, 70);
+                en_macro(EN_MAC_DUB, w ? -50 : 0);
+                en_play(1);
+                run(4.0f);
+                en_echo_pk = 0.0f;
+                run(8.0f);
+                pk[l][w] = en_echo_pk;
+                en_macro(EN_MAC_DUB, 0);
+            }
+        printf("  Wet -50: the echo x%.2f (the Sequence alone), x%.2f (Sequence 2 alone)\n",
+               (double)(pk[0][1] / (pk[0][0] + 1e-9f)), (double)(pk[1][1] / (pk[1][0] + 1e-9f)));
+        CHECK(pk[1][1] / (pk[1][0] + 1e-9f) < 1.3f * pk[0][1] / (pk[0][0] + 1e-9f),
+              "test_wet_all: Sequence 2's echo not moved by Wet as the Sequence's");
+    }
+
     /* every voice of every layer: it sounds, without NaN, under full scale */
     {
         static const int VP[3] = {P_CVOICE, P_SVOICE, P_LVOICE}, LV[3] = {P_CHORD, P_SEQ, P_LEAD};

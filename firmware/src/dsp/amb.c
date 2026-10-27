@@ -677,14 +677,16 @@ static float dr_lvl[2], dr_up = 0.0001f, dr_down = 0.00005f, ph_depth, ph_lfo, p
 static uint32_t dr_rng = 0x6A09E667u;
 static float dr_pedal = 0.7f, dr_rev = 1.0f, dr_echo = 1.0f;   /* (the pedal's level; the sends, x1 at 50) */          /* (its own: the voices' phases leave the music's draws alone) */
 
+static int dr_heard(void) { return !(mutes & EN_M_CHORD) && par[P_CHORD] > 0; }   /* (its MIDI only while heard) */
 static void drone_off(int b)                     /* a bank dies away: its notes off */
 {
     int i;
     if (!dr_on[b])
         return;
     dr_on[b] = 0;
-    for (i = 0; i < NDR; i++)
-        midi(0x80, drv[b][i].note, 0);
+    if (dr_heard())
+        for (i = 0; i < NDR; i++)
+            midi(0x80, drv[b][i].note, 0);
 }
 
 static void drone_chord(void)                    /* the chord as voiced (stab[].note), swelling in on the other bank */
@@ -704,7 +706,8 @@ static void drone_chord(void)                    /* the chord as voiced (stab[].
         v->ph2 = (float)(seq_rand(&dr_rng) >> 8) * (1.0f / 16777216.0f);
         v->gl = fm_cosf(p);
         v->gr = fm_sinf(p);
-        midi(0x90, (uint32_t)n, 70);
+        if (dr_heard())
+            midi(0x90, (uint32_t)n, 70);
     }
     dr_on[nb] = 1;
     dr_bank = (uint8_t)nb;
@@ -1401,10 +1404,10 @@ static void seq_tick(void)                       /* a sixteenth: the sequences' 
             en_loop_pos[l] = (uint8_t)st;
         }
         if (!l) {                                /* the repeats: A always, B only into a rest */
-            if (par[P_TAPA] && (n = seq_tap(&sq_hist[0], DT[par[P_TAPAT] % 6], &v)) >= 0)
-                pluck_voice(0, n, v * par[P_TAPA] / 100, 1);
-            if (par[P_TAPB] && (!on_grid || played < 0) && (n = seq_tap(&sq_hist[0], DT[par[P_TAPBT] % 6], &v)) >= 0)
-                pluck_voice(0, n, v * par[P_TAPB] / 100, 1);
+            if (pe(P_TAPA) && (n = seq_tap(&sq_hist[0], DT[par[P_TAPAT] % 6], &v)) >= 0)
+                pluck_voice(0, n, v * pe(P_TAPA) / 100, 1);   /* (pe: PERFORM's Energy moves them too) */
+            if (pe(P_TAPB) && (!on_grid || played < 0) && (n = seq_tap(&sq_hist[0], DT[par[P_TAPBT] % 6], &v)) >= 0)
+                pluck_voice(0, n, v * pe(P_TAPB) / 100, 1);
         }
         seq_hist_push(&sq_hist[l], played, vel);
     }
@@ -2263,14 +2266,16 @@ static void macro(int i, int v)
 {
     /* each: the parameters it moves and how far at full turn (+50), in the parameter's own units */
     static const struct { uint8_t p; int8_t at50; } MOVE[] = {
-        {P_SQECHO, 40}, {P_LDECHO, 40}, {P_ECHO, 30},  /* (1.3.0) Wet: the whole music dry, or drowned in the echo (the
+        {P_SQECHO, 40}, {P_LDECHO, 40}, {P_ECHO, 30}, {P_S2ECHO, 40}, {P_DRECHO, 40},   /* Wet: the whole music dry, or
+                                                          * drowned in the echo, every layer's send (BERLIN: Sequence 2's
+                                                          * and the Drone's too) (the
                                                           * chord's and the pings' Wet, the echo's send; the noise too:
                                                           * render_crackle) */
         {P_DENSITY, 85}, {P_SEQ, 30}, {P_SEQ2, 30},       /* Energy (BERLIN): the sequences' notes and levels, */
         {P_SWEEP, 40}, {P_DECAY, 30}, {P_TAPB, 40}, {P_CUTOFF, 20},   /* their sweep, length, second repeat,
                                                                        * cutoff */
     };
-    static const uint8_t OF[] = {EN_MAC_DUB, EN_MAC_DUB, EN_MAC_DUB, EN_MAC_ENERGY, EN_MAC_ENERGY, EN_MAC_ENERGY,
+    static const uint8_t OF[] = {EN_MAC_DUB, EN_MAC_DUB, EN_MAC_DUB, EN_MAC_DUB, EN_MAC_DUB, EN_MAC_ENERGY, EN_MAC_ENERGY, EN_MAC_ENERGY,
                                  EN_MAC_ENERGY, EN_MAC_ENERGY, EN_MAC_ENERGY, EN_MAC_ENERGY};
     unsigned k;
     mac[i] = (int8_t)v;
@@ -2360,7 +2365,18 @@ static void drain(void)
             if (a)
                 seq_take();
             break;
-        case C_MUTE: mutes = (uint32_t)a; break;
+        case C_MUTE:
+            if (a & ~mutes & EN_M_BASS)          /* (BERLIN) the Lead muted: its note let go now (a key's too) */
+                lead_off();
+            if (a & ~mutes & EN_M_CHORD) {       /* the Drone muted: its notes off on MIDI (its voices ring on, silent) */
+                int b, i;
+                for (b = 0; b < 2; b++)
+                    if (dr_on[b])
+                        for (i = 0; i < NDR; i++)
+                            midi(0x80, drv[b][i].note, 0);
+            }
+            mutes = (uint32_t)a;
+            break;
         case C_PERF: perf = (uint32_t)a; break;
         case C_FX: fxm = c & 0xFFFFu; break;
         case C_MOVE: mvm = c & 0xFFu; break;
