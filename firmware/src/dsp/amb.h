@@ -44,7 +44,7 @@ extern const uint8_t EN_DRUM_N[EN_NDRUM];
 
 /* parameters: value ranges in en_param_info() */
 enum {
-    P_CHORD, P_SEQ, P_BASS, P_SEQ2,                /* layer levels */
+    P_CHORD, P_SEQ, P_LEAD, P_SEQ2,                /* layer levels */
     P_DENSITY, P_EVOLVE, P_DRIFT, P_TAPA,             /* motion: the pings' notes, change, the chord's bars, the shaker */
     P_ECHO, P_ETIME, P_REVERB, P_FEEDBACK,            /* space */
     P_CUTOFF, P_DECAY, P_SWEEP, P_MOTION,             /* the stab's filter and length, the pings' tone, the arrangement */
@@ -54,11 +54,11 @@ enum {
     P_TAPAT, P_TAPB,                                  /* drums: swing, the hats' colour */
     P_SEQLEN, P_CRACKLE, P_TAPBT, P_SIZE,               /* stabs a bar, the vinyl, the kick's ducking, the plate */
     P_CLOUD,                                          /* the granular reverb */
-    P_SVOICE, P_BVOICE, P_S2VOICE,                        /* the pings' voice, the bass's, the drums' kit */
+    P_SVOICE, P_LVOICE, P_S2VOICE,                        /* the pings' voice, the bass's, the drums' kit */
     /* the sound pages: each relative to the voice as it is (0), -50 .. +50 (the kick's tune: semitones) */
     P_CATT, P_CCOL, P_CRES, P_DREL,                   /* the chord: attack, colour, resonance, the filter's envelope */
     P_PTON, P_PRAT, P_PLEN, P_PBEND,                  /* the pings: tone, ratio, length, bend */
-    P_BBITE, P_BSHAPE, P_BLEN, P_BSLIDE,              /* the bass: bite, shape, length, slide */
+    P_LOCT, P_VIB, P_BLEN, P_GLIDE,              /* the bass: bite, shape, length, slide */
     P_KTUNE, P_KLEN, P_KPUNCH, P_HTONE,               /* the drums: the kick's tune, length, punch; the hats' tone */
     /* the FM pages (an FM voice): the algorithm (0: the voice's; 1..9), the upper operators' ratio, op 4's
      * feedback, the modulators' decay: relative, -50 .. +50 */
@@ -90,7 +90,7 @@ enum {
      * sound pass left it; 0: +6 dB; 100: about -20 dB, almost all echo); the bass's notes in its groove (100: every
      * note; less, left out at random, the bar's first kept); the shaker and open hat against the kick (50: x1,
      * about +-12 dB at the ends) */
-    P_PHASER, P_PGHOST, P_BNOTES, P_HATSLVL,
+    P_PHASER, P_PGHOST, P_LDENS, P_HATSLVL,
     /* 1.3.0's echo and density (format 14), 0..100: the chord's dry against its sends (as the pings' Ghost; 50: -6 dB,
      * its echo x1.35); the kick's density (its shapes by phrase: 0 none .. 100 four on the floor, always); the echo's
      * blur (0 clean copies .. 50 each repeat a little more dissolved .. 100 a wash), its tone (darker .. brighter),

@@ -31,6 +31,7 @@ static uint8_t kick_bar[KBARS], bar_sec[KBARS];
 static uint32_t sq_n, sq_at[SQN], drum_ch_ons, s2_n, s2_at[SQN];
 static uint8_t sq_note[SQN], sq_vel[SQN], s2_note[SQN], dr_note[SQN];
 static uint32_t dr_n, dr_at[SQN];
+static uint32_t ld_ons, ld_groups, ld_mono_bad, ld_outscale, ld_last_off = 0xFFFFFFFFu, ld_on_now, ld_pool = 0xFFFu;
 static int sounding[16][128];
 void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2)
 {
@@ -42,12 +43,23 @@ void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2)
             drum_ch_ons++;
         if ((st & 15u) == 1u && sq_n < SQN)
             sq_at[sq_n] = en_bars, sq_note[sq_n] = (uint8_t)d1, sq_vel[sq_n] = (uint8_t)d2, sq_n++;
+        if ((st & 15u) == 2u) {                  /* the Lead: one at a time, its phrases, in the scale */
+            ld_mono_bad += ld_on_now;
+            ld_on_now = 1;
+            ld_ons++;
+            if (ld_last_off == 0xFFFFFFFFu || en_bars - ld_last_off >= 16u)
+                ld_groups++;
+            ld_outscale += !(ld_pool >> ((d1 + 120u - 2u) % 12u) & 1u);
+        }
         if ((st & 15u) == 0u && dr_n < SQN)
             dr_at[dr_n] = en_bars, dr_note[dr_n] = (uint8_t)d1, dr_n++;
         if ((st & 15u) == 3u && s2_n < SQN)
             s2_at[s2_n] = en_bars, s2_note[s2_n] = (uint8_t)d1, s2_n++;
-    } else if ((st & 0xF0u) == 0x80u || (st & 0xF0u) == 0x90u)
+    } else if ((st & 0xF0u) == 0x80u || (st & 0xF0u) == 0x90u) {
         sounding[st & 15u][d1 & 127u]--;
+        if ((st & 15u) == 2u)
+            ld_on_now = 0, ld_last_off = en_bars;
+    }
     else if ((st & 0xF0u) == 0xB0u && d1 == 123u && (st & 15u) != 1u && (st & 15u) != 3u)
         memset(sounding[st & 15u], 0, sizeof sounding[0]);   /* all notes off: the channel quiet, as a synth takes it
                                                               * (but the sequences', which end each note themselves) */
@@ -639,7 +651,7 @@ int main(void)
 
     /* every voice of every layer: it sounds, without NaN, under full scale */
     {
-        static const int VP[3] = {P_CVOICE, P_SVOICE, P_BVOICE}, LV[3] = {P_CHORD, P_SEQ, P_BASS};
+        static const int VP[3] = {P_CVOICE, P_SVOICE, P_LVOICE}, LV[3] = {P_CHORD, P_SEQ, P_LEAD};
         int l, v;
         for (l = 0; l < 3; l++)
             for (v = en_param_info(VP[l])->lo; v <= en_param_info(VP[l])->hi; v++) {
@@ -977,6 +989,35 @@ int main(void)
     peak = 0.0f;
     run(60.0f);
     CHECK(!bad && peak > 0.01f && peak < 0.95f, "test_phaser_bounded: peak %f", (double)peak);
+
+    /* (BERLIN) the Lead: four minutes at Phrases 50: its notes (channel 3) in phrases with a bar or more of silence
+     * between, four or more of them; one note at a time; all in the scale */
+    fresh();
+    ld_pool = EN_MODE_POOL[MODE_AEOLIAN];
+    en_set(P_ROOT, 2);
+    en_pool(ld_pool);
+    en_set(P_LEAD, 60);
+    en_set(P_LDENS, 50);
+    ld_ons = ld_groups = ld_mono_bad = ld_outscale = ld_on_now = 0;
+    ld_last_off = 0xFFFFFFFFu;
+    en_play(1);
+    run(240.0f);
+    CHECK(ld_groups >= 4u && ld_ons > ld_groups, "test_lead_phrases: %u phrases, %u notes", ld_groups, ld_ons);
+    CHECK(!ld_outscale, "test_lead_phrases: %u notes off the scale", ld_outscale);
+    CHECK(!ld_mono_bad, "test_lead_mono: %u notes over another", ld_mono_bad);
+    printf("  4 min of the Lead at Phrases 50: %u phrases, %u notes\n", ld_groups, ld_ons);
+    ld_pool = 0xFFFu;
+
+    /* (BERLIN) the Lead at its longest glide, a minute: bounded */
+    fresh();
+    en_set(P_LEAD, 100);
+    en_set(P_LDENS, 100);
+    en_set(P_GLIDE, 100);
+    en_set(P_VIB, 100);
+    en_play(1);
+    peak = 0.0f;
+    run(60.0f);
+    CHECK(!bad && peak < 0.95f, "test_lead_glide_bounded: peak %f", (double)peak);
 
     /* (BERLIN) every note-on has its note-off: two minutes of piece changes, tempo changes, freeze, mutes, PANIC and
      * stops with repeats pending, then stop and let it ring out */

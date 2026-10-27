@@ -27,10 +27,10 @@ enum { V_DUB, V_CHORD, V_TEXTURE, V_BASS, V_DRUMS, V_SPACE, V_SETUP, NPAGES, V_M
        V_DSND, V_CFM, V_PFM, V_BFM, V_CHORDS, V_PAT, V_PERF, V_KEY, V_NSND, V_ESND, V_NSND2, NVIEWS };
 /* (V_PERF: PERFORM's knobs, the master actions; V_MIX while white 6 is held. V_KEY: HOME again, the key and the
  * tempo, the Dub page's second) */
-static const char *const VIEW_NAME[NVIEWS] = {"Dub", "Chord", "Pings", "Bass", "Drums", "Space", "Setup", "Mix",
-                                              "Chord sound", "Ping sound", "Bass sound", "Drum sound",
-                                              "Chord FM", "Ping FM", "Bass FM", "Chords", "Pattern", "Perform", "Key", "Noise",
-                                              "Echo", "Noise space"};
+static const char *const VIEW_NAME[NVIEWS] = {"Berlin", "Drone", "Sequence", "Lead", "Sequence 2", "Space", "Setup",
+                                              "Mix", "Drone sound", "Repeats", "Seq shape", "Seq2 sound",
+                                              "Drone FM", "Seq FM", "Lead FM", "Chords", "Pattern", "Perform", "Key", "Atmosphere",
+                                              "Echo", "Atmos space"};
 #define B_NONE 0xFFu
 static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_ENV, B_ARP, B_LFO, B_SEQ, B_FX, B_GLO, B_NONE, B_NONE, B_NONE, B_NONE,
                                          B_NONE, B_NONE, B_NONE, B_NONE, B_NONE, B_NONE, B_NONE, B_NONE, B_SAVE, B_NONE, B_NONE};
@@ -88,14 +88,14 @@ static const uint16_t VIEW_KNOB[NVIEWS][4] = {
     {K_FILTER, P_EVOLVE, P_MOTION, P_DRIFT},
     {P_CATT, P_DREL, P_CCOL, P_PHASER},          /* (BERLIN, until its own pages: the Drone) */
     {P_DENSITY, P_SEQOCT, P_CUTOFF, P_DECAY},    /* (the Sequence) */
-    {P_SEQGRID, P_TRANS, P_SEQLEN, P_SWEEP},     /* (the Sequence's shape, until the Lead) */
+    {P_LDENS, P_GLIDE, P_VIB, P_LOCT},           /* (the Lead) */
     {P_SEQ2, P_SEQ2LEN, P_SEQ2OCT, P_SCH1},      /* (Sequence 2) */
     {P_ECHO, P_ETIME, P_FEEDBACK, P_REVERB},
     {P_TUNE, P_MIDI, K_LEDS, K_SAVE},
-    {P_CHORD, P_SEQ, P_BASS, P_SEQ2},
+    {P_CHORD, P_SEQ, P_LEAD, P_SEQ2},
     {P_CCOL, P_CRES, P_CATT, P_DREL},            /* (the Drone's sound) */
     {P_TAPA, P_TAPAT, P_TAPB, P_TAPBT},          /* (the Sequence's repeats) */
-    {P_BBITE, P_BSHAPE, P_BLEN, P_BSLIDE},
+    {P_SEQGRID, P_TRANS, P_SEQLEN, P_SWEEP},     /* (LFO again: the Sequence's shape, for now) */
     {P_KTUNE, P_KLEN, P_KPUNCH, P_HLEN},         /* (1.4.0: the kick's rumble here, in Hat len's place: EN_RUMBLE) */
     {P_CALG, P_CFRAT, P_CFB, P_CFDEC},
     {P_PALG, P_PFRAT, P_PFB, P_PFDEC},
@@ -112,14 +112,14 @@ static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Filter", "Evolve", "Motion", "Drift"},
     {"Attack", "Release", "Colour", "Phaser"},
     {"Density", "Octave", "Cutoff", "Decay"},
-    {"Grid", "Transpose", "Length", "Sweep"},
+    {"Phrases", "Glide", "Vibrato", "Octave"},
     {"Level", "Length", "Octave", "Chance"},
     {"Echo", "Echo time", "Feedback", "Reverb"},
     {"Tune", "MIDI out", "Lights", "Save"},
-    {"Drone", "Seq", "Bass", "Seq 2"},
+    {"Drone", "Seq", "Lead", "Seq 2"},
     {"Colour", "Reso", "Attack", "Release"},
     {"Repeat A", "A time", "Repeat B", "B time"},
-    {"Bite", "Shape", "Length", "Slide"},
+    {"Grid", "Transpose", "Length", "Sweep"},
     {"Kick tune", "Kick len", "Punch", "Hat len"},
     {"Algo", "Ratio", "Feedback", "LFO"},
     {"Algo", "Ratio", "Feedback", "LFO"},
@@ -647,7 +647,7 @@ static void set_mode(int m)
 static int view_voice(int v)
 {
     v = page_of(v);
-    return v == V_CHORD ? P_CVOICE : v == V_TEXTURE ? P_SVOICE : v == V_BASS ? P_BVOICE : v == V_DRUMS ? P_S2VOICE : -1;
+    return v == V_CHORD ? P_CVOICE : v == V_TEXTURE ? P_SVOICE : v == V_BASS ? P_LVOICE : v == V_DRUMS ? P_S2VOICE : -1;
 }
 static void set_voice(int p, int v)
 {
@@ -686,8 +686,8 @@ static void set_piece(int i)                    /* the piece playing kept as it 
 static const uint8_t PERF_KEY[PERF_N] = {0, 2, 4, 6, 7,          /* white 1-5: the layers */
                                          11, 12, 14, 16, 18,     /* white 7-11: the moves */
                                          1, 3, 5, 8, 10};        /* black 1-5: the solos */
-static const char *const PERF_NAME[PERF_N] = {"CHORD", "PINGS", "BASS", "KICK", "HATS", "THROW", "OPEN", "SHUT",
-                                              "DROP", "ECHO", "CHORD", "PINGS", "BASS", "KICK", "HATS"};
+static const char *const PERF_NAME[PERF_N] = {"DRONE", "SEQ", "LEAD", "SEQ 2", "SEQ 2", "THROW", "OPEN", "SHUT",
+                                              "DROP", "ECHO", "DRONE", "SEQ", "LEAD", "SEQ 2", "SEQ 2"};
 static void perf_mutes(void)                     /* to the engine: the mutes, and with a solo, all but it */
 {
     en_mute(ui.mutes | (ui.solo ? 0x1Fu & ~ui.solo : 0u));
@@ -1021,8 +1021,8 @@ static void button(int b)
 #define OCT_QUICK 1000u
 #define OCT_SHOW 1200u                           /* the ring up after the last press, then OCT_FADE fading */
 #define OCT_FADE 250u
-static const uint8_t LAYER_LEVEL[NLAYER] = {P_CHORD, P_SEQ, P_BASS, P_SEQ2, P_CRACKLE};
-static const char *const LAYER_NAME[NLAYER] = {"CHORD", "PINGS", "BASS", "DRUMS", "NOISE"};
+static const uint8_t LAYER_LEVEL[NLAYER] = {P_CHORD, P_SEQ, P_LEAD, P_SEQ2, P_CRACKLE};
+static const char *const LAYER_NAME[NLAYER] = {"DRONE", "SEQ", "LEAD", "SEQ 2", "ATMOS"};
 static const uint32_t LAYER_MUTE[NLAYER] = {EN_M_CHORD, EN_M_PINGS, EN_M_BASS, EN_M_KICK | EN_M_HATS, EN_M_NOISE};
 static void oct_show(int l)                      /* the ring up (from where it was, if it was: it glides) */
 {
@@ -1125,11 +1125,11 @@ static void midi_in(void)
 #define SHAKE_HOLD 1500u                  /* held on: a shake (a new voice, every value a big step) */
 #define NNUDGE 6
 static const uint8_t NUDGE_BTN[NNUDGE] = {B_ENV, B_ARP, B_LFO, B_SEQ, B_FX, B_SAVE};
-static const char *const NUDGE_NAME[NNUDGE] = {"CHORD", "PINGS", "BASS", "DRUMS", "SPACE", "NOISE"};
+static const char *const NUDGE_NAME[NNUDGE] = {"DRONE", "SEQ", "LEAD", "SEQ 2", "SPACE", "ATMOS"};
 static const uint8_t NUDGE_PAR[NNUDGE][8] = {   /* (the FM ones, the last two of the first three, on an FM voice only) */
     {P_CATT, P_CCOL, P_CRES, P_DECAY, P_CATT, P_CUTOFF, P_CFRAT, P_CFB},   /* (Env, on no page now, left be) */
     {P_PTON, P_PRAT, P_PLEN, P_PBEND, P_PGHOST, P_PLEN, P_PFRAT, P_PFB},   /* (Ghost: the dry against the echo) */
-    {P_BBITE, P_BSHAPE, P_BLEN, P_BSLIDE, P_TRANS, P_BLEN, P_BFRAT, P_BFB},
+    {P_LOCT, P_VIB, P_BLEN, P_GLIDE, P_TRANS, P_BLEN, P_BFRAT, P_BFB},
     {P_KTUNE, P_KLEN, P_KPUNCH, P_HTONE, P_KLEN, P_HATSLVL, P_HTONE, P_KTUNE},   /* (Hats: their level, against the kick) */
     {P_ECHO, P_FEEDBACK, P_REVERB, P_SIZE, P_CLOUD, P_ECHO, P_ECHO, P_ECHO},   /* (the space: FX; its shake, a new echo time) */
     {P_NCOL, P_NGRAIN, P_NTUNE, P_NROOM, P_NCOL, P_NGRAIN, P_NTUNE, P_NCOL},   /* (the noise: SAVE; its shake, a new character) */
@@ -1160,7 +1160,7 @@ static uint8_t nudge_quiet;                      /* (HOME held on: the shakes al
 static void nudge(int layer, int how)
 {
     static const uint8_t SND[NNUDGE] = {V_CSND, V_PSND, V_BSND, V_DSND, V_SPACE, V_NSND};
-    static const uint8_t VOICE[NNUDGE] = {P_CVOICE, P_SVOICE, P_BVOICE, P_S2VOICE, P_ETIME, P_NCHAR};
+    static const uint8_t VOICE[NNUDGE] = {P_CVOICE, P_SVOICE, P_LVOICE, P_S2VOICE, P_ETIME, P_NCHAR};
     int16_t rec[P_NPARAMS];
     uint16_t pool;
     int j, best = -1, bd = 0, fm, n, np = 0;
@@ -2319,7 +2319,7 @@ static void draw_meters(void)                    /* left: the four layers */
         dm = fm_maxf(dm, en_drum_glow[i]);
     lv[0] = en_pad_level * (float)proj.par[P_CHORD] * 0.01f;
     lv[1] = bm * (float)proj.par[P_SEQ] * 0.01f;
-    lv[2] = en_bass_level * (float)proj.par[P_BASS] * 0.01f;
+    lv[2] = en_bass_level * (float)proj.par[P_LEAD] * 0.01f;
     lv[3] = dm * (float)proj.par[P_SEQ2] * 0.01f;
     for (i = 0; i < 4; i++) {
         int32_t x = 8 + i * 11, h = (int32_t)(fm_clampf(lv[i], 0.0f, 1.0f) * 52.0f + 0.5f);

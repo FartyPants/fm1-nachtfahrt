@@ -1,14 +1,31 @@
-# CPU baseline, stressed (as DUB-1 PLAN.md measured on the device): Night Drive, Pings Density 100, Cloud 100
+# CPU, stressed (BERLIN): Density, both repeats, Sequence 2, the Phaser and the Lead's phrases at full (DUB-1's was
+# Night Drive with its pings' Density and Cloud at 100: docs/BASELINE.md)
 spin PRESET 5
 wait 300
 expect piece 5
 tap ARP
 wait 200
 spin K1 100
-spin K4 100
-expect par4 100
-expect par32 100
+tap ARP
 wait 200
+spin K1 100
+spin K3 100
+tap SEQ
+wait 200
+spin K1 100
+tap ENV
+wait 200
+spin K4 100
+tap LFO
+wait 200
+spin K1 100
+wait 200
+expect par4 100
+expect par7 100
+expect par27 100
+expect par3 100
+expect par111 100
+expect par113 100
 peakreset
 wait 60000
-expect peak_db_max -0.5
+expect peak_db_max -0.1          # (every layer at full: below clipping; the pieces keep -0.5, Task 13)

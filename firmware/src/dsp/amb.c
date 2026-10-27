@@ -28,7 +28,7 @@ const uint8_t EN_DRUM_N[EN_NDRUM] = {16, 16, 16, 16, 16};
 const char *const EN_SEC_NAME[EN_NSEC] = {"Full", "Break", "Groove", "Thin"};
 
 static const en_param_t PARAMS[P_NPARAMS] = {
-    {"Chord", 0, 100, 60},    {"Sequence", 0, 100, 70},    {"Bass", 0, 100, 0},     {"Sequence 2", 0, 100, 0},
+    {"Chord", 0, 100, 60},    {"Sequence", 0, 100, 70},    {"Lead", 0, 100, 50},     {"Sequence 2", 0, 100, 0},
     {"Density", 0, 100, 60},  {"Evolve", 0, 100, 40},   {"Drift", 0, 6, 4},       {"Repeat A", 0, 100, 100},
     {"Echo", 0, 100, 55},     {"Echo time", 0, 5, 1},   {"Reverb", 0, 100, 35},   {"Feedback", 0, 100, 60},
     {"Cutoff", 0, 100, 45},   {"Decay", 0, 100, 35},    {"Sweep", 0, 100, 50}, {"Motion", 0, 100, 50},
@@ -38,10 +38,10 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Repeat A time", 0, 5, 1},    {"Repeat B", 0, 100, 0},
     {"Length", 3, 16, 8},    {"Crackle", 0, 100, 35},  {"Repeat B time", 0, 5, 2},     {"Size", 0, 100, 55},
     {"Cloud", 0, 100, 30},
-    {"Seq voice", 0, EN_NSV - 1, 0}, {"Bass voice", 0, EN_NBV - 1, 0}, {"Seq2 voice", 0, EN_NS2V - 1, 1},
+    {"Seq voice", 0, EN_NSV - 1, 0}, {"Lead voice", 0, EN_NBV - 1, 0}, {"Seq2 voice", 0, EN_NS2V - 1, 1},
     {"Attack", 0, 100, 40},   {"Colour", -50, 50, 0},   {"Resonance", -50, 50, 0}, {"Release", 0, 100, 50},
     {"Tone", -50, 50, 0},     {"Ratio", -50, 50, 0},    {"Ping len", -50, 50, 0}, {"Bend", 0, 100, 0},
-    {"Bite", -50, 50, 0},     {"Shape", -50, 50, 0},    {"Bass len", -50, 50, 0}, {"Slide", -50, 50, 0},
+    {"Lead oct", -1, 2, 0},   {"Vibrato", 0, 100, 40},  {"Bass len", -50, 50, 0}, {"Glide", 0, 100, 35},
     {"Kick tune", -12, 12, 0}, {"Kick len", -50, 50, 0}, {"Punch", -50, 50, 0},   {"Hat tone", -50, 50, 0},
     {"Chord alg", 0, 9, 0},   {"Chord ratio", -50, 50, 0}, {"Chord fb", 0, 100, 0}, {"Chord LFO", 0, 100, 0},
     {"Ping alg", 0, 9, 0},    {"Ping ratio", -50, 50, 0}, {"Ping fb", 0, 100, 0}, {"Ping LFO", 0, 100, 0},
@@ -62,7 +62,7 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Accent", 0, 100, 50}, {"Seq play", 0, 1, 0},
     {"Noise tone", -50, 50, 0}, {"Noise density", -50, 50, 0}, {"Air", -50, 50, 0}, {"Noise drift", -50, 50, 0},
     {"Noise", 0, EN_NNCHAR - 1, 0},
-    {"Phaser", 0, 100, 40},   {"Wet", 0, 100, 50},    {"Notes", 0, 100, 100},   {"Hats level", 0, 100, 50},
+    {"Phaser", 0, 100, 40},   {"Wet", 0, 100, 50},    {"Phrases", 0, 100, 50},   {"Hats level", 0, 100, 50},
     {"Chord wet", 0, 100, 50}, {"Length 2", 3, 16, 7}, {"Blur", 0, 100, 50}, {"Echo tone", 0, 100, 50},
     {"Width", 0, 100, 50},    {"Noise decay", 0, 100, 50},
     {"Noise width", 0, 100, 50}, {"Noise plate", 0, 100, 50}, {"Noise echo", 0, 100, 50}, {"Hat len", -50, 50, 0},
@@ -184,26 +184,25 @@ void en_piece(int i, int16_t *par, uint16_t *pool)
     static const uint8_t NEW[] = {P_SEQ, P_SEQ2, P_DENSITY, P_TAPA, P_TAPAT, P_TAPB, P_TAPBT, P_SEQLEN, P_SEQ2LEN, P_SEQGRID,
                                   P_TRANS, P_SEQOCT, P_SEQ2OCT, P_SVOICE, P_S2VOICE, P_SWEEP, P_SACCENT, P_SGATE0,
                                   P_SGATE1, P_SOCT0, P_SOCT1, P_SSKIP0, P_SACC0, P_SACC1, P_SCH0, P_SCH1, P_SMODE,
-                                  P_CVOICE, P_CATT, P_DREL, P_PHASER};
+                                  P_CVOICE, P_CATT, P_DREL, P_PHASER, P_LEAD, P_LVOICE, P_GLIDE, P_VIB, P_LDENS, P_LOCT};
     unsigned k;
     for (p = 0; p < P_NPARAMS; p++)
         par[p] = PIECES[i].v[p];
     for (k = 0; k < sizeof NEW; k++)
         par[NEW[k]] = PARAMS[NEW[k]].def;
-    par[P_BASS] = 0;
     *pool = EN_MODE_POOL[PIECES[i].v[P_MODE]];
 }
 
 const char *const EN_CV_NAME[EN_NCV] = {"Organ", "Strings", "Choir", "Saws", "Glass"};   /* (BERLIN: the Drone's) */
 const char *const EN_PV_NAME[EN_NPV] = {"Blip", "Marimba", "Glass", "Wood", "Drop"};
-const char *const EN_BV_NAME[EN_NBV] = {"Sub", "Punch", "Rubber", "Pluck", "Growl"};
+const char *const EN_BV_NAME[EN_NBV] = {"Odyssey", "Mini", "Flute", "Theremin", "Synthi"};   /* (BERLIN: the Lead's) */
 const char *const EN_KIT_NAME[EN_NKIT] = {"Tight", "Deep", "Punch", "Soft", "Dusty"};
 const char *const EN_CQ_NAME[EN_NCQ] = {"Empty", "Major", "Minor", "Sus2", "Sus4", "Dim", "Aug"};
 const char *const EN_CX_NAME[EN_NCX] = {"Triad", "6", "7", "Maj7", "9", "11", "Add9"};
 static const char *const ETIME_NAME[6] = {"1/8", "1/8.", "1/4", "1/4.", "1/2", "1 bar"};
 static const float ETIME_BEATS[6] = {0.5f, 0.75f, 1.0f, 1.5f, 2.0f, 4.0f};
 /* the Groove knob (P_SEQGRID): the five patterns from sparse to busy (GROOVE_PAT: the engine's GROOVE below); Notes
- * (P_BNOTES) how many of its notes play (the rest left out at random, bar by bar); Energy (PERFORM) thins it further,
+ * (P_LDENS) how many of its notes play (the rest left out at random, bar by bar); Energy (PERFORM) thins it further,
  * or fills a thin one */
 #define NGROOVE 5
 static const uint8_t GROOVE_PAT[NGROOVE] = {0, 1, 2, 4, 3};
@@ -250,7 +249,7 @@ void en_param_text(int i, int v, char *b)
         s = EN_CV_NAME[(unsigned)v < EN_NCV ? v : 0];
     else if (i == P_SVOICE)
         s = EN_SV_NAME[(unsigned)v < EN_NSV ? v : 0];
-    else if (i == P_BVOICE)
+    else if (i == P_LVOICE)
         s = EN_BV_NAME[(unsigned)v < EN_NBV ? v : 0];
     else if (i == P_S2VOICE)
         s = EN_SV_NAME[(unsigned)v < EN_NS2V ? v : 0];
@@ -1632,6 +1631,102 @@ static void seq_tick(void)                       /* a sixteenth: the sequences' 
     }
 }
 
+/* ------------------------------------------------------------------ the lead --- */
+/* (BERLIN) the Lead: one voice, gliding, its vibrato coming in late; it plays phrases (long notes, or a slow run of
+ * scale steps ending long), starting on a chord tone, a breath of 2 to 8 bars between (Phrases: how often). Voices:
+ * Odyssey (a saw and a pulse), Mini (three saws), Flute (a sine and breath), Theremin (a sine, always wavering),
+ * Synthi (a square). MIDI channel 3 */
+static struct {
+    uint8_t on, note;                            /* sounding (its gate); the note it glides to */
+    float cur, ph, ph2, ph3, vph, env, fenv, vt, s1[2], s2[2], c1[4], c2[4];
+} lead;
+static float lead_vol, ld_gk = 0.004f;
+static uint8_t ld_note[8], ld_dur[8], ld_n, ld_i, ld_left, ld_rest;
+static uint32_t ld_rng = 0x3C6EF372u;
+
+static int ld_audible(void) { return lead_vol > 0.0f && !(mutes & EN_M_BASS); }
+
+static void lead_off(void)                       /* the note let go */
+{
+    if (lead.on) {
+        lead.on = 0;
+        midi(0x82, lead.note, 0);
+    }
+}
+
+static int ld_deg_note(int d)                    /* scale degree d (any) as a note, in the Lead's register */
+{
+    const int ns = nsteps ? nsteps : 7, o = (d + 64 * ns) / ns - 64, k = (d + 64 * ns) % ns,
+              n = 60 + par[P_ROOT] % 12 + 12 * par[P_LOCT] + 12 * o + (nsteps ? steps[k] : 2 * k);
+    return n < 36 ? 36 : n > 100 ? 100 : n;
+}
+
+static void lead_phrase(void)                    /* a new phrase: its notes and their lengths, in sixteenths */
+{
+    const int ns = nsteps ? nsteps : 7, run = seq_rand(&ld_rng) % 100u < 40u;
+    int d = en_deg_of(pool, (chord_pcs[seq_rand(&ld_rng) % (uint32_t)(chord_nt ? chord_nt : 1)] - par[P_ROOT] + 24) % 12), i;
+    if (seq_rand(&ld_rng) & 1u)
+        d += ns;                                 /* (now and then from the octave above) */
+    if (run) {                                   /* a slow run: 3 to 6 steps one way, the last held */
+        const int dir = seq_rand(&ld_rng) & 1u ? 1 : -1;
+        ld_n = (uint8_t)(3 + seq_rand(&ld_rng) % 4u);
+        for (i = 0; i < ld_n; i++) {
+            ld_note[i] = (uint8_t)ld_deg_note(d + dir * i);
+            ld_dur[i] = (uint8_t)(i + 1 < ld_n ? 2 + seq_rand(&ld_rng) % 3u : 8 + seq_rand(&ld_rng) % 9u);
+        }
+    } else {                                     /* long notes: 1 to 3, a beat to a bar each, on chord tones */
+        ld_n = (uint8_t)(1 + seq_rand(&ld_rng) % 3u);
+        for (i = 0; i < ld_n; i++) {
+            ld_note[i] = (uint8_t)ld_deg_note(d);
+            ld_dur[i] = (uint8_t)(4 + seq_rand(&ld_rng) % 13u);
+            d += (seq_rand(&ld_rng) & 1u ? 2 : -2) * (1 + (int)(seq_rand(&ld_rng) % 2u));   /* (a third or a fifth away) */
+        }
+    }
+    ld_i = 0;
+    ld_left = 0;
+}
+
+static void lead_note(int n)                     /* the next note: legato (it glides there), or from silence */
+{
+    const int legato = lead.on;
+    lead_off();
+    if (!ld_audible())
+        return;
+    if (!legato && lead.env < 0.05f)
+        lead.cur = (float)n;                     /* (from silence: no glide) */
+    lead.note = (uint8_t)n;
+    lead.on = 1;
+    lead.vt = 0.0f;
+    lead.fenv = 1.0f;
+    hit(2, 0.8f);
+    midi(0x92, (uint32_t)n, 90);
+}
+
+static void lead_tick(void)                      /* a sixteenth: the phrase goes on, or the breath */
+{
+    if (!(sixteenth & 15u) && !ld_n) {           /* a bar line, between phrases */
+        if (ld_rest)
+            ld_rest--;
+        else if (seq_rand(&ld_rng) % 100u < (uint32_t)(20 + 6 * pe(P_LDENS) / 10))
+            lead_phrase();
+    }
+    if (!ld_n)
+        return;
+    if (ld_left) {
+        ld_left--;
+        if (ld_left)
+            return;
+    }
+    if (ld_i < ld_n) {
+        lead_note(ld_note[ld_i]);
+        ld_left = ld_dur[ld_i++];
+        return;
+    }
+    lead_off();                                  /* the phrase done: a breath of 2 .. 8 bars (fewer as Phrases rises) */
+    ld_n = 0;
+    ld_rest = (uint8_t)(2 + seq_rand(&ld_rng) % (uint32_t)(1 + 6 * (100 - pe(P_LDENS)) / 100));
+}
+
 /* ------------------------------------------------------------- the stabs --- */
 static int stab_k, stab_kb, stab_rot;
 static uint32_t stab_home;                      /* the pattern, before this bar's gaps */
@@ -1864,7 +1959,7 @@ static void bass_hit(int first, int up)
     bass.gate = (int32_t)(fm_minf(GROOVE_GATE[gpat()] * fm_exp2f(rel(P_BLEN)), 15.8f) * step_len);
     bass_bite = 1.0f;
     {
-        int bv = (unsigned)par[P_BVOICE] < EN_NBV ? par[P_BVOICE] : 0;
+        int bv = (unsigned)par[P_LVOICE] < EN_NBV ? par[P_LVOICE] : 0;
         if (BV_PATCH[bv])
             fm_note(&bfm, BV_PATCH[bv], mtof(bass.note), 1.0f, fm_q(P_BFRAT), fm_d(P_BFDEC));
     }
@@ -1979,7 +2074,7 @@ static int pcount(uint32_t m) { return __builtin_popcount(m); }
 static void ph_bar(int pb)
 {
     const int b = pb == 3 || pb == 7;
-    const float lo = loose(), e = (float)mac[EN_MAC_ENERGY] * (1.0f / 50.0f), d0 = (float)par[P_BNOTES] * 0.01f;
+    const float lo = loose(), e = (float)mac[EN_MAC_ENERGY] * (1.0f / 50.0f), d0 = 1.0f;
     const float d = fm_clampf(e < 0.0f ? d0 * (1.0f + 0.6f * e) : d0 + (1.0f - d0) * e, 0.0f, 1.0f);
     uint32_t g = en_groove(gpat()), f = g & (0u - g);   /* (the groove; its first note, always kept) */
     uint32_t k = drum_pat[0], sh = drum_pat[1], op = drum_pat[2];
@@ -2119,7 +2214,7 @@ static void lanes(void)
     en_lane[2] = (uint16_t)(hats ? (lay_hats ? bar_sh : 0u) | (lay_open || fill ? bar_op : 0u) : 0u);
     en_lane[3] = (uint16_t)(hats && lay_hats ? dpat(3) : 0u);
     en_lane[4] = (uint16_t)(hats && (sec == SEC_FULL || sec == SEC_GROOVE || par[P_SMODE]) ? dpat(4) : 0u);
-    en_lane[5] = (uint16_t)(lay_bass && !(mutes & EN_M_BASS) && !(perf & EN_PF_KICKDROP) && par[P_BASS] > 0 ? bar_bass : 0u);
+    en_lane[5] = (uint16_t)(lay_bass && !(mutes & EN_M_BASS) && !(perf & EN_PF_KICKDROP) && par[P_LEAD] > 0 ? bar_bass : 0u);
 }
 
 /* a pattern's hit: its chance (Play: Pattern only, so Auto's music stays as it was), its accent */
@@ -2172,7 +2267,7 @@ static void tick(void)
                 drum_hit(4, v4, 0);
         }
     }
-    if (lay_bass && !(mutes & EN_M_BASS) && !(perf & EN_PF_KICKDROP) && bar_bass >> st & 1u) {
+    if (EN_DUB && lay_bass && !(mutes & EN_M_BASS) && !(perf & EN_PF_KICKDROP) && bar_bass >> st & 1u) {
         /* (1.3.0) the bar's notes, from the plan (Density and Energy: which rest, the same each A bar); the octave
          * note, if the plan has one, the same place each bar */
         const uint32_t first = bar_bass & (0u - bar_bass), below = bar_bass & ((1u << st) - 1u);
@@ -2189,6 +2284,7 @@ static void tick(void)
     for (d = 0; d < EN_NDRUM; d++)
         en_drum_pos[d] = (uint8_t)st;
     seq_tick();
+    lead_tick();
     if (EN_DUB && (sixteenth & 1u) == 0u) {     /* (the dub's loops stepped in eighths) */
         for (l = 0; l < EN_NLOOP; l++) {
             int s = loop_pos[l];
@@ -2616,7 +2712,7 @@ int en_voice_fm(int layer)
     if (layer == 0)
         return cv_patch(cvoice) != 0;
     if (layer == 2)
-        return BV_PATCH[(unsigned)par[P_BVOICE] < EN_NBV ? par[P_BVOICE] : 0] != 0;
+        return BV_PATCH[(unsigned)par[P_LVOICE] < EN_NBV ? par[P_LVOICE] : 0] != 0;
     return layer == 1;
 }
 int en_fm_alg(int layer)
@@ -2624,7 +2720,7 @@ int en_fm_alg(int layer)
     if (layer == 0)
         return cv_patch(cvoice) ? fm_alg_of(P_CALG, cv_patch(cvoice)) : 0;
     if (layer == 2) {
-        const fmpatch_t *p = BV_PATCH[(unsigned)par[P_BVOICE] < EN_NBV ? par[P_BVOICE] : 0];
+        const fmpatch_t *p = BV_PATCH[(unsigned)par[P_LVOICE] < EN_NBV ? par[P_LVOICE] : 0];
         return p ? fm_alg_of(P_BALG, p) : 0;
     }
     return par[P_PALG] ? par[P_PALG] - 1 : 0 ? 4 : FM_ALG2;
@@ -2713,7 +2809,8 @@ static void apply(int p, int v)
     switch (p) {
     case P_CHORD: chord_vol = (float)(v * v) * 0.0001f; lanes(); break;
     case P_SEQ: seq_vol = (float)(v * v) * 0.0001f; break;
-    case P_BASS: bass_vol = (float)(v * v) * 0.0001f; lanes(); break;
+    case P_LEAD: lead_vol = (float)(v * v) * 0.0001f; break;
+    case P_GLIDE: ld_gk = 1.0f - fm_expf(-1.0f / ((0.001f + 0.006f * (float)v) * EN_SR)); break;   /* ~1 .. 600 ms */
     case P_SEQ2: seq2_vol = (float)(v * v) * 0.0001f; break;
     case P_SMODE: case P_SGATE0: case P_SGATE1: case P_SOCT0: case P_SOCT1: case P_SSKIP0: lanes(); break;
     case P_SEQLEN: seq_regrow(0); break;
@@ -2905,6 +3002,8 @@ static void quiet(void)
         drum[i].on = 0, drum[i].wait = 0;
     drone_off(0), drone_off(1);
     dr_lvl[0] = dr_lvl[1] = 0.0f;
+    lead_off();
+    lead.env = 0.0f;
     for (i = 0; i < NPLUCK; i++)
         if (pluck[i].on) {
             pluck[i].on = 0;
@@ -2923,6 +3022,10 @@ void en_init(void)
         sint[i] = fm_sinf((float)i * (FM_TWO_PI / (float)SN));
     for (i = 0; i <= SN; i++)
         orgt[i] = sint[i % SN] + 0.5f * sint[2 * i % SN] + 0.3f * sint[3 * i % SN] + 0.2f * sint[4 * i % SN];
+    memset(pluck, 0, sizeof pluck);              /* (BERLIN's voices from rest: none sounding, none to let go) */
+    memset(&lead, 0, sizeof lead);
+    dr_on[0] = dr_on[1] = 0;
+    dr_lvl[0] = dr_lvl[1] = 0.0f;
     plate_init();
     for (i = 0; i < TAPE_N; i++)
         tape[i] = 0;
@@ -3010,6 +3113,8 @@ static void play_start(int from_top)
     tick_wait = 0;
     en_playing = 1;
     drone_chord();
+    ld_n = ld_i = 0;                             /* (the Lead: a breath before its first phrase) */
+    ld_rest = 2;
     if (!en_ext)
         midi(from_top ? 0xFA : 0xFB, 0, 0);
 }
@@ -3023,6 +3128,7 @@ static void play_stop(void)
     en_playing = 0;
     bass.gate = 0;
     drone_off(dr_bank);
+    lead_off();
     if (!en_ext)
         midi(0xFC, 0, 0);
     notes_off();
@@ -3405,9 +3511,9 @@ static void render_stabs(uint32_t n)
 static void render_bass(uint32_t n)
 {
     uint32_t j;
-    const int bv = (unsigned)par[P_BVOICE] < EN_NBV ? par[P_BVOICE] : 0;
+    const int bv = (unsigned)par[P_LVOICE] < EN_NBV ? par[P_LVOICE] : 0;
     const float g = bass_vol * 0.5f * BV_GAIN[bv] * GROOVE_LVL[gpat()],
-                xb = rel(P_BBITE) + lfo_b, xs = rel(P_BSHAPE),   /* (the LFO on the bite) */
+                xb = lfo_b, xs = 0.0f,   /* (the LFO on the bite) */
                 drv = 1.2f * fm_exp2f(1.2f * xb), bi = fm_maxf(1.0f + xb, 0.0f);   /* Bite: the drive, the FM bite */
     const int balg = BV_PATCH[bv] ? fm_alg_of(P_BALG, BV_PATCH[bv]) : 0;
     const float bfb = BV_PATCH[bv] ? fm_fb(P_BFB, BV_PATCH[bv]) : 0.0f;
@@ -3418,7 +3524,7 @@ static void render_bass(uint32_t n)
         en_bass_level = 0.0f;
         return;
     }
-    bass.note += (bass.target - bass.note) * fm_minf((float)n / (0.012f * fm_exp2f(4.4f * rel(P_BSLIDE)) * EN_SR), 1.0f);
+    bass.note += (bass.target - bass.note) * fm_minf((float)n / (0.012f * 1.0f * EN_SR), 1.0f);
                                                  /* a short slide (Slide: ~1 ms .. ~250 ms) */
     inc = mtof(bass.note) * (1.0f / EN_SR);
     if (BV_PATCH[bv])                            /* the FM voices follow the slide */
@@ -4246,6 +4352,58 @@ static void render_drone(uint32_t n)
     }
 }
 
+static void render_lead(uint32_t n)
+{
+    const int lv = (unsigned)par[P_LVOICE] < EN_NBV ? par[P_LVOICE] : 0;
+    const float g = lead_vol * 0.45f, vib = (float)par[P_VIB] * 0.004f + (lv == 3 ? 0.25f : 0.0f), gl = 0.84f, gr = 1.08f;
+    uint32_t j;
+    float dt = 0.0f;
+    if (!lead.on && lead.env < 1e-5f)
+        return;
+    for (j = 0; j < n; j++) {
+        float x, bp, a;
+        if (!(j & 15u)) {                        /* the glide, the vibrato, the filter: every 16 */
+            const float vd = vib * fm_clampf((lead.vt - 0.4f) * 2.5f, 0.0f, 1.0f), f = mtof(lead.cur + vd * sine(lead.vph));
+            dt = f * (1.0f / EN_SR);
+            svf_coefs(lead.c1, f * (3.0f + 6.0f * lead.fenv), 0.9f);
+            svf_coefs(lead.c2, f * (3.0f + 6.0f * lead.fenv), 0.7f);
+            lead.vt += 16.0f / EN_SR;
+            lead.vph += 16.0f * 5.5f / EN_SR;
+            if (lead.vph >= 1.0f)
+                lead.vph -= 1.0f;
+            lead.fenv *= 0.985f;                 /* (~0.4 s) */
+        }
+        lead.cur += ((float)lead.note - lead.cur) * ld_gk;
+        switch (lv) {
+        case 0: x = 0.6f * blep_saw(lead.ph, dt) + 0.4f * (blep_saw(lead.ph, dt) - blep_saw(frac1(lead.ph + 0.35f), dt)); break;
+        case 1: x = 0.45f * (blep_saw(lead.ph, dt) + blep_saw(lead.ph2, dt * 1.004f) + blep_saw(lead.ph3, dt * 0.996f)); break;
+        case 2: x = sine(lead.ph) + 0.08f * lead.env * (frand() - 0.5f); break;
+        case 3: x = sine(lead.ph); break;
+        default: x = blep_saw(lead.ph, dt) - blep_saw(frac1(lead.ph + 0.5f), dt); break;
+        }
+        lead.ph += dt;
+        if (lead.ph >= 1.0f)
+            lead.ph -= 1.0f;
+        lead.ph2 += dt * 1.004f;
+        if (lead.ph2 >= 1.0f)
+            lead.ph2 -= 1.0f;
+        lead.ph3 += dt * 0.996f;
+        if (lead.ph3 >= 1.0f)
+            lead.ph3 -= 1.0f;
+        if (lv != 2 && lv != 3) {
+            x = svf_lp(lead.c1, lead.s1, x, &bp);
+            x = svf_lp(lead.c2, lead.s2, x, &bp);
+        }
+        lead.env += ((lead.on ? 1.0f : 0.0f) - lead.env) * (lead.on ? 0.0009f : 0.00008f);   /* (~25 ms in, ~300 ms out) */
+        a = x * lead.env * g;
+        mixl[j] += a * gl;
+        mixr[j] += a * gr;
+        rsend[j] += 0.45f * a;
+        esend[j] += 0.6f * a;
+    }
+    en_bass_level = lead.env;
+}
+
 static void render_chunk(int32_t *out, uint32_t n, float gain)
 {
     uint32_t j;
@@ -4280,6 +4438,7 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
         render_bells(n);
         render_plucks(n);
         render_drone(n);
+        render_lead(n);
         widen(n);                                /* (the chord's and the pings' dry, wider) */
         if (tl == 2)
             for (j = 0; j < n; j++)
