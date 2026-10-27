@@ -201,7 +201,7 @@ int seq_pitch(const seq_t *s, int i, const int *steps, int nscale, int root_note
 void seq_hist_clear(seq_hist_t *h)
 {
     int i;
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < SEQ_HIST; i++) {
         h->note[i] = -1;
         h->vel[i] = 0;
     }
@@ -212,18 +212,18 @@ void seq_hist_push(seq_hist_t *h, int note, int vel)
 {
     h->note[h->pos] = (int16_t)note;
     h->vel[h->pos] = (uint8_t)vel;
-    h->pos = (uint8_t)((h->pos + 1u) & 7u);
+    h->pos = (uint8_t)((h->pos + 1u) % SEQ_HIST);
 }
 
 int seq_tap(const seq_hist_t *h, int dt, int *vel)
 {
     int idx;
-    if (dt < 1 || dt > 8) {
+    if (dt < 1 || dt > SEQ_HIST) {
         if (vel)
             *vel = 0;
         return -1;
     }
-    idx = (h->pos - dt) & 7;
+    idx = (h->pos - dt + SEQ_HIST) % SEQ_HIST;
     if (vel)
         *vel = h->note[idx] < 0 ? 0 : h->vel[idx];
     return h->note[idx];

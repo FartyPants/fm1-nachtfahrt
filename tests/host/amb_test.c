@@ -28,8 +28,8 @@ static uint8_t kick_bar[KBARS], bar_sec[KBARS];
 /* (BERLIN) the sequence's note-ons (channel 2) in order: the sixteenth, the note, the velocity; every channel's
  * notes sounding (note-ons less note-offs); note-ons on channel 10 and above (the drums', which are gone) */
 #define SQN 8192
-static uint32_t sq_n, sq_at[SQN], drum_ch_ons;
-static uint8_t sq_note[SQN], sq_vel[SQN];
+static uint32_t sq_n, sq_at[SQN], drum_ch_ons, s2_n, s2_at[SQN];
+static uint8_t sq_note[SQN], sq_vel[SQN], s2_note[SQN];
 static int sounding[16][128];
 void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2)
 {
@@ -41,6 +41,8 @@ void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2)
             drum_ch_ons++;
         if ((st & 15u) == 1u && sq_n < SQN)
             sq_at[sq_n] = en_bars, sq_note[sq_n] = (uint8_t)d1, sq_vel[sq_n] = (uint8_t)d2, sq_n++;
+        if ((st & 15u) == 3u && s2_n < SQN)
+            s2_at[s2_n] = en_bars, s2_note[s2_n] = (uint8_t)d1, s2_n++;
     } else if ((st & 0xF0u) == 0x80u || (st & 0xF0u) == 0x90u)
         sounding[st & 15u][d1 & 127u]--;
     else if ((st & 0xF0u) == 0xB0u && d1 == 123u && (st & 15u) != 1u && (st & 15u) != 3u)
@@ -114,7 +116,7 @@ static void fresh(void)
     en_bars = 0;
     bad = 0;
     memset(kick_bar, 0, sizeof kick_bar);
-    sq_n = 0;
+    sq_n = s2_n = 0;
     memset(bar_sec, 0xFF, sizeof bar_sec);
 }
 
@@ -295,8 +297,10 @@ int main(void)
         CHECK(!strcmp(t, "Keys"), "ctone 1: %s", t);
         en_param_text(P_TAPAT, 1, t);
         CHECK(!strcmp(t, "1/8."), "repeat A time 1: %s", t);
-        en_param_text(P_TAPBT, 1, t);
-        CHECK(!strcmp(t, "1/4"), "repeat B time 1: %s", t);
+        en_param_text(P_TAPBT, 2, t);
+        CHECK(!strcmp(t, "1/4"), "repeat B time 2: %s", t);
+        en_param_text(P_TAPAT, 5, t);
+        CHECK(!strcmp(t, "1 bar"), "repeat A time 5: %s", t);
         en_param_text(P_SEQGRID, 0, t);
         CHECK(!strcmp(t, "8ths"), "grid 0: %s", t);
         en_param_text(P_TRANS, 2, t);
@@ -857,6 +861,30 @@ int main(void)
         en_set(P_TEMPO, en_param_info(P_TEMPO)->def);
     }
 
+    /* (BERLIN) the repeats' times are the echo's: a lone note on the downbeat, Repeat A at 1/4. (6 sixteenths): each bar
+     * that note and its repeat six sixteenths later, nothing else */
+    {
+        static const int8_t D[8] = {0, 4, 7, 2, 0, 4, 7, 5};
+        uint32_t b;
+        int badbars = 0;
+        fresh();
+        en_set(P_TAPA, 100);
+        en_set(P_TAPAT, 3);
+        en_set(P_TAPB, 0);
+        seq_write(8, 0x0001u, D);
+        en_play(1);
+        run(30.0f);
+        for (b = 1u; b + 1u < en_bars / 16u; b++) {
+            int n0 = 0, v0 = 0, n6 = 0, v6 = 0, total = 0, n, v;
+            uint32_t k;
+            for (k = 0; k < 16u; k++)
+                total += seq_at(16u * b + k, &n, &v);
+            if (total != 2 || !seq_at(16u * b, &n0, &v0) || !seq_at(16u * b + 6u, &n6, &v6) || n0 != n6 || v0 != v6)
+                badbars++;
+        }
+        CHECK(en_bars / 16u > 8u && !badbars, "test_tap_times: Repeat A at 1/4.: %d bars wrong", badbars);
+    }
+
     /* (BERLIN) Repeat B (a quarter) only into a rest: step 5 rested, it fills that eighth with the note four
      * sixteenths before (step 3's), and nowhere else; at 60 and 160 BPM */
     {
@@ -870,7 +898,7 @@ int main(void)
             en_set(P_TEMPO, TEMPI[k]);
             en_set(P_TAPA, 0);
             en_set(P_TAPB, 100);
-            en_set(P_TAPBT, 1);
+            en_set(P_TAPBT, 2);
             seq_write(8, 0x00DFu, D);
             en_play(1);
             run(45.0f);
@@ -886,6 +914,82 @@ int main(void)
             CHECK(en_bars / 16u > 8u && !badbars, "test_tap_b_into_rests at %d BPM: %d bars wrong", TEMPI[k], badbars);
         }
         en_set(P_TEMPO, en_param_info(P_TEMPO)->def);
+    }
+
+    /* (BERLIN) Sequence 2 at Length 7 against the Sequence's 8: its note-ons repeat every 7 eighths, and the two
+     * together every 56 (28 beats) */
+    {
+        uint32_t i, j, from = 16u * 4u, bad7 = 0, bad56 = 0, n7 = 0;
+        fresh();
+        en_set(P_SEQ2, 60);
+        en_set(P_SEQLEN, 8);
+        en_set(P_SEQ2LEN, 7);
+        en_set(P_MOTION, 0);
+        en_set(P_EVOLVE, 0);
+        en_set(P_DRIFT, 6);
+        en_set(P_TAPA, 0);
+        en_regrow();
+        en_play(1);
+        run(150.0f);
+        for (i = 0; i < s2_n; i++) {             /* each one 14 sixteenths later again, the same note */
+            int ok = 0;
+            if (s2_at[i] < from || s2_at[i] + 14u >= en_bars)
+                continue;
+            n7++;
+            for (j = i + 1; j < s2_n && s2_at[j] <= s2_at[i] + 14u; j++)
+                ok |= s2_at[j] == s2_at[i] + 14u && s2_note[j] == s2_note[i];
+            bad7 += !ok;
+        }
+        for (i = 0; i < sq_n; i++) {             /* and the Sequence's, 112 sixteenths later */
+            int ok = 0;
+            if (sq_at[i] < from || sq_at[i] + 112u >= en_bars)
+                continue;
+            for (j = i + 1; j < sq_n && sq_at[j] <= sq_at[i] + 112u; j++)
+                ok |= sq_at[j] == sq_at[i] + 112u && sq_note[j] == sq_note[i];
+            bad56 += !ok;
+        }
+        CHECK(n7 > 20u && !bad7, "test_seq2_lengths: Sequence 2 not every 7 eighths (%u of %u)", bad7, n7);
+        CHECK(!bad56, "test_seq2_lengths: the two not together every 56 eighths (%u)", bad56);
+    }
+
+    /* (BERLIN) a piece's patterns, kept: taken out, grown afresh, put back: the same */
+    {
+        uint8_t saved[EN_SEQ_N], again[EN_SEQ_N];
+        fresh();
+        en_play(1);
+        run(1.0f);
+        en_seq_get(saved);
+        en_regrow();
+        run(0.1f);
+        en_seq_get(again);
+        CHECK(memcmp(saved, again, EN_SEQ_N), "test_seq_roundtrip: a regrow changed nothing");
+        en_seq(saved);
+        en_regrow();
+        run(0.1f);
+        en_seq_get(again);
+        CHECK(!memcmp(saved, again, EN_SEQ_N), "test_seq_roundtrip: not put back as it was");
+        en_seq(0);
+    }
+
+    /* (BERLIN) Pattern: the lanes as written, never varied: steps 0, 2, 4, 6 of 8 only (sixteenths 0, 4, 8, 12 of
+     * each bar), for 64 bars with Motion and Evolve at 100 */
+    {
+        uint32_t i, off = 0;
+        fresh();
+        en_set(P_TAPA, 0);
+        en_set(P_TAPB, 0);
+        en_set(P_SEQLEN, 8);
+        en_set(P_MOTION, 100);
+        en_set(P_EVOLVE, 100);
+        en_set(P_SGATE0, 0x0055);
+        en_set(P_SMODE, 1);
+        en_play(1);
+        run(64.0f * 2.5f);
+        for (i = 0; i < sq_n; i++)
+            off += (sq_at[i] & 3u) != 0u;
+        CHECK(en_bars / 16u >= 63u && sq_n >= 4u * 63u && !off, "test_pattern_mode: %u of %u off the written steps (%u bars)",
+              off, sq_n, en_bars / 16u);
+        en_set(P_SMODE, 0);
     }
 
     /* (BERLIN) every note-on has its note-off: two minutes of piece changes, tempo changes, freeze, mutes, PANIC and

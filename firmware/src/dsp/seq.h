@@ -33,15 +33,16 @@ void seq_vary(seq_t *s, uint32_t *rng, int nscale, int motion, int evolve);
  * parallel 0: shifted by the chord root's scale degree (it stays in the scale, the shape bends) */
 int seq_pitch(const seq_t *s, int i, const int *steps, int nscale, int root_note, int parallel, int chord_off);
 
-/* the last 8 sixteenths, for the repeat taps; note -1: nothing played */
+/* the last 16 sixteenths (a bar), for the repeat taps; note -1: nothing played */
+#define SEQ_HIST 16
 typedef struct {
-    int16_t note[8];
-    uint8_t vel[8];
+    int16_t note[SEQ_HIST];
+    uint8_t vel[SEQ_HIST];
     uint8_t pos;   /* where the next push goes */
 } seq_hist_t;
 void seq_hist_clear(seq_hist_t *h);
 void seq_hist_push(seq_hist_t *h, int note, int vel);   /* once per sixteenth, after the step (-1: nothing played) */
-/* the note played dt sixteenths before the current one (dt 1..8, 1 = the latest push; the current one not yet
+/* the note played dt sixteenths before the current one (dt 1..SEQ_HIST, 1 = the latest push; the current one not yet
  * pushed); its velocity into *vel (may be NULL); -1 and vel 0 if none or dt out of range */
 int seq_tap(const seq_hist_t *h, int dt, int *vel);
 #endif

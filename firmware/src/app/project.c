@@ -36,7 +36,7 @@ static void keep(void)                           /* the piece playing, into its 
         proj.slot[proj.piece].par[p] = proj.par[p];
     proj.slot[proj.piece].pool = proj.pool;
     proj.slot[proj.piece].screen = proj.screen;
-    en_pings_get(proj.slot[proj.piece].pings);
+    en_seq_get(proj.slot[proj.piece].pings);
     proj.slot[proj.piece].pings_ok = 1;
 }
 
@@ -145,5 +145,5 @@ void project_apply(void)                         /* (then en_regrow keeps the pi
     for (i = 0; i < P_NPARAMS; i++)
         en_set(i, proj.par[i]);
     en_pool(proj.pool);
-    en_pings(s->pings_ok ? s->pings : 0);
+    en_seq(s->pings_ok ? s->pings : 0);
 }

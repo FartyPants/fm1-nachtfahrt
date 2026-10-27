@@ -363,6 +363,10 @@ static void test_hist_taps(void)
     CHECK(seq_tap(&h, 1, NULL) == -1 && seq_tap(&h, 2, NULL) == 67, "a rest is -1, ring wraps");
     seq_hist_clear(&h);
     CHECK(seq_tap(&h, 3, NULL) == -1, "after clear: none");
+    for (i = 0; i < 16; i++)                     /* a bar back: the repeats' longest time */
+        seq_hist_push(&h, 60 + i, 100);
+    CHECK(seq_tap(&h, 16, NULL) == 60 && seq_tap(&h, 12, NULL) == 64, "tap 16 is a bar back (60)");
+    CHECK(seq_tap(&h, 17, &vel) == -1 && vel == 0, "dt 17: none");
 }
 
 int main(void)

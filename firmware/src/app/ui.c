@@ -101,7 +101,7 @@ static const uint16_t VIEW_KNOB[NVIEWS][4] = {
     {P_PALG, P_PFRAT, P_PFB, P_PFDEC},
     {P_BALG, P_BFRAT, P_BFB, P_BFDEC},
     {K_SLOT, K_CQ, K_CX, K_PLAY},
-    {K_LANE, P_SACCENT, K_LCH, P_DMODE},
+    {K_LANE, P_SACCENT, K_LCH, P_SMODE},
     {K_FILTER, K_DUB, K_ENERGY, P_TAPBT},         /* (Wet, Energy: offsets for playing; Duck the piece's own) */
     {P_TEMPO, P_ROOT, K_MODE, P_TAPAT},
     {P_NGRAIN, P_NROOM, P_NCOL, P_NTUNE},     /* (the level on OCT- / OCT+, as the layers'; Drift the recipes') */
@@ -406,7 +406,7 @@ static int knob_get(int k)
     if (k == K_LANE)
         return ui.lane;
     if (k == K_LCH)
-        return proj.par[P_DCH0 + ui.lane];
+        return proj.par[P_SCH0 + ui.lane];
     if (k >= K_FILTER && k <= K_SPACE)
         return ui.mac[k - K_FILTER];
     if (k == K_MODE)
@@ -542,7 +542,7 @@ static void knob_set(int k, int v)
         ui.lane = (uint8_t)v;
         return;
     } else if (k == K_LCH) {
-        knob_set(P_DCH0 + ui.lane, v);
+        knob_set(P_SCH0 + ui.lane, v);
         return;
     } else if (k >= K_FILTER && k <= K_SPACE) {
         ui.mac[k - K_FILTER] = (int8_t)v;
@@ -882,7 +882,7 @@ static void edit_released(uint32_t held)
  * the accents' strength, KNOB 3 the lane's chance, KNOB 4 Play: Auto (generated, as ever) or Pattern. The first
  * edit takes the pattern over from what Auto plays. The arrangement still takes lanes out (a Break, a fill) */
 static const uint8_t STEP_KEY[16] = {0, 2, 4, 6, 7, 9, 11, 12, 14, 16, 18, 19, 21, 23, 24, 26};   /* the white keys */
-static uint32_t lane_steps(int d) { return proj.par[P_DMODE] ? (uint32_t)(uint16_t)proj.par[P_DPAT0 + d] : en_drum_pat[d]; }
+static uint32_t lane_steps(int d) { return proj.par[P_SMODE] ? (uint32_t)(uint16_t)proj.par[P_SGATE0 + d] : en_drum_pat[d]; }
 static void pattern_key(uint32_t key, uint32_t keys)
 {
     int st, d = ui.lane, acc;
@@ -895,20 +895,20 @@ static void pattern_key(uint32_t key, uint32_t keys)
     for (m = 0; m < 16; m++)
         keys &= ~(1u << STEP_KEY[m]);
     black = keys;
-    if (!proj.par[P_DMODE]) {                    /* the first edit: Auto's pattern, taken over */
+    if (!proj.par[P_SMODE]) {                    /* the first edit: Auto's pattern, taken over */
         int k;
         for (k = 0; k < EN_NDRUM; k++)
-            knob_set(P_DPAT0 + k, (int)(int16_t)(uint16_t)en_drum_pat[k]);
-        knob_set(P_DMODE, 1);
+            knob_set(P_SGATE0 + k, (int)(int16_t)(uint16_t)en_drum_pat[k]);
+        knob_set(P_SMODE, 1);
     }
-    m = (uint32_t)(uint16_t)proj.par[P_DPAT0 + d];
-    acc = (int)((uint32_t)(uint16_t)proj.par[P_DACC0 + d] >> st & 1u);
+    m = (uint32_t)(uint16_t)proj.par[P_SGATE0 + d];
+    acc = (int)((uint32_t)(uint16_t)proj.par[P_SACC0 + d] >> st & 1u);
     if (black) {                                 /* accent it (on, too), or not */
-        knob_set(P_DACC0 + d, (int)(int16_t)(uint16_t)((uint32_t)(uint16_t)proj.par[P_DACC0 + d] ^ (1u << st)));
-        knob_set(P_DPAT0 + d, (int)(int16_t)(uint16_t)(m | 1u << st));
+        knob_set(P_SACC0 + d, (int)(int16_t)(uint16_t)((uint32_t)(uint16_t)proj.par[P_SACC0 + d] ^ (1u << st)));
+        knob_set(P_SGATE0 + d, (int)(int16_t)(uint16_t)(m | 1u << st));
         acc = !acc;
     } else {
-        knob_set(P_DPAT0 + d, (int)(int16_t)(uint16_t)(m ^ 1u << st));
+        knob_set(P_SGATE0 + d, (int)(int16_t)(uint16_t)(m ^ 1u << st));
     }
     t[0] = 0;
     itoa_u((uint32_t)st + 1u, t);
@@ -918,7 +918,7 @@ static void pattern_key(uint32_t key, uint32_t keys)
         sp_buf[0] = 0;
         sp_cat("Step ");
         sp_cat(t);
-        sp_cat(black ? (acc ? " accented" : " not accented") : (proj.par[P_DPAT0 + d] >> st & 1 ? " on" : " off"));
+        sp_cat(black ? (acc ? " accented" : " not accented") : (proj.par[P_SGATE0 + d] >> st & 1 ? " on" : " off"));
         ann_say(sp_buf, 0, ANN_NOW);
         sp_said = 1;
     }
@@ -2379,7 +2379,7 @@ static void draw_lanes(void)
     for (l = 0; l < 6; l++) {                    /* (in the layers' colours: stabs, kick, hats, rim, clap, bass) */
         uint32_t p = en_lane[l];
         int32_t y = 96 + l * 8;
-        int maybe = DR[l] >= 0 && (proj.par[P_DMODE] ? proj.par[P_DCH0 + DR[l]] < 50 : DR[l] == 4);
+        int maybe = DR[l] >= 0 && (proj.par[P_SMODE] ? proj.par[P_SCH0 + DR[l]] < 50 : DR[l] == 4);
         cv_round(29, y + 1, 5, 4, 1, C[l]);
         for (i = 0; i < 16; i++) {
             int32_t x = 40 + i * 11;
@@ -2458,14 +2458,14 @@ static void draw_pattern(void)
     static const uint16_t C[EN_NDRUM] = {K_PULSE, K_TEXT, K_DIM, K_RIM, K_CLAP};
     static const char *const SH[EN_NDRUM] = {"KICK", "SHKR", "OPEN", "RIM", "CLAP"};
     int l, i, pos = en_drum_pos[0];
-    text_c(120, -1, &FONT_XS, proj.par[P_DMODE] ? "PLAY: THE PATTERN" : "PLAY: AUTO (A KEY TAKES IT OVER)",
-           proj.par[P_DMODE] ? K_ACC : K_DIM);
+    text_c(120, -1, &FONT_XS, proj.par[P_SMODE] ? "PLAY: THE PATTERN" : "PLAY: AUTO (A KEY TAKES IT OVER)",
+           proj.par[P_SMODE] ? K_ACC : K_DIM);
     if (en_playing)
         cv_round(37 + pos * 12, 15, 11, 86, 2, K_PANEL);   /* (five lanes, 17 px apart) */
     for (l = 0; l < EN_NDRUM; l++) {
-        uint32_t p = lane_steps(l), a = proj.par[P_DMODE] ? (uint32_t)(uint16_t)proj.par[P_DACC0 + l] : 0u;
+        uint32_t p = lane_steps(l), a = proj.par[P_SMODE] ? (uint32_t)(uint16_t)proj.par[P_SACC0 + l] : 0u;
         int32_t y = 17 + l * 17, sel = l == ui.lane;
-        int maybe = proj.par[P_DMODE] ? proj.par[P_DCH0 + l] < 50 : l == 4;   /* (a chance under half: rings) */
+        int maybe = proj.par[P_SMODE] ? proj.par[P_SCH0 + l] < 50 : l == 4;   /* (a chance under half: rings) */
         if (sel)
             cv_round(2, y - 2, 236, 17, 4, mix(K_BG, K_PANEL, 10));
         cv_text(5, y + 1, &FONT_XS, SH[l], sel ? K_TEXT : K_DIM);
@@ -2610,9 +2610,9 @@ static void draw_main(void)
     }
     ui.grid_said = 0;
     if (ui.view == V_PAT) {                      /* the Pattern page: the steps */
-        h = hash(hash(0x50415454u, ui.lane | (uint32_t)proj.par[P_DMODE] << 4 | (uint32_t)en_drum_pos[0] << 8), en_playing);
+        h = hash(hash(0x50415454u, ui.lane | (uint32_t)proj.par[P_SMODE] << 4 | (uint32_t)en_drum_pos[0] << 8), en_playing);
         for (i = 0; i < EN_NDRUM; i++)
-            h = hash(hash(h, lane_steps((int)i)), (uint32_t)(uint16_t)proj.par[P_DACC0 + i]);
+            h = hash(hash(h, lane_steps((int)i)), (uint32_t)(uint16_t)proj.par[P_SACC0 + i]);
         h = hash(h, (uint32_t)oct_ring_on(now));
         if (h != ui.sig[1] || oct_ring_on(now)) {
             ui.sig[1] = h;
@@ -3259,7 +3259,7 @@ static void speak_dump(void)
                 else if (k == K_LANE)
                     ui.lane = (uint8_t)x;
                 else if (k == K_LCH)
-                    proj.par[P_DCH0 + ui.lane] = (int16_t)x;
+                    proj.par[P_SCH0 + ui.lane] = (int16_t)x;
                 else
                     proj.leds = (uint8_t)x;
                 sp_n = 0;

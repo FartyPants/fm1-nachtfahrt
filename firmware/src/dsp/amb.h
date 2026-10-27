@@ -77,10 +77,10 @@ enum {
     P_PMODE,
     /* the drums' pattern page: each lane's sixteen steps (bit i: step i, as int16) and its accents, its chance (%);
      * the accents' strength; Play: Auto (generated, as ever) or Pattern (these) */
-    P_DPAT0, P_DPAT1, P_DPAT2, P_DPAT3, P_DPAT4,
-    P_DACC0, P_DACC1, P_DACC2, P_DACC3, P_DACC4,
-    P_DCH0, P_DCH1, P_DCH2, P_DCH3, P_DCH4,
-    P_SACCENT, P_DMODE,
+    P_SGATE0, P_SGATE1, P_SOCT0, P_SOCT1, P_SSKIP0,
+    P_SACC0, P_SACC1, P_DACC2, P_DACC3, P_DACC4,
+    P_SCH0, P_SCH1, P_DCH2, P_DCH3, P_DCH4,
+    P_SACCENT, P_SMODE,
     /* the noise (SAVE's Noise page, 1.3.0): Colour, Grain, Room, Drift, -50..+50 around the piece's own (0), and a
      * character (EN_NCHAR_NAME: Vinyl, Tape, Dust, Room, Machine); Crackle (the Noise page's Level) is its level.
      * (Room is off the page: the recipes and the characters still set it) */
@@ -120,12 +120,11 @@ void en_freeze(int on);
 void en_seed(uint32_t s);                      /* stir some entropy into the generators */
 void en_panic(void);                           /* everything quiet, now */
 void en_regrow(void);                          /* a new piece: fresh loops and patterns, the home chord */
-/* the ping loops, packed a byte a step (EN_PINGS_N: every loop's steps, in turn): the note offset in the low
- * nibble (15: a rest), the velocity in the high one (50 + 3 x v). A piece keeps them; en_pings gives them back
- * (0: none kept, the loops grown afresh), taken at once and again after each en_regrow */
-#define EN_PINGS_N 82
-void en_pings_get(uint8_t *b);
-void en_pings(const uint8_t *b);
+/* a piece's two patterns, packed (EN_SEQ_N bytes): a piece keeps them; en_seq gives them back (0: none kept, grown
+ * afresh), taken at once and again after each en_regrow */
+#define EN_SEQ_N 82
+void en_seq_get(uint8_t *b);
+void en_seq(const uint8_t *b);
 /* performance (SEL's mode): layers muted (EN_M_*, a mask: set = muted), and the moves held now (EN_PF_*) */
 enum { EN_M_CHORD = 1, EN_M_PINGS = 2, EN_M_BASS = 4, EN_M_KICK = 8, EN_M_HATS = 16, EN_M_NOISE = 32 };   /* (the noise:
                                                 * OCT- + OCT+ on its page; its level kept) */

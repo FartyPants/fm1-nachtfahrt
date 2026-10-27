@@ -35,8 +35,8 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Tune", -50, 50, 0},     {"MIDI out", 0, 1, 1},    {"Tempo", 60, 160, 96},  {"Root", 0, 11, 5},
     {"Mode", 0, EN_NMODES - 1, MODE_DORIAN}, {"Seq oct", -2, 2, 0}, {"Chord voice", 0, EN_NCV - 1, 0},
     {"Seq2 oct", -2, 1, -1},   {"Grid", 0, 1, 0},      {"Transpose", 0, 2, 0},
-    {"Repeat A time", 0, 2, 1},    {"Repeat B", 0, 100, 0},
-    {"Length", 3, 16, 8},    {"Crackle", 0, 100, 35},  {"Repeat B time", 0, 2, 1},     {"Size", 0, 100, 55},
+    {"Repeat A time", 0, 5, 1},    {"Repeat B", 0, 100, 0},
+    {"Length", 3, 16, 8},    {"Crackle", 0, 100, 35},  {"Repeat B time", 0, 5, 2},     {"Size", 0, 100, 55},
     {"Cloud", 0, 100, 30},
     {"Seq voice", 0, EN_NSV - 1, 0}, {"Bass voice", 0, EN_NBV - 1, 0}, {"Seq2 voice", 0, EN_NS2V - 1, 1},
     {"Attack", 0, 100, 0},   {"Colour", -50, 50, 0},   {"Resonance", -50, 50, 0}, {"Env amount", -50, 50, 0},
@@ -53,13 +53,13 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Type 1", 0, EN_NCX - 1, 0}, {"Type 2", 0, EN_NCX - 1, 0}, {"Type 3", 0, EN_NCX - 1, 0}, {"Type 4", 0, EN_NCX - 1, 0},
     {"Type 5", 0, EN_NCX - 1, 0}, {"Type 6", 0, EN_NCX - 1, 0}, {"Type 7", 0, EN_NCX - 1, 0}, {"Type 8", 0, EN_NCX - 1, 0},
     {"Play", 0, 6, 1},
-    {"Kick steps", -32768, 32767, 0}, {"Shaker steps", -32768, 32767, 0}, {"Open steps", -32768, 32767, 0},
-    {"Rim steps", -32768, 32767, 0},  {"Clap steps", -32768, 32767, 0},
-    {"Kick acc", -32768, 32767, 0},   {"Shaker acc", -32768, 32767, 0},   {"Open acc", -32768, 32767, 0},
+    {"Steps", -32768, 32767, 0}, {"Steps 2", -32768, 32767, 0}, {"Octaves", -32768, 32767, 0},
+    {"Octaves 2", -32768, 32767, 0},  {"Skips", -32768, 32767, 0},
+    {"Accents", -32768, 32767, 0},   {"Accents 2", -32768, 32767, 0},   {"Open acc", -32768, 32767, 0},
     {"Rim acc", -32768, 32767, 0},    {"Clap acc", -32768, 32767, 0},
-    {"Kick chance", 0, 100, 100}, {"Shaker chance", 0, 100, 100}, {"Open chance", 0, 100, 100}, {"Rim chance", 0, 100, 100},
+    {"Chance", 0, 100, 100}, {"Chance 2", 0, 100, 100}, {"Open chance", 0, 100, 100}, {"Rim chance", 0, 100, 100},
     {"Clap chance", 0, 100, 5},
-    {"Accent", 0, 100, 50}, {"Drum play", 0, 1, 0},
+    {"Accent", 0, 100, 50}, {"Seq play", 0, 1, 0},
     {"Noise tone", -50, 50, 0}, {"Noise density", -50, 50, 0}, {"Air", -50, 50, 0}, {"Noise drift", -50, 50, 0},
     {"Noise", 0, EN_NNCHAR - 1, 0},
     {"Throws", 0, 100, 50},   {"Wet", 0, 100, 50},    {"Notes", 0, 100, 100},   {"Hats level", 0, 100, 50},
@@ -182,7 +182,8 @@ void en_piece(int i, int16_t *par, uint16_t *pool)
     /* (BERLIN, until its own recipes: DUB-1's, with the parameters that mean something new at their defaults and the
      * dub's chord and bass silent) */
     static const uint8_t NEW[] = {P_SEQ, P_SEQ2, P_DENSITY, P_TAPA, P_TAPAT, P_TAPB, P_TAPBT, P_SEQLEN, P_SEQ2LEN, P_SEQGRID,
-                                  P_TRANS, P_SEQOCT, P_SEQ2OCT, P_SVOICE, P_S2VOICE, P_SWEEP, P_SACCENT};
+                                  P_TRANS, P_SEQOCT, P_SEQ2OCT, P_SVOICE, P_S2VOICE, P_SWEEP, P_SACCENT, P_SGATE0,
+                                  P_SGATE1, P_SOCT0, P_SOCT1, P_SSKIP0, P_SACC0, P_SACC1, P_SCH0, P_SCH1, P_SMODE};
     unsigned k;
     for (p = 0; p < P_NPARAMS; p++)
         par[p] = PIECES[i].v[p];
@@ -262,14 +263,12 @@ void en_param_text(int i, int v, char *b)
         s = v & EN_PLOOP ? "Loop" : "Endless";
     else if (i == P_NCHAR)
         s = EN_NCHAR_NAME[(unsigned)v < EN_NNCHAR ? v : 0];
-    else if (i == P_DMODE)
+    else if (i == P_SMODE)
         s = v ? "Pattern" : "Auto";
     else if (i == P_SEQGRID)
         s = v ? "16ths" : "8ths";
-    else if (i == P_TAPAT)
-        s = ETIME_NAME[(unsigned)v < 3u ? v : 0];          /* 1/8, 1/8., 1/4 */
-    else if (i == P_TAPBT)
-        s = ETIME_NAME[(unsigned)v < 3u ? v + 1 : 1];      /* 1/8., 1/4, 1/4. */
+    else if (i == P_TAPAT || i == P_TAPBT)
+        s = ETIME_NAME[(unsigned)v < 6u ? v : 0];          /* the echo's times: 1/8 .. 1 bar */
     else if (i == P_TRANS)
         s = v == 2 ? "Bed" : v ? "Diatonic" : "Parallel";
     else if (i == P_MODE)
@@ -457,7 +456,7 @@ const char *en_chord_name(const int *pcs, int n, char *buf)
 }
 
 /* ------------------------------------------------------------ commands --- */
-enum { C_SET, C_POOL, C_PLAY, C_NEXT, C_FREEZE, C_SEED, C_PANIC, C_CLOCK, C_REGROW, C_MUTE, C_PERF, C_FX, C_PINGS, C_MACRO, C_PROT, C_REWALK, C_PNUDGE, C_LOCK, C_SEQSET };
+enum { C_SET, C_POOL, C_PLAY, C_NEXT, C_FREEZE, C_SEED, C_PANIC, C_CLOCK, C_REGROW, C_MUTE, C_PERF, C_FX, C_SEQ, C_MACRO, C_PROT, C_REWALK, C_PNUDGE, C_LOCK, C_SEQSET };
 #define QN 512u                                 /* (a piece is every parameter at once: room for twice over and more) */
 _Static_assert(QN >= 2u * (P_NPARAMS + 8), "the command queue can't hold a piece's parameters twice over");
 static uint32_t q[QN];
@@ -1281,39 +1280,6 @@ static void loop_regrow(int l)
     loop_publish(l);
 }
 
-/* a piece's own loops (en_pings): packed by the UI, unpacked here */
-static uint8_t pings_pend[EN_PINGS_N], pings_have;
-void en_pings_get(uint8_t *b)
-{
-    int l, i, k = 0;
-    for (l = 0; l < EN_NLOOP; l++)
-        for (i = 0; i < EN_LOOP_LEN[l]; i++, k++) {
-            int nt = loop_note[l][i], v = (loop_vel[l][i] - 50) / 3;
-            b[k] = (uint8_t)((nt < 0 || nt > 14 ? 15 : nt) | (v < 0 ? 0 : v > 15 ? 15 : v) << 4);
-        }
-}
-void en_pings(const uint8_t *b)
-{
-    int i;
-    for (i = 0; b && i < EN_PINGS_N; i++)
-        pings_pend[i] = b[i];
-    post(C_PINGS, b ? 1 : 0, 0);
-}
-static void pings_take(void)
-{
-    int l, i, k = 0;
-    for (l = 0; l < EN_NLOOP; l++) {
-        for (i = 0; i < EN_LOOP_MAX; i++)
-            loop_note[l][i] = -1;
-        for (i = 0; i < EN_LOOP_LEN[l]; i++, k++) {
-            int nt = pings_pend[k] & 15;
-            loop_note[l][i] = (int8_t)(nt == 15 ? -1 : nt);
-            loop_vel[l][i] = (uint8_t)(50 + 3 * (pings_pend[k] >> 4));
-        }
-        loop_publish(l);
-    }
-}
-
 static void loop_pass(int l)                    /* the end of a pass: grow, prune, evolve */
 {
     int c = loop_count(l), t = loop_target(), s;
@@ -1441,6 +1407,32 @@ static uint32_t sq_rng = 0x2545F491u;
 static float seq_vol, seq2_vol, sq_cut = 600.0f, sq_edec = 0.9995f, sq_adec = 0.9997f;
 const char *const EN_SV_NAME[EN_NS2V] = {"2600", "Moog", "Synthi", "Pulse", "Glass", "Sub"};
 
+/* a piece's patterns, kept (en_seq_get, en_seq: EN_SEQ_N bytes): each one's degrees (16 + 16), steps, octaves and
+ * accents (two bytes each, low first) and Density's order (16 + 16) */
+static uint8_t seq_pend_b[EN_SEQ_N], seq_have;
+void en_seq_get(uint8_t *b)
+{
+    int l, i;
+    for (i = 0; i < EN_SEQ_N; i++)
+        b[i] = 0;
+    for (l = 0; l < 2; l++) {
+        for (i = 0; i < SEQ_MAX; i++) {
+            b[16 * l + i] = (uint8_t)sq[l].deg[i];
+            b[44 + 16 * l + i] = sq_prio[l][i];
+        }
+        b[32 + 2 * l] = (uint8_t)(sq[l].gate & 255u), b[33 + 2 * l] = (uint8_t)(sq[l].gate >> 8);
+        b[36 + 2 * l] = (uint8_t)(sq[l].oct & 255u), b[37 + 2 * l] = (uint8_t)(sq[l].oct >> 8);
+        b[40 + 2 * l] = (uint8_t)(sq[l].acc & 255u), b[41 + 2 * l] = (uint8_t)(sq[l].acc >> 8);
+    }
+}
+void en_seq(const uint8_t *b)
+{
+    int i;
+    for (i = 0; b && i < EN_SEQ_N; i++)
+        seq_pend_b[i] = b[i];
+    post(C_SEQ, b ? 1 : 0, 0);
+}
+
 void en_seq_set(int l, const seq_t *p)
 {
     sq_pend[l & 1] = *p;
@@ -1504,46 +1496,77 @@ static void seq_regrow(int l)                    /* a pattern grown afresh: ever
     seq_hist_clear(&sq_hist[l]);
 }
 
-static int seq_note(int l, int s)                /* step s's note, transposed by the chord as the piece says */
+static void seq_take(void)                      /* a piece's kept patterns, back (its lengths as it has them) */
+{
+    int l, i;
+    for (l = 0; l < 2; l++) {
+        seq_t *q = &sq[l];
+        for (i = 0; i < SEQ_MAX; i++) {
+            q->deg[i] = (int8_t)seq_pend_b[16 * l + i];
+            sq_prio[l][i] = seq_pend_b[44 + 16 * l + i];
+        }
+        q->gate = (uint16_t)(seq_pend_b[32 + 2 * l] | seq_pend_b[33 + 2 * l] << 8);
+        q->oct = (uint16_t)(seq_pend_b[36 + 2 * l] | seq_pend_b[37 + 2 * l] << 8);
+        q->acc = (uint16_t)(seq_pend_b[40 + 2 * l] | seq_pend_b[41 + 2 * l] << 8);
+        q->skip = 0;
+        q->len = q->base_len = (uint8_t)par[l ? P_SEQ2LEN : P_SEQLEN];
+        sq_written[l] = 0;
+        sq_pos[l] = 0;
+        sq_bars[l] = sq_wrap[l] = 0;
+        seq_hist_clear(&sq_hist[l]);
+    }
+}
+
+static int seq_note(const seq_t *q, int l, int s)   /* step s's note, transposed by the chord as the piece says */
 {
     const int root = par[P_ROOT] % 12, tr = par[P_TRANS],
               off = tr == 2 ? 0 : ((int)en_chord_root % 12 - root + 12) % 12,
               base = 48 + root + 12 * (l ? par[P_SEQ2OCT] : par[P_SEQOCT]),
-              n = seq_pitch(&sq[l], s, steps, nsteps, base, tr == 0, off);
+              n = seq_pitch(q, s, steps, nsteps, base, tr == 0, off);
     return n < 24 ? 24 : n > 108 ? 108 : n;
 }
 
 static void seq_tick(void)                       /* a sixteenth: the sequences' steps, the repeats */
 {
-    static const uint8_t DTA[3] = {2, 3, 4}, DTB[3] = {3, 4, 6};   /* the repeats' times, in sixteenths */
+    static const uint8_t DT[6] = {2, 3, 4, 6, 8, 16};   /* the repeats' times (the echo's), in sixteenths */
     const int on_grid = par[P_SEQGRID] || !(sixteenth & 1u);
     int l;
     if (!(sixteenth & 15u))                      /* a bar line: the performer, when a pass ended on it (at most every
                                                   * 4 bars), or every 16 */
         for (l = 0; l < 2; l++)
             if (++sq_bars[l] >= 16u || (sq_wrap[l] && sq_bars[l] >= 4u)) {
-                if (!lock && !sq_written[l])
+                if (!lock && !sq_written[l] && !par[P_SMODE])
                     seq_vary(&sq[l], &sq_rng, nsteps ? nsteps : 7, pe(P_MOTION), pe(P_EVOLVE));
                 sq_bars[l] = 0;
             }
     for (l = 0; l < 2; l++) {
         int played = -1, vel = 0, n, v;
         if (on_grid) {
-            const int st = sq_pos[l] < sq[l].len ? sq_pos[l] : 0;
-            if ((sq[l].gate >> st & 1u) && !(sq[l].skip >> st & 1u) &&
-                (sq_written[l] || sq_prio[l][st] < 25 + 3 * pe(P_DENSITY) / 4)) {
-                played = seq_note(l, st);
-                vel = sq[l].acc >> st & 1u ? 120 : 77;   /* the root accented (as Synth Seeker's 121 and 77) */
+            seq_t q = sq[l];                     /* (Pattern: the lanes' steps, octaves, skips, accents, its length) */
+            const int pat = par[P_SMODE] != 0, ch = par[l ? P_SCH1 : P_SCH0];
+            int st;
+            if (pat) {
+                q.gate = (uint16_t)par[l ? P_SGATE1 : P_SGATE0];
+                q.oct = (uint16_t)par[l ? P_SOCT1 : P_SOCT0];
+                q.acc = (uint16_t)par[l ? P_SACC1 : P_SACC0];
+                q.skip = l ? 0u : (uint16_t)par[P_SSKIP0];
+                q.len = q.base_len = (uint8_t)par[l ? P_SEQ2LEN : P_SEQLEN];
+            }
+            st = sq_pos[l] < q.len ? sq_pos[l] : 0;
+            if ((q.gate >> st & 1u) && !(q.skip >> st & 1u) &&
+                (sq_written[l] || pat || sq_prio[l][st] < 25 + 3 * pe(P_DENSITY) / 4) && (ch >= 100 || irand(100) < ch)) {
+                played = seq_note(&q, l, st);
+                vel = q.acc >> st & 1u ? 120 : 77;   /* the root accented (as Synth Seeker's 121 and 77) */
                 pluck_voice(l, played, vel, 0);
             }
-            sq_pos[l] = seq_next(&sq[l], st);
+            sq_pos[l] = seq_next(&q, st);
             sq_wrap[l] = (uint8_t)(sq_pos[l] <= st);
             en_loop_pos[l] = (uint8_t)st;
         }
         if (!l) {                                /* the repeats: A always, B only into a rest */
-            if (par[P_TAPA] && (n = seq_tap(&sq_hist[0], DTA[par[P_TAPAT] % 3], &v)) >= 0)
+            if (par[P_TAPA] && (n = seq_tap(&sq_hist[0], DT[par[P_TAPAT] % 6], &v)) >= 0)
                 pluck_voice(0, n, v * par[P_TAPA] / 100, 1);
-            if (par[P_TAPB] && (!on_grid || played < 0) && (n = seq_tap(&sq_hist[0], DTB[par[P_TAPBT] % 3], &v)) >= 0)
+            if (par[P_TAPB] && (!on_grid || played < 0) && (n = seq_tap(&sq_hist[0], DT[par[P_TAPBT] % 6], &v)) >= 0)
                 pluck_voice(0, n, v * par[P_TAPB] / 100, 1);
         }
         seq_hist_push(&sq_hist[l], played, vel);
@@ -1735,7 +1758,7 @@ static void drum_hit(int d, float vel, int off)  /* (Swing delays the whole off 
 {
     int32_t w = 0;
     (void)off;
-    if ((d == 1 || d == 2) && !par[P_DMODE])     /* (1.3.0: the hats a few ms late, the phrase's feel) */
+    if ((d == 1 || d == 2) && !par[P_SMODE])     /* (1.3.0: the hats a few ms late, the phrase's feel) */
         w = (int32_t)((float)ph.late[ph_st & 15] * (1.0f / 255.0f) * 0.006f * EN_SR * loose());
     if (w > 0) {
         drum[d].wait = w;
@@ -1906,7 +1929,7 @@ static void ph_bar(int pb)
         bar_bass = g | 1u << 14;
     else if (b)                                   /* (B, sparse: every other of A's, the first kept) */
         bar_bass = ph_thin(bar_bass, pcount(bar_bass) / 2 - (f ? 1 : 0), f, 4u);
-    if (par[P_DMODE]) {                          /* (Pattern: yours, each step's Chance on the grid) */
+    if (par[P_SMODE]) {                          /* (Pattern: yours, each step's Chance on the grid) */
         bar_k = dpat(0), bar_sh = dpat(1), bar_op = dpat(2);
         return;
     }
@@ -2025,7 +2048,7 @@ static int kick_draw(int next)
 }
 
 /* a lane's steps as they play: the pattern page's (Play: Pattern), or the generated ones */
-static uint32_t dpat(int d) { return par[P_DMODE] ? (uint32_t)(uint16_t)par[P_DPAT0 + d] : drum_pat[d]; }
+static uint32_t dpat(int d) { return par[P_SMODE] ? (uint32_t)(uint16_t)par[P_SGATE0 + d] : drum_pat[d]; }
 
 /* the screen's lanes, the bar as it plays: what is muted or at level 0, gone at once */
 static void lanes(void)
@@ -2036,18 +2059,18 @@ static void lanes(void)
     en_lane[1] = (uint16_t)(kick ? bar_k & (fill ? 0x00FFu : 0xFFFFu) : 0u);
     en_lane[2] = (uint16_t)(hats ? (lay_hats ? bar_sh : 0u) | (lay_open || fill ? bar_op : 0u) : 0u);
     en_lane[3] = (uint16_t)(hats && lay_hats ? dpat(3) : 0u);
-    en_lane[4] = (uint16_t)(hats && (sec == SEC_FULL || sec == SEC_GROOVE || par[P_DMODE]) ? dpat(4) : 0u);
+    en_lane[4] = (uint16_t)(hats && (sec == SEC_FULL || sec == SEC_GROOVE || par[P_SMODE]) ? dpat(4) : 0u);
     en_lane[5] = (uint16_t)(lay_bass && !(mutes & EN_M_BASS) && !(perf & EN_PF_KICKDROP) && par[P_BASS] > 0 ? bar_bass : 0u);
 }
 
 /* a pattern's hit: its chance (Play: Pattern only, so Auto's music stays as it was), its accent */
 static int dhit(int d, int st, float *vel)
 {
-    if (!par[P_DMODE])
+    if (!par[P_SMODE])
         return 1;
-    if (par[P_DCH0 + d] < 100 && frand() * 100.0f >= (float)par[P_DCH0 + d])
+    if (par[P_SCH0 + d] < 100 && frand() * 100.0f >= (float)par[P_SCH0 + d])
         return 0;
-    if (!((uint32_t)(uint16_t)par[P_DACC0 + d] >> st & 1u))
+    if (!((uint32_t)(uint16_t)par[P_SACC0 + d] >> st & 1u))
         *vel *= 1.0f - 0.006f * 50.0f;   /* (the unaccented, quieter as Accent turns up) */
     return 1;
 }
@@ -2068,7 +2091,7 @@ static void tick(void)
         ph_st = st;
         if (bar_k >> st & 1u && st == 14 && !(KSHAPE[kick_shape] >> 14 & 1u))
             v0 *= 0.45f;                         /* (the busy B bar's pickup: a ghost) */
-        if (!par[P_DMODE] && kick_shape == KS_GHOST && (st == 4 || st == 12))
+        if (!par[P_SMODE] && kick_shape == KS_GHOST && (st == 4 || st == 12))
             v0 *= 0.32f;                         /* (two and four ghosted, -10 dB) */
         if (kick && bar_k >> st & 1u && !(fill && st >= 8) && dhit(0, st, &v0))
             drum_hit(0, v0, 0);
@@ -2086,7 +2109,7 @@ static void tick(void)
             drum_hit(3, v3, st & 1);
         if (en_lane[4] >> st & 1u) {             /* the clap: rare (Auto: 3% + 5% x Evolve, ~5% at 40; Pattern: its Chance) */
             float v4 = 0.8f + 0.2f * r;
-            if (par[P_DMODE] ? dhit(4, st, &v4) : frand() < 0.03f + 0.05f * evolve)
+            if (par[P_SMODE] ? dhit(4, st, &v4) : frand() < 0.03f + 0.05f * evolve)
                 drum_hit(4, v4, 0);
         }
     }
@@ -2633,7 +2656,7 @@ static void apply(int p, int v)
     case P_SEQ: seq_vol = (float)(v * v) * 0.0001f; break;
     case P_BASS: bass_vol = (float)(v * v) * 0.0001f; lanes(); break;
     case P_SEQ2: seq2_vol = (float)(v * v) * 0.0001f; break;
-    case P_DMODE: case P_DPAT0: case P_DPAT1: case P_DPAT2: case P_DPAT3: case P_DPAT4: lanes(); break;
+    case P_SMODE: case P_SGATE0: case P_SGATE1: case P_SOCT0: case P_SOCT1: case P_SSKIP0: lanes(); break;
     case P_SEQLEN: seq_regrow(0); break;
     case P_SEQ2LEN: seq_regrow(1); break;
     case P_HTONE: {                              /* the hats' colour (BERLIN: the dub's, silent) */
@@ -3020,13 +3043,13 @@ static void drain(void)
             break;
         case C_REGROW:
             regrow();
-            if (pings_have)                      /* (a piece's own loops, kept) */
-                pings_take();
+            if (seq_have)                        /* (a piece's own patterns, kept) */
+                seq_take();
             break;
-        case C_PINGS:
-            pings_have = (uint8_t)a;
+        case C_SEQ:
+            seq_have = (uint8_t)a;
             if (a)
-                pings_take();
+                seq_take();
             break;
         case C_MUTE: mutes = (uint32_t)a; lanes(); break;
         case C_PERF: perf = (uint32_t)a; lanes(); break;
