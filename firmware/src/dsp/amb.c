@@ -512,8 +512,7 @@ typedef struct {
 static noise_ctl_t nctl;
 static uint8_t atm_char;                        /* (BERLIN) the Atmosphere's character (render_atmos) */
 static uint32_t atm_rng;                        /* (its random: en_init's seed) */
-static float throw_mul = 1.0f, hats_lvl = 1.0f;   /* Throws, Hats level */
-static float chord_dry = 0.5f, chord_snd = 1.5f;   /* the chord's Ghost: its dry, its sends (apply) */
+static float hats_lvl = 1.0f;                    /* Hats level */
 static int ec_pp;                               /* (BERLIN) the echo ping-pongs (twice its time fits the tape) */
 static float ec_g = 0.6f, ec_lpc = 0.68f, ec_wide = 1.0f;   /* the echo's Blur, Tone, Width (and the chord's and the
                                                              * pings': widen) */
@@ -625,7 +624,6 @@ static void svf_coefs(float *c, float f, float k)   /* TPT SVF (Zavalishin): a1,
  *   7: 4 -> 3, and 2 and 1         8: all four, side by side     9: 2 -> 1 (two operators) */
 #define FM_NALG 9
 #define FM_ALG2 8                                /* the two-operator one */
-static const uint8_t FM_CARR[FM_NALG] = {1, 1, 1, 1, 5, 7, 7, 15, 1};   /* the carriers (bit k: op k + 1) */
 typedef struct {
     float ratio, level, dec, sus;               /* the ratio, the level, the decay (s) to the sustain (0..1 of the level) */
 } fmop_t;
@@ -634,71 +632,6 @@ typedef struct {
     float fb;                                   /* op 4's feedback (turns) */
     fmop_t op[4];
 } fmpatch_t;
-typedef struct {
-    float ph[4], inc[4], e[4], kd[4], lv[4], fb1, fb2;
-} fmvoice_t;
-
-/* a note: the operators' rates (rmul: op 2's ratio moved), their envelopes from the top (dmul: the modulators'
- * decays stretched) */
-static void fm_note(fmvoice_t *v, const fmpatch_t *p, float f, float rmul, float qmul, float dmul)
-{
-    int k;
-    for (k = 0; k < 4; k++) {
-        float r = p->op[k].ratio * (k == 1 ? rmul : k >= 2 ? qmul : 1.0f), d = p->op[k].dec * (k ? dmul : 1.0f);
-        v->inc[k] = f * r * (1.0f / EN_SR);
-        v->e[k] = 1.0f;
-        v->kd[k] = d > 0.0f ? fm_expf(-32.0f / (d * EN_SR)) : 1.0f;
-    }
-}
-
-/* the control rate: the envelopes a step on, the levels (ms: the modulators' scaled, as Colour and Tone have it) */
-static void fm_ctl(fmvoice_t *v, const fmpatch_t *p, int alg, float ms)
-{
-    int k;
-    for (k = 0; k < 4; k++) {
-        float s = p->op[k].sus;
-        v->e[k] = s + (v->e[k] - s) * v->kd[k];
-        v->lv[k] = p->op[k].level * v->e[k] * ((FM_CARR[alg] >> k & 1u) ? 1.0f : ms);
-    }
-}
-
-/* one sample (dk: the pitch now, a multiple of the note's; fb: op 4's feedback) */
-static inline float fm_sample(fmvoice_t *v, int alg, float fb, float dk)
-{
-    float o2, o3, o4, out, *ph = v->ph, *l = v->lv;
-    int k;
-    if (alg == FM_ALG2) {
-        o2 = sine(ph[1] + 8.0f + fb * (v->fb1 + v->fb2)) * l[1];
-        v->fb2 = v->fb1;
-        v->fb1 = o2;
-        out = sine(ph[0] + o2 + 8.0f) * l[0];
-        ph[0] += v->inc[0] * dk;
-        ph[1] += v->inc[1] * dk;
-        for (k = 0; k < 2; k++)
-            if (ph[k] >= 1.0f)
-                ph[k] -= 1.0f;
-        return out;
-    }
-    o4 = sine(ph[3] + 8.0f + fb * (v->fb1 + v->fb2)) * l[3];   /* (the feedback: the last two, averaged) */
-    v->fb2 = v->fb1;
-    v->fb1 = o4;
-    switch (alg) {
-    case 0: o3 = sine(ph[2] + o4 + 8.0f) * l[2]; o2 = sine(ph[1] + o3 + 8.0f) * l[1]; out = sine(ph[0] + o2 + 8.0f) * l[0]; break;
-    case 1: o3 = sine(ph[2] + 8.0f) * l[2]; o2 = sine(ph[1] + o3 + o4 + 8.0f) * l[1]; out = sine(ph[0] + o2 + 8.0f) * l[0]; break;
-    case 2: o3 = sine(ph[2] + 8.0f) * l[2]; o2 = sine(ph[1] + o3 + 8.0f) * l[1]; out = sine(ph[0] + o2 + o4 + 8.0f) * l[0]; break;
-    case 3: o3 = sine(ph[2] + o4 + 8.0f) * l[2]; o2 = sine(ph[1] + 8.0f) * l[1]; out = sine(ph[0] + o2 + o3 + 8.0f) * l[0]; break;
-    case 4: o3 = sine(ph[2] + o4 + 8.0f) * l[2]; o2 = sine(ph[1] + 8.0f) * l[1]; out = sine(ph[0] + o2 + 8.0f) * l[0] + o3; break;
-    case 5: o3 = sine(ph[2] + o4 + 8.0f) * l[2]; o2 = sine(ph[1] + o4 + 8.0f) * l[1]; out = sine(ph[0] + o4 + 8.0f) * l[0] + o2 + o3; break;
-    case 6: o3 = sine(ph[2] + o4 + 8.0f) * l[2]; o2 = sine(ph[1] + 8.0f) * l[1]; out = sine(ph[0] + 8.0f) * l[0] + o2 + o3; break;
-    default: o3 = sine(ph[2] + 8.0f) * l[2]; o2 = sine(ph[1] + 8.0f) * l[1]; out = sine(ph[0] + 8.0f) * l[0] + o2 + o3 + o4; break;
-    }
-    for (k = 0; k < 4; k++) {
-        ph[k] += v->inc[k] * dk;
-        if (ph[k] >= 1.0f)
-            ph[k] -= 1.0f;
-    }
-    return out;
-}
 
 /* the FM voices' patches: the chord's Keys (an electric piano: a body pair, and a tine pair at 14) and Bell
  * (3.5 against 1, 7 against 2); the basses: Punch (a stack, a thump in the first 90 ms), Rubber (two pairs, an
@@ -715,9 +648,6 @@ static const fmpatch_t FM_PLUCK = {FM_ALG2, 0.0f, {{1.0f, 1.0f, 0.0f, 1.0f}, {3.
                                                    {1.0f, 0.1f, 0.1f, 0.0f}}};
 static const fmpatch_t FM_GROWL = {FM_ALG2, 0.0f, {{1.0f, 1.0f, 0.0f, 1.0f}, {1.0f, 0.44f, 0.07f, 0.09f}, {2.0f, 0.2f, 0.1f, 0.1f},
                                                    {1.0f, 0.1f, 0.1f, 0.0f}}};
-static float fm_q(int p) { return fm_exp2f((float)par[p] * 0.02f); }           /* FM page: the upper ratios, x0.5 .. x2 */
-static float fm_d(int p) { (void)p; return 1.0f; }   /* the modulators' decay: the patch's own (1.3.0: the knob is the LFO) */
-static float fm_fb(int p, const fmpatch_t *pt) { return fm_clampf(pt->fb + 0.004f * (float)par[p], 0.0f, 0.7f); }   /* (1.3.0: more only) */
 static int fm_alg_of(int p, const fmpatch_t *pt) { return par[p] ? par[p] - 1 : pt->alg; }
 
 /* ------------------------------------------------- slow random motion --- */
@@ -747,46 +677,17 @@ static float loose(void) { return fm_minf(evolve * 2.5f, 1.0f); }   /* (1.3.0: h
 static float arcm;                              /* the sweep, -1 dark .. +1 open, times Motion */
 
 /* -------------------------------------------------------------- chord --- */
-/* The stab: four voices struck together, one envelope, one filter. Saws: two a voice, 7 cents apart;
- * Keys: an FM electric piano, brighter as it's struck. Then a resonant low-pass a side that opens with
- * each stab (its own, quicker envelope) and with the sweep, and a soft clip. */
+/* the chord as voiced: its four notes (the Drone's, drone_chord), its level (the Drone's) */
 typedef struct {
-    float ph[2], inc[2];
-    uint8_t note, midi_note;
+    uint8_t note;
 } stab_t;
 static stab_t stab[EN_NPAD];
-static float chord_vol, cut_base = 800.0f, st_dec = 0.9995f, st_fdec = 0.99f, st_t60 = 0.3f;
-static float st_env, st_amp, st_fenv, st_throw, throw_dec, st_cofs;
-static float ec_dk, ec_dd;                      /* (the classics pass) a strike ducks the echo's returns: its level,
-                                                 * eased; the repeats heard in the gaps, not over the stab */
-static float st_s[4], st_c[4], st_h[2];
-static int32_t st_midi_left;
+static float chord_vol;
 static int shape, root_note = 55;               /* the voicing's shape, the chord's root as voiced (MIDI) */
-static const float STAB_PAN[EN_NPAD] = {-0.3f, -0.09f, 0.12f, 0.33f};   /* (1.3.0: 60% of the spread) */
-static float stab_gl[EN_NPAD], stab_gr[EN_NPAD];
-static int32_t gate_ctr;                        /* samples since the sixteenth began (the grid's Gate) */
-/* the chord's voices: how it sounds (CV_*), how quickly it strikes (the amplitude's smoothing a sample:
- * 0.035 ~0.6 ms .. 0.00012 ~190 ms), its length (times Decay's), how far its own envelope opens the filter
- * (octaves), its modulator's ratio and index (FM voices, in turns: the index at the strike, and at rest),
- * and a level to match the others */
-enum { CV_SAWS, CV_KEYS, CV_ORGAN, CV_PAD, CV_BELL, CV_WHEEL, CV_NOISE, NSTABV };   /* (the dub's stabs, silent) */
-static const struct {
-    float att, dec, fenv, ratio, idx_hi, idx_lo, gain;
-} CV[NSTABV] = {
-    /* (1.3.0: each strike opens further, and closes sooner) */
-    {0.035f, 1.0f, 2.5f, 0.0f, 0.0f, 0.0f, 1.0f},        /* Saws: two saws a voice, 7 cents apart */
-    {0.035f, 1.3f, 1.4f, 1.0f, 0.41f, 0.06f, 1.23f},     /* Keys: FM at the carrier's pitch, an electric piano */
-    {0.02f, 2.5f, 0.7f, 0.0f, 0.0f, 0.0f, 0.75f},        /* Organ: four drawbars (1, 2, 3, 4) */
-    {0.00012f, 4.0f, 0.6f, 0.0f, 0.0f, 0.0f, 0.72f},     /* Pad: the saws, swelling in, long */
-    {0.05f, 1.8f, 1.1f, 3.5f, 0.35f, 0.05f, 1.17f},      /* Bell: FM at 3.5, the clang dying first */
-    {0.03f, 3.0f, 0.4f, 0.0f, 0.0f, 0.0f, 0.67f},        /* Tonewheel: drawbars, a percussion and a click at the
-                                                          * strike, a rotary speaker turning (left against right) */
-    {0.05f, 0.6f, 2.6f, 0.0f, 0.0f, 0.0f, 3.6f},         /* Noise: noise and a little saw, the filter's pitch */
-};
+/* (the dub's chord voices, by number: a regrow's voicing still follows them, regrow; the Drone's own are EN_CV_NAME) */
+enum { CV_SAWS, CV_KEYS, CV_ORGAN, CV_PAD, CV_BELL };
 static int cvoice;                              /* the chord's voice now */
-static fmvoice_t cfm[EN_NPAD];                  /* its FM voices' operators */
 static const fmpatch_t *cv_patch(int cv) { return cv == 1 ? &FM_KEYS : cv == 4 ? &FM_BELL : 0; }
-static float rotor, click;                      /* Tonewheel: the rotor's turn, the key click */
 
 /* ------------------------------------------------------------------ bass --- */
 static const fmpatch_t *const BV_PATCH[EN_NBV] = {0, &FM_PUNCH, &FM_RUBBER, &FM_PLUCK, &FM_GROWL};
@@ -1755,39 +1656,6 @@ static void stabs_bar(void)                     /* this bar's stabs: the pattern
     en_stab_pat = out;
 }
 
-static void stab_fire(float vel, int throw_it)
-{
-    int i;
-    if (st_midi_left > 0)
-        for (i = 0; i < EN_NPAD; i++)
-            midi(0x80, stab[i].midi_note, 0);
-    for (i = 0; i < EN_NPAD; i++) {
-        float f = mtof((float)stab[i].note);
-        float dt = 0.00202f * fm_exp2f(2.0f * rel(P_CCOL));   /* +-3.5 cents (Colour: +-0.9 .. +-14) */
-        stab[i].inc[0] = f * (1.0f - dt) * (1.0f / EN_SR);
-        stab[i].inc[1] = CV[cvoice].ratio > 0.0f ? f * CV[cvoice].ratio * (1.0f / EN_SR)   /* FM: the modulator */
-                                                 : f * (1.0f + dt) * (1.0f / EN_SR);
-        if (cv_patch(cvoice))
-            fm_note(&cfm[i], cv_patch(cvoice), f, 1.0f, fm_q(P_CFRAT), fm_d(P_CFDEC));
-        stab[i].midi_note = stab[i].note;
-        midi(0x90, stab[i].note, (uint32_t)(40.0f + 80.0f * vel));
-    }
-    st_env = vel;
-    ec_dk = fm_maxf(ec_dk, vel);
-    st_fenv = 1.0f;
-    st_cofs = (frand() - 0.5f) * 0.8f * loose();   /* (1.3.0: each stab its own cutoff, +-0.4 octave) */
-    click = cvoice == CV_WHEEL ? 0.12f * vel : 0.0f;
-    en_stab_vel = vel;
-    en_stab_thrown = (uint8_t)(throw_it != 0);
-    en_stabs++;
-    hit(0, vel);
-    st_midi_left = (int32_t)(fm_maxf(st_t60 * 0.5f, 0.06f) * EN_SR);
-    if (throw_it) {
-        st_throw = 1.0f;
-        en_throws++;
-    }
-}
-
 /* ---------------------------------------------------------------- drums --- */
 static void hats_publish(void)
 {
@@ -2187,7 +2055,6 @@ static void tick(void)
 {
     int st = (int)(sixteenth & 15u), d;
     float r = frand();
-    gate_ctr = 0;
     if (st == 0)
         bar_start();
     const int kick = lay_kick && !(mutes & EN_M_KICK) && !(perf & EN_PF_DROP), hats = !(mutes & EN_M_HATS);
@@ -2218,13 +2085,6 @@ static void tick(void)
             if (par[P_SMODE] ? dhit(4, st, &v4) : frand() < 0.03f + 0.05f * evolve)
                 drum_hit(4, v4, 0);
         }
-    }
-    if (EN_DUB && en_stab_pat >> st & 1u) {               /* (the random draws made muted or not: the music goes on the same) */
-        uint32_t later = en_stab_pat >> (st + 1);
-        int last = !later, thr = (fill && last) || frand() < fm_minf(0.12f * loose() * (sec == SEC_BREAK ? 1.5f : 1.0f) * throw_mul, 0.6f);
-        float vel = st == (int)__builtin_ctz(en_stab_pat) ? 0.9f + 0.1f * frand() : 0.65f + 0.25f * frand();
-        if (!(mutes & EN_M_CHORD))
-            stab_fire(vel, thr || (perf & EN_PF_SWEEP));
     }
     noise_step((int)(sixteenth & 31u));         /* (the noise's groove: two bars) */
     for (d = 0; d < EN_NDRUM; d++)
@@ -2350,12 +2210,11 @@ static void plate_init(void)
 #define TAPE_SR 11025.0f
 static int16_t tape[TAPE_N] EN_POOL;
 static int tape_w, tape_ph;
-static float tape_acc, tape_lp, tape_hp, tape_p1, tape_p2, tape_c1, tape_c2, tape_p3, tape_c3;   /* (3: the right's, a
+static float tape_acc, tape_lp, tape_hp, tape_p1, tape_c1, tape_p3, tape_c3;   /* (3: the right's, a
                                                  * few ms behind the left: Width) */
 static const float HEAD2[5] = {0.75f, 0.6667f, 0.5f, 0.375f, 0.25f};    /* the second head's parts */
 static float head2 = 0.75f, head2_t = 0.75f, head2_v;   /* its place (of the loop), target, speed */
-static float fb_lean;                            /* 0..1: how much of the feedback is the second head's */
-static float hg[4] = {1.0f, 0.0f, 0.0f, 1.0f};   /* the heads' pan gains: 1 left, 1 right, 2 left, 2 right */
+static float hg[2] = {1.0f, 0.0f};              /* the first head's pan gains: left, right */
 static uint32_t head_left;                       /* samples until the second head may move */
 
 static inline float tape_read(float d)           /* d quarter-rate samples ago */
@@ -2397,20 +2256,16 @@ static void echo_time(void)
 static void heads_step(uint32_t n)
 {
     float p, want, vmax, sw;
-    int i;
     /* (1.3.0) the loop's gain from the tail's length: whatever the echo's time, the repeats are gone (-60 dB) in
      * Feedback's seconds; long delays vanish as quickly as short ones (Dub and the throws still push past it) */
     echo_fb = fm_exp2f(-9.966f * (echo_len_t * (1.0f / TAPE_SR)) / echo_t60);
-    for (i = 0; i < 2; i++) {
-        /* (1.3.0: the first head near the middle, drifting with Motion; the second, on throws, to the right; Width
-         * spreads them: 0 mono, 2 as wide as before) */
-        p = fm_clampf(ec_wide * ((i ? 0.4f : 0.0f) + (i ? 0.2f : 0.25f) * (0.4f + 0.6f * motion) * mod[6 + i].v), -1.0f, 1.0f);
-        p = (p + 1.0f) * (FM_PI / 4.0f);
-        hg[2 * i] = fm_cosf(p);
-        hg[2 * i + 1] = fm_sinf(p);
-    }
-    fb_lean = 0.3f * motion * (1.0f + mod[8].v);
-    if (head_left <= n) {
+    /* (1.3.0: the first head near the middle, drifting with Motion; Width spreads it: 0 mono, 2 as wide as before) */
+    p = fm_clampf(ec_wide * (0.0f + 0.25f * (0.4f + 0.6f * motion) * mod[6].v), -1.0f, 1.0f);
+    p = (p + 1.0f) * (FM_PI / 4.0f);
+    hg[0] = fm_cosf(p);
+    hg[1] = fm_sinf(p);
+    if (head_left <= n) {                        /* (the second head's moves: heard no more, the throws gone; their
+                                                  * draws keep the music's dice where they were) */
         head_left = (uint32_t)((16.0f + 32.0f * frand()) * EN_SR);
         if (en_playing && !en_frozen && frand() < motion * 0.6f)
             head2_t = HEAD2[irand(5)];
@@ -2463,7 +2318,7 @@ static inline void echoes(float in, float *el, float *er)
 {
     tape_acc += in;
     if (++tape_ph >= 4) {                        /* the tape, a quarter of the time */
-        float d, h1, h2, h3, f1, f2, fb, w;
+        float d, h1, h3, f1, fb, w;
         tape_ph = 0;
         echo_len += (echo_len_t * fx_em - echo_len) * fx_ek;   /* (the grid: the time doubled, the tape slowing) */
         if (echo_len > (float)(TAPE_N - 8))      /* (Tape stop slows a long echo past the tape: it stops at its end;
@@ -2482,12 +2337,6 @@ static inline void echoes(float in, float *el, float *er)
                    : tape_read(fm_minf(d + 88.0f * fm_minf(ec_wide, 2.0f), (float)(TAPE_N - 4)));
         f1 = tape_read(fm_maxf((ec_pp ? 2.0f * d : d) - (float)EAP_FB, 2.0f));   /* (and what goes round, the
                                                   * diffusers' delay earlier) */
-        if (st_throw > 1e-4f) {                  /* (the second head: only while a throw rings) */
-            h2 = tape_read(d * head2);
-            f2 = tape_read(fm_maxf(d * head2 - (float)EAP_FB, 2.0f));
-        } else {
-            h2 = f2 = 0.0f;
-        }
         if (en_frozen) {                         /* dub hold: the loop, as it is */
             int k = (int)echo_len, i0 = tape_w - k;
             int16_t s = tape[i0 < 0 ? i0 + TAPE_N : i0];
@@ -2496,11 +2345,11 @@ static inline void echoes(float in, float *el, float *er)
             tape[tape_w] = s;
         } else {
             const float nova = fm_maxf(ar_nova, fx_nova);   /* (the arc's ending, or the grid's) */
-            float g = fm_minf(echo_fb + 0.15f * st_throw + 0.12f * perf_echo + 0.1f * dub_up + 0.35f * nova,
+            float g = fm_minf(echo_fb + 0.12f * perf_echo + 0.1f * dub_up + 0.35f * nova,
                               fb_cap + 0.3f * nova);   /* (Dub: past the knob; Supernova, past full) */
             if (ec_pp)
                 g *= g;                          /* (two repeats a turn round: the feedback squared) */
-            tape_lp += tape_lpc * (f1 + fb_lean * st_throw * (f2 - f1) - tape_lp);   /* each time round: thinner, darker */
+            tape_lp += tape_lpc * (f1 - tape_lp);   /* each time round: thinner, darker */
             tape_hp += tape_hpc * (tape_lp - tape_hp);
             fb = ec_fb(tape_lp - tape_hp);       /* (and more dissolved) */
             w = ec_in(tape_acc * 0.25f) + 0.7f * sat(fb * g * (1.0f / 0.7f));
@@ -2512,22 +2361,20 @@ static inline void echoes(float in, float *el, float *er)
         tape_p1 = tape_c1;
         tape_p3 = tape_c3;
         tape_c3 = h3;
-        tape_p2 = tape_c2;
         tape_c1 = h1;
-        tape_c2 = h2;
     }
     {   /* between the tape's samples: a line from the last to the next; then to the field */
         float f = (float)tape_ph * 0.25f;
-        float h1 = tape_p1 + (tape_c1 - tape_p1) * f, h2 = tape_p2 + (tape_c2 - tape_p2) * f;
+        float h1 = tape_p1 + (tape_c1 - tape_p1) * f;
         float h3 = tape_p3 + (tape_c3 - tape_p3) * f;
         if (ec_pp) {                             /* (Width: 0 every repeat both sides, from 50 side to side) */
             const float x = 1.0f - fm_minf(ec_wide, 1.0f);
-            *el = hg[0] * (h1 + x * h3) + hg[2] * h2 * st_throw;
-            *er = hg[1] * (h3 + x * h1) + hg[3] * h2 * st_throw;
+            *el = hg[0] * (h1 + x * h3);
+            *er = hg[1] * (h3 + x * h1);
         } else {
-            *el = hg[0] * h1 + hg[2] * h2 * st_throw;   /* (the second head: only while a throw rings) */
-            *er = hg[1] * (h1 + fm_minf(0.6f * ec_wide, 1.0f) * (h3 - h1)) + hg[3] * h2 * st_throw;   /* (the later head
-                                                  * blended in: 60% at Width 50, all from 84) */
+            *el = hg[0] * h1;
+            *er = hg[1] * (h1 + fm_minf(0.6f * ec_wide, 1.0f) * (h3 - h1));   /* (the later head blended in: 60% at
+                                                  * Width 50, all from 84) */
         }
     }
 }
@@ -2696,14 +2543,11 @@ static void apply(int p, int v)
     case P_REVERB: rev_send = (float)(v * v) * 0.0001f; break;
     case P_FEEDBACK: echo_t60 = 1.5f * fm_exp2f((float)v * (1.0f / 30.0f)); break;   /* the tail: 1.5 s .. 15 s (heads_step) */
     case P_SIZE: pl_decay_t = 0.5f + 0.0045f * (float)v; break;      /* to 0.95 */
-    case P_CUTOFF:                               /* 110 Hz .. 5.4 kHz: the stab's; the plucks' (the sequences) */
-        cut_base = sq_cut = 110.0f * fm_exp2f((float)v * 0.055f);
+    case P_CUTOFF:                               /* 110 Hz .. 5.4 kHz: the plucks' (the sequences) */
+        sq_cut = 110.0f * fm_exp2f((float)v * 0.055f);
         break;
-    case P_DECAY: case P_CVOICE:                 /* 60 ms .. 1.5 s (times the voice's); the filter's envelope, quicker */
+    case P_DECAY: case P_CVOICE:                 /* the Drone's voice; the plucks' length */
         cvoice = (unsigned)par[P_CVOICE] < EN_NCV ? par[P_CVOICE] : 0;
-        st_t60 = 0.06f * fm_exp2f((float)pe(P_DECAY) * 0.0464f) * CV[cvoice].dec;
-        st_dec = fm_expf(-6.9f / (st_t60 * EN_SR));
-        st_fdec = fm_expf(-6.9f * 32.0f / ((0.25f * st_t60 + 0.02f) * EN_SR));   /* (1.3.0: a shorter strike) */
         {   /* the plucks: the filter's envelope 80 .. 250 ms to -60 dB, the sound half as long again */
             const float t = 0.08f * fm_exp2f((float)pe(P_DECAY) * 0.0164f);
             sq_edec = fm_expf(-6.9f / (t * EN_SR));
@@ -2883,7 +2727,6 @@ static void quiet(void)
             pluck[i].on = 0;
             midi(pluck[i].layer ? 0x83u : 0x81u, pluck[i].note, 0);
         }
-    st_env = st_amp = 0.0f;
     notes_off();
 }
 
@@ -2931,15 +2774,7 @@ void en_init(void)
         mod[i].v = mod[i].tgt = 0.0f;
         mod[i].left = 0;
     }
-    for (i = 0; i < EN_NPAD; i++) {
-        float p = (STAB_PAN[i] + 1.0f) * (FM_PI / 4.0f);
-        stab_gl[i] = fm_cosf(p);
-        stab_gr[i] = fm_sinf(p);
-        stab[i].ph[0] = 0.13f * (float)i;
-        stab[i].ph[1] = 0.37f + 0.21f * (float)i;
-    }
     duck_rel = fm_expf(-1.0f / (0.13f * EN_SR));
-    throw_dec = fm_expf(-1.0f / (0.5f * EN_SR));
     arcm = arc = 0.0f;
     for (i = 0; i < P_NPARAMS; i++)
         apply(i, PARAMS[i].def);
@@ -3206,144 +3041,6 @@ static void widen(uint32_t n)
     }
 }
 
-
-static void render_stabs(uint32_t n)
-{
-    uint32_t j;
-    int i;
-    const int cv = cvoice;
-    /* the sound page: Attack (a swell up, a snap down), Colour (as each voice has it: the detune, the FM index, the
-     * drawbars, the noise against the saw), Resonance, Env (how far each stab opens the filter) */
-    const float xa = (float)par[P_CATT] * 0.01f, xc = rel(P_CCOL), up = fm_clampf(1.0f + xc, 0.0f, 2.0f), fx = fm_exp2f(1.5f * xc);
-    const float g = chord_vol * 0.5f * CV[cv].gain,
-                k = fm_clampf(1.1f - 0.6f * fm_clampf(0.5f + 0.5f * arcm, 0.0f, 1.0f) - 0.55f * rel(P_CRES) -
-                                 0.22f * fm_maxf(perf_sw, 0.0f), 0.12f, 2.0f);   /* (Open: it sings) */
-    const float att = fm_clampf(CV[cv].att * fm_exp2f(-(xa > 0.0f ? 9.0f : 3.0f) * xa), 0.00004f, 0.3f),
-                fe = CV[cv].fenv * 1.0f;
-    float pc = 0.0f, ck = click;
-    const float dk = st_dec;
-    const fmpatch_t *pt = cv_patch(cv);
-    const int alg = pt ? fm_alg_of(P_CALG, pt) : 0;
-    const float cfb = pt ? fm_fb(P_CFB, pt) : 0.0f;
-    float s0 = st_s[0], s1 = st_s[1], s2 = st_s[2], s3 = st_s[3], env = st_env, amp = st_amp, thr = st_throw;
-    float hl = st_h[0], hr = st_h[1];
-    if (st_midi_left > 0 && (st_midi_left -= (int32_t)n) <= 0)
-        for (i = 0; i < EN_NPAD; i++)
-            midi(0x80, stab[i].midi_note, 0);
-    if ((env < 3e-4f && amp < 3e-4f) || (SHED && env < 6e-3f && amp < 6e-3f)) {   /* (1.3.0: done at -70 dB, not -100:
-                                                  * past it, nothing heard; shedding, at -44 dB, as the pings) */
-        st_env = st_amp = 0.0f;
-        st_throw = thr * fm_expf(-(float)n / (0.5f * EN_SR));
-        en_pad_level = 0.0f;
-        for (i = 0; i < EN_NPAD; i++)
-            en_pad_amp[i] = 0.0f;
-        return;
-    }
-    for (j = 0; j < n; j++) {
-        float l = 0.0f, r = 0.0f, v1, v2, v3, yl, yr, e;
-        if (!(j & 31u)) {                        /* the filter: its base, its envelope, the sweep */
-            float fc = cut_base * fm_exp2f(fe * st_fenv + 1.6f * arcm + st_cofs + lfo_c + perf_sw + 0.3f * motion * mod[0].v);
-            svf_coefs(st_c, fm_clampf(fc, 90.0f, 12000.0f), k);
-            st_fenv *= st_fdec;
-            pc = st_fenv * st_fenv;              /* (Tonewheel: the percussion, quicker still) */
-            if (pt)
-                for (i = 0; i < EN_NPAD; i++)
-                    fm_ctl(&cfm[i], pt, alg, fx);   /* (Colour: the modulators' levels) */
-        }
-        env *= dk;
-        amp += (env - amp) * att;               /* the strike, without a click (or a swell, for the Pad) */
-        if (cv == CV_NOISE) {                   /* one noise for all four: the filter gives it its pitch */
-            noise = noise * 1664525u + 1013904223u;
-            l = r = (float)(int32_t)noise * (1.0f / 2147483648.0f) * 1.6f * (1.0f - 0.5f * xc);
-        }
-        for (i = 0; i < EN_NPAD; i++) {
-            stab_t *v = &stab[i];
-            float x;
-            switch (cv) {
-            case CV_KEYS: case CV_BELL:          /* the FM core */
-                x = fm_sample(&cfm[i], alg, cfb, 1.0f) * 0.9f;
-                break;
-            case CV_ORGAN: {
-                float p = v->ph[0];
-                x = (sine(p) + up * (0.5f * sine(2.0f * p) + 0.33f * sine(3.0f * p) + 0.2f * sine(4.0f * p))) * 0.8f;
-                break;
-            }
-            case CV_WHEEL: {                     /* 8', 4', 2 2/3' and 2'; the percussion (the third harmonic) dies fast */
-                float p = v->ph[0];
-                x = (sine(p) + up * (0.7f * sine(2.0f * p) + 0.3f * sine(4.0f * p)) + (0.35f * up + 0.9f * pc) * sine(3.0f * p)) * 0.7f;
-                break;
-            }
-            case CV_NOISE:
-                x = 0.35f * up * blep_saw(v->ph[0], v->inc[0]);
-                break;
-            default:                             /* Saws, Pad */
-                x = blep_saw(v->ph[0], v->inc[0]) + blep_saw(v->ph[1], v->inc[1]);
-                break;
-            }
-            v->ph[0] += v->inc[0];
-            if (v->ph[0] >= 1.0f)
-                v->ph[0] -= 1.0f;
-            v->ph[1] += v->inc[1];
-            if (v->ph[1] >= 1.0f)
-                v->ph[1] -= 1.0f;
-            l += x * stab_gl[i];
-            r += x * stab_gr[i];
-        }
-        if (cv == CV_WHEEL) {                   /* the click, and the rotor: left and right in turn */
-            float ro;
-            noise = noise * 1664525u + 1013904223u;
-            ck *= 0.996f;
-            l += ck * (float)(int32_t)noise * (1.0f / 2147483648.0f);
-            r += ck * (float)(int32_t)noise * (1.0f / 2147483648.0f);
-            rotor += 5.6f / EN_SR;              /* the fast speed, ~5.6 turns a second */
-            if (rotor >= 1.0f)
-                rotor -= 1.0f;
-            ro = 0.3f * sine(rotor);
-            l *= 1.0f + ro;
-            r *= 1.0f - ro;
-        }
-        v3 = l - s1;                             /* the low-pass, left */
-        v1 = st_c[0] * s0 + st_c[1] * v3;
-        v2 = s1 + st_c[1] * s0 + st_c[2] * v3;
-        s0 = 2.0f * v1 - s0;
-        s1 = 2.0f * v2 - s1;
-        yl = v2;
-        v3 = r - s3;                             /* and right */
-        v1 = st_c[0] * s2 + st_c[1] * v3;
-        v2 = s3 + st_c[1] * s2 + st_c[2] * v3;
-        s2 = 2.0f * v1 - s2;
-        s3 = 2.0f * v2 - s3;
-        yr = v2;
-        e = amp * g;
-        yl = sat(yl * e * 3.0f) * 0.4f;
-        yr = sat(yr * e * 3.0f) * 0.4f;
-        hl += 0.0225f * (yl - hl);               /* a gentle high-pass, ~160 Hz: the stabs out of the low-mids */
-        hr += 0.0225f * (yr - hr);
-        yl -= hl;
-        yr -= hr;
-        mixl[j] += yl * chord_dry * (1.0f - 0.5f * thr);   /* (Ghost: the dry against the sends; a throw's, -6 dB) */
-        mixr[j] += yr * chord_dry * (1.0f - 0.5f * thr);
-        esend[j] += (yl + yr) * (0.8f + 2.5f * thr) * chord_snd;
-        rsend[j] += (yl + yr) * 0.35f;
-        thr *= throw_dec;
-    }
-    gate_ctr += (int32_t)n;
-    st_s[0] = fm_flush(s0);
-    st_s[1] = fm_flush(s1);
-    st_s[2] = fm_flush(s2);
-    st_s[3] = fm_flush(s3);
-    st_h[0] = fm_flush(hl);
-    st_h[1] = fm_flush(hr);
-    st_env = env;
-    st_amp = amp;
-    st_throw = thr;
-    click = fm_flush(ck);
-    en_pad_level = fm_minf(amp * 1.2f, 1.0f);
-    for (i = 0; i < EN_NPAD; i++) {
-        en_pad_note[i] = stab[i].note;
-        en_pad_amp[i] = amp;
-    }
-}
 
 /* a hat: the metal and noise, high-passed (Chamberlin SVF, ~1.8 to 5 kHz by Hats) and low-passed (~8 kHz):
  * in the references' 2-8 kHz, not the air above (1.3.0); no pitch; into the echo (metal: the square's share,
@@ -3891,7 +3588,7 @@ static void render_crackle(uint32_t n)
             f = (float)ph * 0.25f;               /* (back to the full rate: a line from the last to the next) */
             l = (pl + (ql - pl) * f) * dnr;
             r = (pr + (qr - pr) * f) * dnr;
-            esend[j] += (l + r) * (0.15f * ne + 0.8f * st_throw);   /* (a little into the echo, Echo; a throw, more) */
+            esend[j] += (l + r) * (0.15f * ne);   /* (a little into the echo, Echo) */
             rsend[j] += (l + r) * 0.3f * np + h * gh * 0.4f;   /* (the plate, Plate) */
             l *= 0.75f * nw;                     /* (the dry -2.5 dB, less into the plate than before: further back,
                                                   * its breathing heard, not smoothed into the plate's wash; PERFORM's
@@ -4311,7 +4008,6 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
     for (j = 0; j < n; j++)
         mixl[j] = mixr[j] = rsend[j] = esend[j] = kickb[j] = 0.0f;
     lfo_step();
-    render_stabs(n);
     render_plucks(n);
     render_drone(n);
     render_lead(n);
@@ -4332,14 +4028,6 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
         duck_x *= duck_rel;
         dg = 1.0f - 0.3f * duck_depth * duck_d;  /* the duck: the wash ducked lightly */
         echoes(esend[j] * eg, &el, &er);
-        {   /* (a strike: the returns down by up to 6 dB, back over ~150 ms; not a throw's, which rides over) */
-            float ge;
-            ec_dd += (ec_dk - ec_dd) * 0.05f;
-            ec_dk *= 0.99985f;
-            ge = 1.0f - 0.5f * fm_minf(ec_dd, 1.0f) * (1.0f - st_throw);
-            el *= ge;
-            er *= ge;
-        }
         epk = fm_maxf(epk, fm_fabsf(el + er));   /* (the screen's ripples: the echo as it comes out) */
         rin = (rsend[j] * rg + (el + er) * 0.12f * rev_send) * 0.8f;   /* (the classics pass: less of the echo into
                                                   * the plate, 0.25 before: the repeats stay distinct) */
