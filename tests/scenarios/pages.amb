@@ -1,0 +1,99 @@
+# BERLIN's pages: every button and its presses, each page's knobs as the reader says them (one layout: a layer's main
+# page K1 how much, K2 octave (the Drone: Reso; the Atmosphere: Width), K3 and K4 its own; its sound page brightness,
+# envelope, Reverb, Echo), the voices on ALGORITHM, a knob turned, a layer's level on OCT+
+wait 200
+listen
+wait 300
+expect view 0
+said Berlin page: Filter Off, Evolve 55, Motion 30, Drift
+tap HOME
+wait 300
+expect view 18
+said Key page: Tempo 122, Root F, Mode Dorian, Transpose Parallel
+tap ENV
+wait 300
+expect view 1
+said Drone page, voice Organ: Pedal 70, Reso 0, Phaser 40, Attack 40
+tap ENV
+wait 300
+expect view 8
+said Drone sound page, voice Organ: Colour 0, Release 50, Reverb 50, Echo 50
+tap ARP
+wait 300
+expect view 2
+said Sequence page, voice 2600: Density 60, Octave 0, Length 8, Grid 8ths
+tap ARP
+wait 300
+expect view 9
+said Seq sound page, voice 2600: Cutoff 40, Decay 25, Reverb 50, Echo 50
+tap ARP
+wait 300
+expect view 13
+said Repeats page, voice 2600: Repeat A 100, A time 1/8., Repeat B 0, B time 1/4
+tap ARP
+wait 300
+expect view 2
+tap LFO
+wait 300
+expect view 3
+said Lead page, voice Odyssey: Phrases 50, Octave 0, Glide 25, Vibrato 40
+tap LFO
+wait 300
+expect view 10
+said Lead sound page, voice Odyssey: Tone 50, Attack 10, Reverb 90, Echo 90
+tap SEQ
+wait 300
+expect view 4
+said Sequence 2 page, voice Moog: Chance 100, Octave -1, Length 7, Level 60
+tap SEQ
+wait 300
+expect view 11
+said Seq2 sound page, voice Moog: Cutoff 40, Decay 35, Reverb 50, Echo 50
+tap SAVE
+wait 300
+expect view 19
+said Atmosphere page, character Wind: Density 0, Width 50, Drift 0, Air 0
+tap SAVE
+wait 300
+expect view 21
+said Atmos sound page, character Wind: Colour 0, Ring 50, Reverb 50, Echo 50
+tap FX
+wait 300
+expect view 5
+said Space page: Echo
+tap FX
+wait 300
+expect view 20
+said Echo page: Blur
+tap GLO
+wait 300
+expect view 6
+said Setup page: Tune 0, MIDI out On
+tap GLO
+wait 300
+expect view 22
+said Arc page: Seq2 in 8, Lead in 16, Sweep 50, Motion 30
+# the voices: ALGORITHM on a layer's page
+tap ENV
+wait 300
+turn ALGO 1
+wait 300
+said VOICE Strings
+expect par22 1
+tap LFO
+wait 300
+turn ALGO 1
+wait 300
+said VOICE Mini
+# a knob: its value said once it settles
+tap ARP
+wait 300
+spin K3 4
+wait 300
+said Length 12
+expect par28 12
+# a layer's level: OCT+ (5 a press)
+expect par1 70
+tap OCT+
+wait 300
+expect par1 75

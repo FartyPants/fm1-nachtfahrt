@@ -664,7 +664,7 @@ static void set_voice(int p, int v)
     proj.par[p] = (int16_t)v;
     en_set(p, v);
     en_param_text(p, v, t);
-    say(p == P_S2VOICE ? "KIT" : "VOICE", t);
+    say("VOICE", t);
     mark_dirty();
 }
 
@@ -3040,7 +3040,7 @@ static void sp_page(int all)
     } else if (view_voice(ui.view) >= 0) {
         char vn[12];
         en_param_text(view_voice(ui.view), proj.par[view_voice(ui.view)], vn);
-        sp_cat(view_voice(ui.view) == P_S2VOICE ? ", kit " : ", voice ");
+        sp_cat(", voice ");
         sp_cat(vn);
     }
     if (ui.view == V_CHORDS) {

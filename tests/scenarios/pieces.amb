@@ -1,66 +1,44 @@
-# the pieces: PRESETS picks one, each remembers its settings, SAVE held resets one, all saved
+# the pieces: PRESETS through all eight and round; each keeps what's changed on it; GLO held saves; a reboot brings
+# them back as they were left; GLO held on, a piece back to its recipe
 wait 500
 expect piece 0
-# Basic's throws down to nothing and its cutoff wide open (the Chord page: ENV)
-tap ENV
-spin K2 -100
-expect par111 0
-spin K4 100
-expect par12 100
-# the next piece: Chamber, its recipe (A Aeolian, its own throws)
+expect playing 1
 turn PRESET 1
+wait 300
 expect piece 1
-expect par19 9
-expect par20 5
-expect pool 0x5AD
-expect par111 >0
-expect par12 <100
-wait 8000
-shot chamber.png
-# and Steppers: a groove of its own, the grid running at its tempo
+turn PRESET 6
+wait 300
+expect piece 7
 turn PRESET 1
-expect piece 2
-expect par24 2
-wait 20000
-shot steppers.png
-expect sixteenths >150
-# the cutoff (the Chord page's fourth knob), kept with the piece
-spin K4 -100
-expect par12 0
-wait 3000
-# back to Basic: as it was left
-turn PRESET -2
+wait 300
 expect piece 0
-expect par111 0
-expect par12 100
-spin K4 -1
-expect par12 99
+# piece 0's Sequence Length to 12, then to piece 2 and back: kept
+tap ARP
+wait 300
+spin K3 4
+wait 300
+expect par28 12
 turn PRESET 2
-expect par12 0
+wait 300
+expect piece 2
+expect par28 8
 turn PRESET -2
-expect par12 99
-# SAVE held: Basic's recipe again (not saved by that)
+wait 300
+expect par28 12
+# saved (GLO held half a second), the flash read back at boot
+press GLO
+wait 700
+release GLO
+wait 300
+expect dirty 0
+reboot
+wait 1000
+expect format 4
+expect piece 0
+expect par28 12
+# GLO held on (1.5 s): back to its recipe
 press GLO
 wait 1700
 release GLO
-expect par111 >0
-expect par12 <99
-expect store_writes 0
-# a tweak, saved, survives a reboot, on the piece it was made on (the Pings page: ARP, its Ghost)
-tap ARP
-spin K2 -100
-spin K2 70
-expect par112 70
-turn PRESET 6
-expect piece 6
-press GLO
-wait 600
-release GLO
-expect store_writes 1
-reboot
 wait 300
-expect piece 6
-# PRESETS goes round: 6, 7, then 0
-turn PRESET 2
-expect piece 0
-expect par112 70
+expect par28 8

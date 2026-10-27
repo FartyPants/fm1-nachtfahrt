@@ -11,8 +11,11 @@ const cstr = (p) => { const m = new Uint8Array(ex.memory.buffer); let e = p; whi
 let fails = 0;
 const check = (ok, what) => { if (!ok) { console.log("FAIL", what); fails++; } };
 check(ex.app_npieces() === 8, "eight pieces");
-check(cstr(ex.app_piece_name(2)) === "Steppers", "piece 2 is Steppers");
-check(ex.app_piece_par(1, 18) === 118, "Chamber's tempo 118");
+for (let i = 0; i < 8; i++) {                    /* (BERLIN) each piece named, its tempo in the range (60 .. 160) */
+  check(cstr(ex.app_piece_name(i)).length > 0, `piece ${i} named`);
+  const t = ex.app_piece_par(i, 18);
+  check(t >= 60 && t <= 160, `piece ${i}'s tempo ${t}`);
+}
 check(cstr(ex.app_param_text(6, 6)) === "Hold" && cstr(ex.app_param_text(6, 4)) === "32 bars", "Drift's text");
 check(cstr(ex.app_chord_name(2, 2, 5, 9, 0)) === "Dm7", "a chord's name: " + cstr(ex.app_chord_name(2, 2, 5, 9, 0)));
 ex.app_init();
@@ -26,7 +29,7 @@ run(30);
 check(!bad && peak > 0.05 && peak < 1, `a piece plays (peak ${peak.toFixed(3)})`);
 const st = new Float32Array(ex.memory.buffer, ex.app_state(), ex.app_state_len());
 check(st[0] === 1 && st[16] > 100, "the state: playing, the grid running");
-for (let p = 0; p < ex.app_nparams(); p++) ex.app_set(p, ex.app_piece_par(2, p));   /* Steppers */
+for (let p = 0; p < ex.app_nparams(); p++) ex.app_set(p, ex.app_piece_par(2, p));   /* (the third piece) */
 ex.app_pool(ex.app_piece_pool(2));
 ex.app_regrow();
 peak = 0;
