@@ -1,0 +1,15 @@
+wait 2000
+press REC
+wait 500
+shot g_full.png
+key w5 down
+key w13 down
+wait 400
+shot g_full2.png
+turn K1 5
+release REC
+key w5 up
+key w13 up
+wait 600
+shot g_after.png
+expect par15 50

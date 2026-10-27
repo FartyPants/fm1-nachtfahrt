@@ -1,0 +1,29 @@
+# the manual's page screenshots
+wait 9000
+tap ENV
+wait 400
+shot screen-chord.png
+tap ARP
+wait 400
+shot screen-pings.png
+tap LFO
+wait 400
+shot screen-bass.png
+tap SEQ
+wait 400
+shot screen-drums.png
+tap GLO
+wait 400
+shot screen-setup.png
+tap FX
+wait 400
+shot screen-space.png
+turn K3 3
+wait 300
+shot screen-turning.png
+tap HOME
+wait 2000
+press GLO
+wait 1100
+shot screen-help.png
+release GLO

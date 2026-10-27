@@ -1,0 +1,21 @@
+listen
+wait 2000
+turn PRESET 5
+wait 800
+tap ENV
+tap ENV
+tap ENV
+wait 300
+expect view 12
+tap LFO
+tap LFO
+tap LFO
+wait 300
+expect view 14
+turn PRESET -5
+wait 800
+tap ENV
+tap ENV
+tap ENV
+wait 300
+expect view 1

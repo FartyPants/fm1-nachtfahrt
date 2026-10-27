@@ -1,0 +1,24 @@
+# the main screen, PERFORM: mutes and moves
+wait 9000
+shot main.png
+tap SEL
+wait 300
+tapkey w3
+wait 2000
+key w5 down
+wait 2500
+shot perform.png
+key w5 up
+key w9 down
+wait 3000
+key w9 up
+tapkey w3
+leds
+tap REC
+wait 2500
+shot hold.png
+tap REC
+press SEL
+wait 1200
+shot help_sel.png
+release SEL

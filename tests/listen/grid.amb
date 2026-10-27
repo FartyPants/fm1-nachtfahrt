@@ -1,0 +1,20 @@
+listen
+wait 3000
+press REC
+wait 400
+shot grid.png
+key w4 down
+key w12 down
+wait 600
+shot grid2.png
+leds
+release REC
+wait 300
+key w4 up
+key w12 up
+wait 600
+expect frozen 0
+tap REC
+wait 300
+expect frozen 1
+tap REC

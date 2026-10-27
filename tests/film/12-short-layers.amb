@@ -1,0 +1,40 @@
+# Short 3, "One layer at a time" (vertical, tools/film.py --layout vertical): Night Drive in PERFORM, taken
+# down to the kick alone with a solo, then built back up a solo at a time (the bass, the chords, the pings,
+# the hats: all five soloed is the whole mix), the solos let go, then THROW, and DROP slamming back.
+# Each `bar` prints the film's time there (the cue sheet for the labels).
+turn PRESET 5 5
+wait 30
+expect piece 5
+bar 8
+wav 12-short-layers.wav
+film 12-short-layers.film
+bar 8 NIGHT DRIVE playing
+bar 10 SEL: PERFORM
+tap SEL
+bar 11 black 4: the kick soloed
+tapkey b3
+bar 13 black 3: + the bass
+tapkey b2
+bar 15 black 1: + the chords
+tapkey b0
+bar 17 black 2: + the pings
+tapkey b1
+bar 19 black 5: + the hats (all five: the whole mix)
+tapkey b4
+bar 21 the solos let go; white 7 held: THROW
+tapkey b0
+tapkey b1
+tapkey b2
+tapkey b3
+tapkey b4
+key w6 down
+bar 23 white 10 held: DROP
+key w6 up
+key w9 down
+bar 25 let go: the floor slams back
+key w9 up
+bar 26 SEL off
+tap SEL
+bar 30 END
+filmstop
+wavstop

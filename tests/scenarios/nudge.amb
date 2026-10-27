@@ -1,0 +1,158 @@
+# the nudge: a layer's button held (ENV the chord, ARP the pings, LFO the bass, SEQ the drums) moves its sound a
+# step (a walk pulled back to the piece's recipe), says the biggest change and shows the layer's sound page; held
+# on, a shake (a new voice or kit, every value a big step);
+# a tap is the page, as ever. Evolve nudges by itself, now and then on a phrase's first bar: at 100 it does, at 40
+# (and under) never
+listen
+wait 2000
+press ENV
+wait 700
+release ENV
+wait 300
+said CHORD NUDGE
+expect view 8
+press ARP
+wait 700
+release ARP
+wait 300
+said PINGS NUDGE
+expect view 9
+press LFO
+wait 700
+release LFO
+wait 300
+said BASS NUDGE
+expect view 10
+press SEQ
+wait 700
+release SEQ
+wait 300
+said DRUMS NUDGE
+expect view 11
+# held on (1.5 s): a shake, a new voice (Basic's chord: Saws, 0) and every value a big step
+press ENV
+wait 1800
+release ENV
+wait 300
+said CHORD SHAKE
+expect par22 >0
+expect view 8
+# held on, the drums: another kit
+press SEQ
+wait 1800
+release SEQ
+wait 300
+said DRUMS SHAKE
+expect par35 >0
+# the bass held on: a shake, a new voice and a new groove (a neighbour)
+press LFO
+wait 1800
+release LFO
+wait 300
+said BASS SHAKE
+expect view 10
+# FX, the space: a nudge, then held on a shake (a new echo time); the Space page
+press FX
+wait 700
+release FX
+wait 300
+said SPACE NUDGE
+expect view 5
+press FX
+wait 1800
+release FX
+wait 300
+said SPACE SHAKE
+# a tap: the page (no nudge)
+tap ENV
+wait 300
+expect view 1
+said_none NUDGE
+# Evolve 40: two minutes playing, nothing nudged (saved, then still saved)
+tap HOME
+wait 300
+expect view 0
+spin K2 -15
+wait 200
+expect par5 40
+press GLO
+wait 600
+release GLO
+wait 300
+expect dirty 0
+wait 120000
+expect dirty 0
+# Evolve 100: two minutes, the sound nudged (the project changed)
+spin K2 60
+wait 200
+expect par5 100
+press GLO
+wait 600
+release GLO
+wait 300
+expect dirty 0
+wait 120000
+expect dirty 1
+# a nudge of yours shows a card in the middle (amber), a shake's red; Evolve's don't; gone after ~1.8 s
+tap HOME
+wait 2500
+expect card 0
+press ENV
+wait 700
+release ENV
+wait 200
+expect card 1
+wait 2000
+expect card 0
+press LFO
+wait 1700
+release LFO
+wait 200
+expect card 2
+# every long press its card: EDIT held (the next chord), held on (new chords, red); GLO held (saved), held on (reset)
+wait 2000
+press EDIT
+wait 700
+release EDIT
+wait 200
+expect card 1
+wait 2000
+press EDIT
+wait 1700
+release EDIT
+wait 200
+expect card 2
+wait 2000
+press GLO
+wait 700
+release GLO
+wait 200
+expect card 1
+wait 2000
+press GLO
+wait 1700
+release GLO
+wait 200
+expect card 2
+# HOME held on: a shake of everything (the chord's, the pings', the bass's voices and the kit, the noise's character);
+# the page kept; HOME with SELECT turned is still the tempo
+tap ENV
+wait 300
+expect view 1
+turn PRESET 1
+turn PRESET -1
+press GLO
+wait 1700
+release GLO
+wait 300
+expect par22 0
+expect par35 0
+press HOME
+wait 1700
+release HOME
+wait 200
+said SHAKE EVERYTHING
+expect card 2
+expect view 1
+expect par22 !=0
+expect par35 !=0

@@ -1,0 +1,50 @@
+# Short 6, "The Bass page" (vertical, tools/film.py --layout vertical): Concrete playing (the Pluck bass on the
+# Roller groove, the drums forward), LFO for the Bass page; Groove through Drone, Offbeat, Dotted, Sync and back
+# to Roller; Octave up one; ALGORITHM through the bass voices, Growl, Punch and Rubber (the octave home), and back
+# to Pluck; then Fifth up (a slow turn). Every move from a bar's downbeat. The take ends on bar 32, where a Break
+# (the kick and the bass out) begins. Each `bar` prints the film's time there (the cue sheet for the labels).
+turn PRESET 4 5
+wait 30
+expect piece 4
+bar 8
+wav 15-short-bass.wav
+film 15-short-bass.film
+bar 8 CONCRETE playing (C pentatonic minor, 130)
+bar 10 LFO: the Bass page
+tap LFO
+bar 11 KNOB 3, Groove: Drone
+turn K3 -3 150
+expect par24 0
+bar 13 Groove: Offbeat
+turn K3 1 150
+bar 14 Groove: Dotted
+turn K3 1 150
+bar 15 Groove: Sync
+turn K3 2 150
+bar 16 Groove: back to Roller
+turn K3 -1 150
+expect par24 3
+bar 18 KNOB 2, Octave up one
+turn K2 1 150
+expect par23 1
+bar 20 the octave home; ALGORITHM: the voice Growl
+turn K2 -1 150
+turn ALGO 1 150
+expect par23 0
+expect par34 4
+bar 22 Punch
+turn ALGO 2 300
+expect par34 1
+bar 24 Rubber
+turn ALGO 1 300
+expect par34 2
+bar 26 back to Pluck
+turn ALGO 1 300
+expect par34 3
+bar 27 KNOB 4, Fifth 30 up to 75: the fifth more often
+turn K4 45 50
+expect par25 75
+bar 29 the end card
+bar 32 END
+filmstop
+wavstop

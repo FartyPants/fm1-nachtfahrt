@@ -1,0 +1,51 @@
+# Short 8, "Play it" (vertical, tools/film.py --layout vertical): Haze playing; SEL for PERFORM and three held
+# moves, Open, Shut, Echo; then REC held for the effects grid and seven of its sixteen (the ones short 1 didn't
+# play): Time x2, Wah, Phone, Crash, Freeze, Wash, Gate, a bar each. Every move on a bar's downbeat.
+# Each `bar` prints the film's time there (the cue sheet for the labels).
+turn PRESET 7 5
+wait 30
+expect piece 7
+bar 8
+wav 17-short-play.wav
+film 17-short-play.film
+bar 8 HAZE playing (Eb Ionian, 116)
+bar 10 SEL: PERFORM
+tap SEL
+bar 11 white 8 held: OPEN
+key w7 down
+bar 13 white 9 held: SHUT
+key w7 up
+key w8 down
+bar 15 white 11 held: ECHO
+key w8 up
+key w10 down
+bar 17 let go; SEL off; REC held: the effects grid
+key w10 up
+tap SEL
+press REC
+bar 18 white 2: TIME x2
+key w1 down
+bar 19 white 7: WAH
+key w1 up
+key w6 down
+bar 20 white 8: PHONE
+key w6 up
+key w7 down
+bar 21 white 10: CRASH
+key w7 up
+key w9 down
+bar 22 white 11: FREEZE
+key w9 up
+key w10 down
+bar 23 white 12: WASH
+key w10 up
+key w11 down
+bar 24 white 14: GATE
+key w11 up
+key w13 down
+bar 25 let go
+key w13 up
+release REC
+bar 29 END
+filmstop
+wavstop

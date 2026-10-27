@@ -1,0 +1,17 @@
+wait 3000
+tap SEL
+wait 300
+turn K3 -10
+wait 400
+shot mix.png
+press SEL
+wait 1200
+shot help_sel.png
+release SEL
+wait 300
+turn SELECT 1
+wait 300
+shot after_select.png
+tap SEL
+wait 300
+shot back.png

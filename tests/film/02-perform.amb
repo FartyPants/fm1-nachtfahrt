@@ -1,0 +1,41 @@
+# the video, clip 2: PERFORM (SEL): the knobs a mixer, the white keys mutes (1-5) and moves (6-10, held)
+wait 8000
+wav 02-perform.wav
+film 02-perform.film
+wait 2000
+tap SEL
+wait 3000
+turn K2 12 60
+wait 2500
+tapkey w2
+wait 4000
+tapkey w2
+wait 2000
+tapkey w3
+wait 4000
+tapkey w3
+wait 2000
+key w5 down
+wait 4500
+key w5 up
+wait 2000
+key w6 down
+wait 3500
+key w6 up
+wait 1000
+key w7 down
+wait 3500
+key w7 up
+wait 2000
+key w8 down
+wait 4000
+key w8 up
+wait 2000
+key w9 down
+wait 4000
+key w9 up
+wait 4000
+tap SEL
+wait 2000
+filmstop
+wavstop

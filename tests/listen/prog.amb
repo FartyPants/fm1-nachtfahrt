@@ -1,0 +1,18 @@
+listen
+wait 3000
+press EDIT
+wait 400
+shot prog_empty.png
+tapkey w0
+tapkey w3
+tapkey w4
+tapkey w6
+wait 300
+shot prog_writing.png
+release EDIT
+wait 2500
+shot prog_main.png
+press EDIT
+wait 400
+shot prog_held.png
+release EDIT

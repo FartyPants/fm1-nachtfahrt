@@ -1,0 +1,42 @@
+# dub hold, next chord, stop and rest, save and reboot
+wait 2000
+tap REC
+wait 50
+expect frozen 1
+shot dub_hold.png
+wait 3000
+tap REC
+wait 50
+expect frozen 0
+# the next chord comes on the bar
+press EDIT
+wait 600
+release EDIT
+wait 4000
+# the pings an octave up (the Pings page's KNOB 2)
+tap ARP
+spin K2 1
+expect par21 1
+# the chord's level, on PERFORM's mix (white 6 held)
+tap SEL
+key w5 down
+spin K1 -100
+spin K1 40
+key w5 up
+tap SEL
+expect par0 40
+tap PLAY
+wait 50
+expect playing 0
+wait 50000
+expect pad_level <1
+shot resting.png
+# while resting, the change saves itself
+wait 5000
+expect dirty 0
+expect store_writes >0
+reboot
+wait 300
+expect par0 40
+expect par21 1
+expect playing 1

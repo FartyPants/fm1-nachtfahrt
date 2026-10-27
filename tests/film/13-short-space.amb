@@ -1,0 +1,46 @@
+# Short 4, "The Space page" (vertical, tools/film.py --layout vertical): Chamber playing (the most echo, deep
+# feedback, one chord held), FX for the Space page, and its four knobs one at a time, each turn slow (single
+# steps, 50 ms apart) from a bar's downbeat: Echo taken dry, Reverb up into the plate (heard best with the echo
+# out of the way) and back, Echo back up, Echo time through 1/4 and 1/2 and back to 1/8., Feedback past 100%
+# (it swells) over the Break and back. The take starts at bar 32, so the dry echo falls in a Full phrase (in
+# the Break before it, Echo at 0 left near silence between the chords). Each `bar` prints the film's time
+# there (the cue sheet for the labels).
+turn PRESET 1 5
+wait 30
+expect piece 1
+bar 32
+wav 13-short-space.wav
+film 13-short-space.film
+bar 32 CHAMBER playing (A Aeolian, 118)
+bar 34 FX: the Space page
+tap FX
+bar 35 KNOB 1, Echo 70 down to 0: dry
+turn K1 -70 50
+expect par8 0
+bar 37 KNOB 4, Reverb 45 up to 100: into the plate
+turn K4 55 50
+expect par10 100
+bar 39 Reverb back to 45
+turn K4 -55 50
+expect par10 45
+bar 41 KNOB 1 again, Echo 0 up to 70: wet
+turn K1 70 50
+expect par8 70
+bar 43 KNOB 2, Echo time 1/8. to 1/4
+turn K2 1 150
+expect par9 2
+bar 45 Echo time 1/2
+turn K2 2 150
+expect par9 4
+bar 47 Echo time back to 1/8.
+turn K2 -3 150
+expect par9 1
+bar 48 KNOB 3, Feedback up to the top: it swells
+turn K3 25 50
+expect par11 100
+bar 51 Feedback back
+turn K3 -25 50
+expect par11 75
+bar 56 END
+filmstop
+wavstop

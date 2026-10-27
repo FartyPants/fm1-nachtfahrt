@@ -1,0 +1,93 @@
+# the video, clip 4: making a piece your own: tempo and drift, a voice and its sound, the echo, the chords,
+# the drums, SAVE
+wait 8000
+wav 04-make.wav
+film 04-make.film
+wait 2000
+press HOME
+wait 400
+turn SELECT -6 150
+wait 600
+release HOME
+wait 1500
+turn K4 -4 200
+wait 2500
+tap ENV
+wait 2000
+turn ALGO 1 300
+wait 4000
+turn ALGO 3 300
+wait 4000
+tap ENV
+wait 1500
+turn K2 12 70
+wait 1500
+turn K4 15 70
+wait 3000
+tap ENV
+wait 1500
+turn K1 3 300
+wait 1500
+turn K3 25 60
+wait 3500
+tap FX
+wait 1500
+turn K3 14 80
+wait 3000
+turn K2 1 200
+wait 4000
+tap HOME
+wait 500
+tap EDIT
+wait 1200
+tapkey w0
+wait 300
+turn K3 2 200
+wait 600
+turn K1 1 200
+tapkey b2
+wait 300
+turn K3 2 200
+wait 600
+turn K1 1 200
+tapkey w4
+wait 300
+turn K3 2 200
+wait 600
+turn K1 1 200
+tapkey b1
+wait 300
+turn K2 -1 200
+wait 300
+turn K3 3 200
+wait 9000
+tap EDIT
+wait 800
+tap SEQ
+wait 300
+tap SEQ
+wait 300
+tap SEQ
+wait 1500
+tapkey w6
+wait 400
+tapkey w14
+wait 2500
+turn K1 1 250
+wait 600
+tapkey w1
+wait 250
+tapkey w9
+wait 2500
+turn K1 2 250
+wait 600
+tapkey w4
+wait 250
+tapkey w12
+wait 5000
+tap SAVE
+wait 2500
+tap HOME
+wait 6000
+filmstop
+wavstop

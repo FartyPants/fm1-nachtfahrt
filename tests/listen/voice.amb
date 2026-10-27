@@ -1,0 +1,20 @@
+listen
+wait 4000
+tap ENV
+wait 300
+turn ALGO 2
+wait 300
+shot voice_chord.png
+tap SEQ
+wait 200
+turn ALGO 1
+wait 300
+shot voice_kit.png
+press ARP
+wait 1200
+shot help_arp.png
+release ARP
+tap HOME
+turn ALGO 1
+wait 300
+expect par20 2

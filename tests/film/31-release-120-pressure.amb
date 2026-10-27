@@ -1,0 +1,114 @@
+# DUB-1 1.2.0's launch video, the Pressure version, in one take (on the 1.2.0 build, tag v1.2.0): the same moves as
+# 30-release-120.amb, played on Pressure (E Phrygian, 128: the kick and bass forward, one chord held) instead of
+# Night Drive, then a transition by hand to Chamber (A Aeolian, 118: the same seven notes, one chord, a long echo).
+# Every move on a bar's downbeat; the split framing (tools/film.py --layout split --scale 2). The title clip covers
+# the first 4 s (the boot's launch screen). Each `bar` prints the film's time there: the cue sheet
+# (build/film/channel/long_videos/release-1.2.0-pressure/).
+# Pressure (6), from the boot's Basic (0), before the film: the first frame is the launch screen.
+# (The 72 ms first: choosing the piece seeds its generators with the time, and this seed keeps Pressure Full every
+# phrase to the piece change, and Chamber Full to the end, checked on the screen's section name bar by bar, so no
+# Thin, Groove or Break phrase hides a move; 48 ms, Night Drive's wait, turned Pressure's bars 8-15 Groove.
+# Of the all-Full seeds from 10 to 160 ms, 72 has few stabs and a clear Dub build; 11 had fewer, but its Dub barely built.)
+# Pressure has few stabs, and the take keeps them few: Energy up only to +30 and for 3 bars, Energy down held 4;
+# the finale carries Energy down (-30) across the change, not up (+20 doubled Chamber's stabs).
+wait 72
+turn PRESET 6 5
+wait 30
+expect piece 6
+splash 0
+wav 31-release-120-pressure.wav
+film 31-release-120-pressure.film
+bar 0 OPEN: the launch screen (under the title); Pressure starts
+splashrun
+expect view 0
+expect screen 0
+bar 2 1. MADE FOR PLAYING LIVE: Pressure, the Dub page
+# ------------------------------------------------------------------ the Filter, HOME's first knob ---
+bar 5 2. THE FILTER (KNOB 1): down, under water (Shut 90 over 3 bars)
+turn K1 -45 125
+bar 8 under water; the kick still pumping
+bar 9 back up through Off
+turn K1 45 60
+bar 11 up: thin and bright (Open 80 over 2.5 bars)
+turn K1 40 120
+bar 14 back to Off
+turn K1 -40 60
+# ------------------------------------------------------------------ ALGORITHM: the screen ---
+bar 16 3. ALGORITHM: the scope
+turn ALGO 1 300
+expect screen 1
+bar 18 ALGORITHM: the spectrum
+turn ALGO 1 300
+expect screen 2
+bar 20 ALGORITHM: the ripples again
+turn ALGO 1 300
+expect screen 0
+# ------------------------------------------------------------------ HOME again: the Key page ---
+bar 21 4. HOME again: the Key page
+tap HOME
+expect view 18
+bar 22 KNOB 4: Swing up
+turn K4 40 60
+bar 24 Swing back
+turn K4 -40 45
+bar 25 HOME: back to the Dub page
+tap HOME
+expect view 0
+# ------------------------------------------------------------------ PERFORM: the master actions ---
+bar 26 5. PERFORM (SEL): the master actions
+tap SEL
+expect view 17
+bar 27 KNOB 2: Dub up to +40 (the echo towards a runaway; +50 built 5.3 LU on Pressure, more than on Night Drive)
+turn K2 20 100
+bar 32 Dub back
+turn K2 -20 60
+bar 34 KNOB 3: Energy down to -80 (sparse), held 4 bars
+turn K3 -40 60
+bar 38 Energy up through 0 (it stops there) to +30, for 3 bars only (Pressure's stabs kept few: +30 is reached a bar in and held ~2.3 s)
+turn K3 40 60
+turn K3 15 60
+bar 41 Energy back
+turn K3 -15 60
+bar 43 KNOB 4: Space up to +70
+turn K4 35 50
+bar 46 Space back
+turn K4 -35 45
+bar 48 KNOB 1: the Filter, in PERFORM too (Open 70)
+turn K1 35 50
+bar 50 the Filter back to Off
+turn K1 -35 50
+# ------------------------------------------------------------------ white 6 held: the mix ---
+bar 51 6. WHITE 6 HELD: the mix
+key w5 down
+expect view 7
+bar 52 KNOB 3: the bass down
+turn K3 -40 45
+bar 54 the bass back
+turn K3 40 45
+expect par2 75
+bar 55 white 4: the kick muted (white 6 still held)
+tapkey w3
+bar 56 white 4: the kick back (the Drums level as it was)
+tapkey w3
+expect par3 80
+bar 57 let go of white 6
+key w5 up
+expect view 17
+# ------------------------------------------------------------------ the finale: a transition by hand ---
+bar 58 7. A TRANSITION BY HAND: Energy down to -30 (sparse, dubby), the Filter down
+turn K3 -15 50
+turn K1 -45 60
+bar 61 PRESETS: Chamber, under water
+turn PRESET -5 5
+expect piece 1
+bar 63 the Filter opens up on the downbeat
+turn K1 45 45
+bar 65 the master actions kept: Energy still -30 on Chamber
+bar 67 Energy back (Chamber fills in); SEL off
+turn K3 15 50
+tap SEL
+expect view 0
+bar 69 END CARD (the music fades over the last bars)
+bar 74 END
+filmstop
+wavstop

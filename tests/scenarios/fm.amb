@@ -1,0 +1,66 @@
+# the FM pages: a third press on an FM voice; the algorithm overridden, kept by the piece; a non-FM voice: back
+listen
+wait 3000
+tap ENV
+wait 200
+turn ALGO 1
+wait 300
+said VOICE Keys
+tap ENV
+tap ENV
+wait 400
+said Chord FM page, voice Keys: Algo Voice, Ratio 0, Feedback 0, LFO +25
+expect view 12
+spin K1 1
+wait 300
+expect par52 1
+said Algo 1
+spin K3 40
+wait 300
+expect par54 40
+wait 4000
+expect peak_db_max -0.5
+tap ENV
+wait 300
+expect view 1
+turn ALGO -1
+wait 300
+said VOICE Saws
+tap ENV
+tap ENV
+wait 300
+expect view 12
+# (Saws isn't FM: the page's knobs grey at 0, and turning them changes nothing; Keys' feedback, 40, kept)
+spin K3 -40
+spin K1 3
+wait 300
+expect par54 40
+expect par52 1
+shot fm_off.png
+tap ENV
+wait 300
+expect view 1
+tap ARP
+tap ARP
+tap ARP
+wait 300
+expect view 13
+spin K1 9
+wait 3000
+expect par56 9
+expect peak_db_max -0.5
+# the fourth knob, the LFO, works on every voice: on Saws (not FM) the FM page greys the rest but not it
+tap HOME
+tap ENV
+wait 300
+expect par22 0
+tap ENV
+tap ENV
+wait 300
+expect view 12
+spin K4 30
+wait 300
+expect par55 55
+spin K1 3
+wait 300
+expect par52 1

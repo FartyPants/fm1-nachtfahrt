@@ -1,0 +1,33 @@
+# every page, a minute of the first piece, dub hold
+wav pages.wav
+wait 20000
+shot main.png
+tap ENV
+wait 300
+shot chord.png
+tap ARP
+wait 300
+shot texture.png
+tap LFO
+wait 300
+shot bass.png
+tap SEQ
+wait 300
+shot drums.png
+tap FX
+wait 300
+shot space.png
+tap GLO
+wait 300
+shot setup.png
+tap HOME
+tap REC
+wait 4000
+shot hold.png
+tap REC
+press ENV
+wait 1200
+shot help.png
+release ENV
+wait 2000
+wavstop

@@ -1,0 +1,33 @@
+listen
+wait 3000
+tap ENV
+wait 200
+turn ALGO 1
+wait 300
+tap ENV
+tap ENV
+wait 400
+shot fm_chord.png
+spin K1 5
+wait 300
+shot fm_chord5.png
+tap ARP
+tap ARP
+tap ARP
+wait 400
+shot fm_ping.png
+tap LFO
+turn ALGO 1
+tap LFO
+tap LFO
+wait 400
+shot fm_bass.png
+tap LFO
+wait 300
+shot back_bass.png
+tap ENV
+turn ALGO -1
+tap ENV
+tap ENV
+wait 300
+shot nofm.png

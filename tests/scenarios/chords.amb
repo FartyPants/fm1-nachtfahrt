@@ -1,0 +1,127 @@
+# the Chords page (EDIT tapped): eight slots. Endless (the default): the walk's eight, slot 1 playing; on a change all
+# move up a slot (a gap stays a gap) and the walk writes slot 8. KNOB 1 the slot, the keys its root (a walk's chord
+# keeps its kind and type), KNOB 2 its kind (Empty: a gap), KNOB 3 its type, KNOB 4 Play: Endless or Loop (the slots
+# in turn, nothing new); ALGORITHM the walk's character (Home, Wander, Free), its chords walked again at once (yours
+# and the gaps kept). EDIT again: back; EDIT held: the next chord; kept by the piece
+listen
+wait 3000
+tap EDIT
+wait 400
+expect view 15
+tap EDIT
+wait 200
+expect view 15
+# slot 1: the walk's home chord, Fm7 in F Dorian, as it would be written
+said Chords page, walk Wander: Slot 1, Chord Minor, Type 7, Play Endless
+expect par64 1
+expect par72 0
+expect progpos 0
+# a key on it: written, its root F, its kind and type kept
+tapkey w0
+wait 200
+said Fm7
+expect par64 5
+expect par72 2
+expect par80 2
+spin K3 2
+wait 200
+said Type 9
+expect par80 4
+# slot 2: the walk's; a key writes it (root Bb), Empty makes it a gap
+turn K1 1
+wait 200
+said Slot 2
+tapkey b2
+wait 200
+expect par65 10
+expect par73 >0
+spin K2 -100
+wait 200
+said Chord Empty
+expect par73 0
+expect par65 0
+# Play: Loop and back (the walk's character kept)
+spin K4 1
+wait 200
+said Play Loop
+expect par88 5
+spin K4 -1
+wait 200
+said Play Endless
+expect par88 1
+# ALGORITHM: the walk Free, its chords walked again; slot 1 (yours, Fm9) and slot 2 (a gap) kept; back to Wander
+turn ALGO 1
+wait 200
+said WALK Free: goes anywhere
+expect par88 2
+expect par64 5
+expect par72 2
+expect par80 4
+expect par65 0
+expect par73 0
+turn ALGO -1
+wait 200
+said WALK Wander: roams wider
+expect par88 1
+tap HOME
+wait 300
+expect view 0
+# the next chord (EDIT held): all up a slot; slot 1 is the gap now (the Fm9 holds), the walk wrote slot 8
+press EDIT
+wait 700
+release EDIT
+wait 200
+said NEXT CHORD
+wait 4500
+expect progpos 0
+expect par64 0
+expect par72 0
+expect chordroot 5
+expect par71 >0
+expect par79 0
+# EDIT held on (1.5 s): new chords, the walk's walked again (not the one playing), and no next chord on release
+press EDIT
+wait 1800
+release EDIT
+wait 200
+said NEW CHORDS Wander
+said_none NEXT CHORD
+expect progpos 0
+expect par64 0
+expect par72 0
+tap PLAY
+wait 6000
+expect store_writes >0
+reboot
+wait 1000
+expect par64 0
+expect par72 0
+expect par71 >0
+expect par88 1
+# REC held on the Chords page and the Pattern page: the effects grid alone, drawn once (they used to draw over each
+# other, flickering)
+tap EDIT
+wait 300
+expect view 15
+press REC
+wait 400
+expect blits !=-1
+wait 1000
+expect blits <3
+release REC
+wait 300
+expect view 15
+tap HOME
+tap SEQ
+tap SEQ
+tap SEQ
+wait 300
+expect view 16
+press REC
+wait 400
+expect blits !=-1
+wait 1000
+expect blits <3
+release REC
+wait 300
+tap SEQ

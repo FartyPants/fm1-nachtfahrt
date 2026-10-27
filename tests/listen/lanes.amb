@@ -1,0 +1,9 @@
+wait 6000
+shot lanes1.png
+wait 140
+shot lanes2.png
+tap SEL
+tapkey w0
+tapkey w3
+wait 120
+shot lanes3.png

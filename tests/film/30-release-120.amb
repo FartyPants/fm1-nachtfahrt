@@ -1,0 +1,109 @@
+# DUB-1 1.2.0's launch video, in one take: what's new, made for playing live. Every move on a bar's downbeat;
+# the split framing (tools/film.py --layout split --scale 2). Night Drive (Full until bar 96: every move heard),
+# then a transition by hand to Haze. The title clip covers the first 4 s (the boot's launch screen).
+# Each `bar` prints the film's time there: the cue sheet (build/film/channel/long_videos/release-1.2.0/).
+# Night Drive (5), from the boot's Basic (0), before the film: the first frame is the launch screen.
+# (The 48 ms first: choosing the piece seeds its generators with the time, and this seed keeps Night Drive Full
+# every phrase to the piece change, checked on the screen's section name bar by bar, so no Thin or Break phrase
+# hides a move; the 1.2.0 build's swing and wider actions had turned bars 32-39 and 48-55 Thin.)
+wait 48
+turn PRESET 5 5
+wait 30
+expect piece 5
+splash 0
+wav 30-release-120.wav
+film 30-release-120.film
+bar 0 OPEN: the launch screen (under the title); Night Drive starts
+splashrun
+expect view 0
+expect screen 0
+bar 2 1. MADE FOR PLAYING LIVE: Night Drive, the Dub page
+# ------------------------------------------------------------------ the Filter, HOME's first knob ---
+bar 5 2. THE FILTER (KNOB 1): down, under water (Shut 90 over 3 bars)
+turn K1 -45 125
+bar 8 under water; the kick still pumping
+bar 9 back up through Off
+turn K1 45 60
+bar 11 up: thin and bright (Open 80 over 2.5 bars)
+turn K1 40 120
+bar 14 back to Off
+turn K1 -40 60
+# ------------------------------------------------------------------ ALGORITHM: the screen ---
+bar 16 3. ALGORITHM: the scope
+turn ALGO 1 300
+expect screen 1
+bar 18 ALGORITHM: the spectrum
+turn ALGO 1 300
+expect screen 2
+bar 20 ALGORITHM: the ripples again
+turn ALGO 1 300
+expect screen 0
+# ------------------------------------------------------------------ HOME again: the Key page ---
+bar 21 4. HOME again: the Key page
+tap HOME
+expect view 18
+bar 22 KNOB 4: Swing up, 55% to 63%
+turn K4 40 60
+bar 24 Swing back
+turn K4 -40 45
+bar 25 HOME: back to the Dub page
+tap HOME
+expect view 0
+# ------------------------------------------------------------------ PERFORM: the master actions ---
+bar 26 5. PERFORM (SEL): the master actions
+tap SEL
+expect view 17
+bar 27 KNOB 2: Dub up to +50 (the echo towards a runaway; the wider 1.2.0 Dub: +80 was 5 LU up, too far)
+turn K2 25 100
+bar 31 Dub back
+turn K2 -25 60
+bar 33 KNOB 3: Energy down to -80 (sparse)
+turn K3 -40 60
+bar 35 Energy up through 0 (it stops there) to +40 (busy: the wider Energy's +80 was 4 LU up)
+turn K3 40 60
+turn K3 20 60
+bar 39 Energy back
+turn K3 -20 60
+bar 41 KNOB 4: Space up to +70 (the wider Space's +100 was a 3 LU wash)
+turn K4 35 50
+bar 44 Space back
+turn K4 -35 45
+bar 46 KNOB 1: the Filter, in PERFORM too (Open 70)
+turn K1 35 50
+bar 48 the Filter back to Off
+turn K1 -35 50
+# ------------------------------------------------------------------ white 6 held: the mix ---
+bar 49 6. WHITE 6 HELD: the mix
+key w5 down
+expect view 7
+bar 50 KNOB 3: the bass down
+turn K3 -40 45
+bar 52 the bass back
+turn K3 40 45
+expect par2 60
+bar 53 white 4: the kick muted (white 6 still held)
+tapkey w3
+bar 54 white 4: the kick back (the Drums level as it was)
+tapkey w3
+expect par3 65
+bar 55 let go of white 6
+key w5 up
+expect view 17
+# ------------------------------------------------------------------ the finale: a transition by hand ---
+bar 56 7. A TRANSITION BY HAND: Energy up, the Filter down
+turn K3 20 50
+turn K1 -45 60
+bar 59 PRESETS: Haze, under water
+turn PRESET 2 5
+expect piece 7
+bar 61 the Filter opens up on the downbeat
+turn K1 45 45
+bar 63 the master actions kept: Energy still up on Haze
+bar 65 Energy back; SEL off
+turn K3 -20 50
+tap SEL
+expect view 0
+bar 67 END CARD (the music fades over the last bars)
+bar 72 END
+filmstop
+wavstop

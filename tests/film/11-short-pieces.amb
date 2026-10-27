@@ -1,0 +1,31 @@
+# Short 2, "Eight pieces" (vertical, tools/film.py --layout vertical): the eight pieces, three bars each, the
+# PRESETS knob turned one step on each change's downbeat (Basic, Chamber, Steppers, Fog, Concrete, Night Drive,
+# Pressure, Haze), then Haze played on. Each `bar` prints the film's time there (the cue sheet for the labels).
+bar 8
+wav 11-short-pieces.wav
+film 11-short-pieces.film
+bar 8 BASIC (F Dorian, 122)
+bar 11 CHAMBER (A Aeolian, 118)
+turn PRESET 1 5
+expect piece 1
+bar 14 STEPPERS (D Dorian, 126)
+turn PRESET 1 5
+expect piece 2
+bar 17 FOG (G Aeolian, 112)
+turn PRESET 1 5
+expect piece 3
+bar 20 CONCRETE (C pentatonic minor, 130)
+turn PRESET 1 5
+expect piece 4
+bar 23 NIGHT DRIVE (Bb Dorian, 124)
+turn PRESET 1 5
+expect piece 5
+bar 26 PRESSURE (E Phrygian, 128)
+turn PRESET 1 5
+expect piece 6
+bar 29 HAZE (Eb Ionian, 116)
+turn PRESET 1 5
+expect piece 7
+bar 33 END
+filmstop
+wavstop

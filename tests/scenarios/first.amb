@@ -1,0 +1,43 @@
+# a first look and listen: it plays from power-on; the pages; half a minute of the first piece
+wav first.wav
+wait 200
+expect playing 1
+expect piece 0
+expect pool 0x6AD
+wait 6000
+shot dub.png
+# the grid runs (122 BPM is about 8 sixteenths a second; any tempo of 90..140 is over 6)
+expect sixteenths >36
+wait 30000
+shot dub30.png
+expect sixteenths >216
+expect loopnotes >0
+wavstop
+expect peak_db_max -0.5
+expect peak_db_min -30
+tap ENV
+wait 100
+shot chord.png
+tap ARP
+wait 100
+shot texture.png
+tap LFO
+wait 100
+shot bass.png
+tap SEQ
+wait 100
+shot drums.png
+tap FX
+wait 100
+shot space.png
+tap GLO
+wait 100
+shot setup.png
+expect view 6
+# SELECT steps through the pages in the panel's order (FX ENV LFO GLO, HOME SAVE ARP SEQ): from Setup back to
+# Space, the first, then on to Drums, the last
+turn SELECT -3 100
+expect view 5
+turn SELECT 7 100
+expect view 4
+tap HOME

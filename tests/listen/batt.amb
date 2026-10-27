@@ -1,0 +1,5 @@
+wait 2000
+shot b_main.png
+tap GLO
+wait 600
+shot b_setup.png

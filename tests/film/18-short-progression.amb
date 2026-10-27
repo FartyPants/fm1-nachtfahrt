@@ -1,0 +1,65 @@
+# Short 9, "Write your own chords" (vertical, tools/film.py --layout vertical): Fog playing; on the Dub page Drift
+# down to 2 bars (a chord every two bars), then EDIT for the Chords page and four slots written, a bar each (a
+# key for the root, KNOB 2 the kind, KNOB 3 the type, KNOB 1 the next slot): Gm7, EbM7, Cm7, Dm7; then the
+# progression plays round. Every move from a bar's downbeat. Each `bar` prints the film's time there (the cue
+# sheet for the labels).
+turn PRESET 3 5
+wait 30
+expect piece 3
+bar 8
+wav 18-short-progression.wav
+film 18-short-progression.film
+bar 8 FOG playing (G Aeolian, 112)
+bar 10 KNOB 4 on the Dub page: Drift 64 bars to 2
+turn K4 -5 200
+expect par6 0
+bar 11 EDIT: the Chords page
+tap EDIT
+bar 12 slot 1: G (white 2), KNOB 3 to 7: Gm7
+tapkey w1
+wait 300
+turn K3 2 200
+bar 13 KNOB 1 to slot 2: Eb (black 5), KNOB 2 Major, KNOB 3 Maj7: EbM7
+turn K1 1 200
+wait 200
+tapkey b4
+wait 300
+turn K2 -1 200
+wait 200
+turn K3 3 200
+bar 14 slot 3: C (white 5), 7: Cm7
+turn K1 1 200
+wait 200
+tapkey w4
+wait 300
+turn K3 2 200
+bar 15 slot 4: D (white 6), 7: Dm7
+turn K1 1 200
+wait 200
+tapkey w5
+wait 300
+turn K3 2 200
+expect par88 1
+expect par64 7
+expect par65 3
+expect par66 0
+expect par67 2
+bar 16 the progression, a chord every 2 bars: slot 3, Cm7
+wait 300
+expect chordroot 0
+bar 18 slot 4, Dm7
+wait 300
+expect chordroot 2
+bar 20 round again: slot 1, Gm7
+wait 300
+expect chordroot 7
+bar 22 slot 2, EbM7
+wait 300
+expect chordroot 3
+bar 24 slot 3, Cm7 (the phrase a Break: the kick and the bass out)
+wait 300
+expect chordroot 0
+bar 26 slot 4, Dm7
+bar 28 END
+filmstop
+wavstop

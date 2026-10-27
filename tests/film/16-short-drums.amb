@@ -1,0 +1,49 @@
+# Short 7, "The Drums page" (vertical, tools/film.py --layout vertical): Pressure playing (the kick and the bass
+# forward, the heaviest ducking), SEQ for the Drums page; Hits down to the kick alone and back up, Swing to a
+# lilt, Duck off and back harder (slow turns, single steps); ALGORITHM through two kits, Punch and Dusty; then SEQ
+# again for the Drum sound page: the kick tuned down, longer, punchier. Every move from a bar's downbeat.
+# Each `bar` prints the film's time there (the cue sheet for the labels).
+turn PRESET 6 5
+wait 30
+expect piece 6
+bar 8
+wav 16-short-drums.wav
+film 16-short-drums.film
+bar 8 PRESSURE playing (E Phrygian, 128)
+bar 10 SEQ: the Drums page
+tap SEQ
+bar 11 KNOB 2, Hits 65 down to 0: the kick alone
+turn K2 -65 45
+expect par7 0
+bar 14 Hits 0 up to 70: the hats back
+turn K2 70 45
+expect par7 70
+bar 16 KNOB 3, Swing 51% up to 63%
+turn K3 60 45
+expect par26 65
+bar 18 KNOB 4, Duck 70 down to 0: no pump
+turn K4 -70 45
+expect par30 0
+bar 20 Duck 0 up to 80: it pumps
+turn K4 80 45
+expect par30 80
+bar 22 ALGORITHM: the kit Punch
+turn ALGO 1 300
+expect par35 2
+bar 24 Dusty
+turn ALGO 2 150
+expect par35 4
+bar 26 SEQ again: the Drum sound page; KNOB 1, Kick tune 5 down
+tap SEQ
+wait 300
+turn K1 -5 200
+expect par48 -5
+bar 28 KNOB 2, Kick len longer
+turn K2 30 50
+expect par49 30
+bar 30 KNOB 3, Punch harder
+turn K3 30 50
+expect par50 30
+bar 34 END
+filmstop
+wavstop

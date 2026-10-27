@@ -1,0 +1,42 @@
+# the video, clip 3: dub hold (a tap on REC), then the effects grid (REC held, the white keys)
+wait 8000
+wav 03-dub.wav
+film 03-dub.film
+wait 3000
+tap REC
+wait 9000
+tap REC
+wait 3000
+press REC
+wait 900
+key w2 down
+wait 2500
+key w2 up
+wait 1200
+key w6 down
+wait 4000
+key w6 up
+wait 1000
+key w7 down
+wait 3000
+key w7 up
+wait 1200
+key w12 down
+wait 2500
+key w12 up
+wait 1200
+key w14 down
+wait 3000
+key w14 up
+wait 1200
+key w10 down
+wait 3500
+key w10 up
+wait 1000
+key w15 down
+wait 4000
+key w15 up
+release REC
+wait 5000
+filmstop
+wavstop

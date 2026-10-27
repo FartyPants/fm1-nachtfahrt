@@ -1,0 +1,86 @@
+# the manual's screenshots (docs/img/, but the launch screen): build/host/amb_host tests/listen/shots.amb build/shots
+wait 9000
+shot screen-main.png
+press ENV
+wait 700
+shot screen-nudge.png
+release ENV
+wait 300
+tap HOME
+wait 300
+turn ALGO 1
+wait 2000
+shot screen-scope.png
+turn ALGO 1
+wait 2000
+shot screen-spectrum.png
+turn ALGO 1
+wait 300
+tap HOME
+wait 1500
+shot screen-key.png
+tap HOME
+wait 300
+tap ENV
+wait 1500
+shot screen-chord.png
+tap ARP
+wait 1500
+shot screen-pings.png
+tap SAVE
+wait 1500
+shot screen-noise.png
+tap SAVE
+wait 1500
+shot screen-noise-space.png
+tap SAVE
+tap LFO
+wait 1500
+shot screen-bass.png
+tap SEQ
+wait 1500
+shot screen-drums.png
+tap GLO
+wait 1500
+shot screen-setup.png
+tap FX
+wait 1500
+shot screen-space.png
+turn K3 3
+wait 300
+shot screen-turning.png
+turn K3 -3
+tap HOME
+wait 1500
+tap REC
+wait 2500
+shot screen-hold.png
+tap REC
+tap SEL
+wait 18000
+key w6 down
+wait 2000
+shot screen-perform.png
+key w6 up
+tap HOME
+turn K3 50
+wait 166000
+shot screen-groove.png
+# the Echo page (FX, FX again)
+tap FX
+wait 300
+tap FX
+wait 1500
+shot screen-echo.png
+tap FX
+# Lock (SEL held): its card, "lock" in red above the page's name
+tap HOME
+wait 300
+press SEL
+wait 700
+release SEL
+wait 300
+shot screen-lock.png
+press SEL
+wait 700
+release SEL

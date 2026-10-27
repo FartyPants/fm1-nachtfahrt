@@ -1,0 +1,52 @@
+# the ping loops: at Evolve 0 they stay as they are, pass after pass; SAVE keeps them with the piece, so
+# they come back after a reboot and after going to another piece and back; at Evolve up they move again
+wait 3000
+spin K2 -100
+expect par5 0
+# (a pass of the longest loop, for the loops to reach Density)
+wait 16000
+pingmark
+wait 40000
+expect pingsame 1
+press GLO
+wait 600
+release GLO
+reboot
+wait 1500
+expect par5 0
+expect pingsame 1
+turn PRESET 1
+wait 2000
+expect pingsame 0
+turn PRESET -1
+wait 2000
+expect pingsame 1
+# Density changed: the loops grow to it (and then stay)
+tap ARP
+wait 200
+spin K1 40
+wait 30000
+expect pingsame 0
+pingmark
+wait 30000
+expect pingsame 1
+# Evolve up: they move again
+tap HOME
+wait 200
+spin K2 80
+wait 60000
+expect pingsame 0
+# a project saved by DUB-1 1.0.0 (format 8, no pings) is read and kept: the tempo, the piece; the loops afresh
+tap HOME
+spin K1 -6
+expect par18 116
+turn PRESET 2
+wait 500
+store8
+reboot
+wait 1000
+expect format 17
+expect piece 2
+turn PRESET -2
+wait 500
+expect par18 116

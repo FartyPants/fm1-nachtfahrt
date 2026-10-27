@@ -1,0 +1,13 @@
+wait 3000
+tap SEQ
+tap SEQ
+tap SEQ
+spin K1 4
+tapkey w4
+tapkey w12
+tapkey w14
+wait 300
+shot clap_pat.png
+tap SEQ
+wait 2500
+shot clap_main.png

@@ -1,0 +1,19 @@
+listen
+wait 3000
+tap SEQ
+tap SEQ
+tap SEQ
+wait 400
+shot pat_auto.png
+key b0 down
+tapkey w2
+key b0 up
+tapkey w3
+spin K1 3
+tapkey w4
+tapkey w12
+wait 400
+shot pat_edit.png
+tap SEQ
+wait 1500
+shot pat_main.png

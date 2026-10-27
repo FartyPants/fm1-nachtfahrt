@@ -1,0 +1,152 @@
+# The video in one take: every move on a bar's downbeat, the sections on the phrases (eight bars), so
+# the music runs unbroken and the edit only cuts between the three framings (tools/make_film.sh 00-take).
+# Each `bar` prints the film's time there: the cue sheet for build/video-script.md.
+splash 0
+wav 00-take.wav
+film 00-take.film
+bar 0 OPEN: the launch screen; the music starts
+splashrun
+bar 1 1. IT PLAYS ITSELF: the ripples
+bar 8 HOME: the scope
+tap HOME
+bar 12 HOME: the spectrum
+tap HOME
+bar 16 HOME: the ripples again
+tap HOME
+bar 17 2. PERFORM: SEL, the knobs a mixer
+tap SEL
+bar 18 KNOB 2: the pings up
+turn K2 12 60
+bar 20 white 4: the kick muted
+tapkey w3
+bar 21 white 4: the kick back
+tapkey w3
+spin K4 -35
+expect par3 65
+bar 22 black 3 and 4: the bass and the kick soloed
+tapkey b2
+tapkey b3
+bar 24 the solos off; white 7 held: THROW
+tapkey b2
+tapkey b3
+key w6 down
+bar 26 white 8 held: OPEN
+key w6 up
+key w7 down
+bar 28 white 9 held: SHUT
+key w7 up
+key w8 down
+bar 30 white 10 held: DROP (the kick and the bass)
+key w8 up
+key w9 down
+bar 32 white 11 held: ECHO
+key w9 up
+key w10 down
+bar 34 let go
+key w10 up
+bar 35 SEL: PERFORM off
+tap SEL
+bar 36 3. DUB HOLD: a tap on REC
+tap REC
+bar 40 REC: let go
+tap REC
+bar 41 REC held: the effects grid
+press REC
+bar 42 TAPE STOP
+key w2 down
+bar 43 WAH
+key w2 up
+key w6 down
+bar 45 STUTTER
+key w6 up
+key w12 down
+bar 46 SIREN
+key w12 up
+key w14 down
+bar 48 RISER
+key w14 up
+key w15 down
+bar 50 let go: the riser lands
+key w15 up
+release REC
+bar 51 4. MAKE IT YOURS: HOME + SELECT, the tempo 122 to 116
+press HOME
+turn SELECT -6 150
+release HOME
+bar 52 KNOB 4: Drift, a chord every 2 bars
+turn K4 -4 200
+bar 53 ENV: the Chord page
+tap ENV
+bar 54 ALGORITHM: the voice Keys
+turn ALGO 1 300
+bar 56 ALGORITHM: the voice Bell
+turn ALGO 3 300
+bar 58 ENV again: its sound page; Colour
+tap ENV
+wait 500
+turn K2 12 70
+bar 59 Env
+turn K4 15 70
+bar 61 FX: the Space page; Feedback up
+tap FX
+wait 300
+turn K3 14 80
+bar 62 Echo time
+turn K2 1 200
+bar 64 EDIT: the Chords page; four slots
+tap HOME
+wait 200
+tap EDIT
+wait 600
+tapkey w0
+wait 200
+turn K3 2 150
+wait 300
+turn K1 1 150
+tapkey b2
+wait 200
+turn K3 2 150
+wait 300
+turn K1 1 150
+tapkey w4
+wait 200
+turn K3 2 150
+wait 300
+turn K1 1 150
+tapkey b1
+wait 200
+turn K2 -1 150
+wait 200
+turn K3 3 150
+bar 67 the progression plays: Fm7, Bbm7, Cm7, AbM7
+bar 72 SEQ x3: the drum pattern page; kick steps
+tap EDIT
+wait 300
+tap SEQ
+wait 250
+tap SEQ
+wait 250
+tap SEQ
+wait 800
+tapkey w6
+wait 300
+tapkey w14
+bar 74 the shaker
+turn K1 1 200
+wait 300
+tapkey w1
+wait 250
+tapkey w9
+bar 75 the rim
+turn K1 2 200
+wait 300
+tapkey w4
+wait 250
+tapkey w12
+bar 78 SAVE
+tap SAVE
+bar 79 HOME: the new piece playing
+tap HOME
+bar 84 END (fade over the last bars)
+filmstop
+wavstop

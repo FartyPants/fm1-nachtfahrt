@@ -1,0 +1,47 @@
+# Short 5, "The Chord page" (vertical, tools/film.py --layout vertical): Steppers playing (saw stabs), ENV for the
+# Chord page, Stabs up and Decay longer (slow turns, single steps, from a bar's downbeat); then ALGORITHM through
+# the voices in the Thin phrase (bars 16-23: no bass, no shaker, the chord exposed): Keys, Organ, Bell,
+# Tonewheel; Saws again as the phrase turns Full, and Cutoff shut, opened, and back to the recipe.
+# Each `bar` prints the film's time there (the cue sheet for the labels).
+turn PRESET 2 5
+wait 30
+expect piece 2
+bar 8
+wav 14-short-chord.wav
+film 14-short-chord.film
+bar 8 STEPPERS playing (D Dorian, 126)
+bar 10 ENV: the Chord page
+tap ENV
+bar 11 KNOB 2, Stabs 45 up to 75: more a bar
+turn K2 30 50
+expect par28 75
+bar 13 KNOB 3, Decay 25 up to 65: longer
+turn K3 40 50
+expect par13 65
+bar 16 the Thin phrase; ALGORITHM: the voice Keys
+turn ALGO 1 300
+expect par22 1
+bar 18 Organ
+turn ALGO 1 300
+expect par22 2
+bar 20 Bell
+turn ALGO 2 300
+expect par22 4
+bar 22 Tonewheel
+turn ALGO 1 300
+expect par22 5
+bar 24 Full again; Saws again
+turn ALGO 2 150
+expect par22 0
+bar 25 KNOB 4, Cutoff 55 down to 15: dark
+turn K4 -40 50
+expect par12 15
+bar 27 Cutoff 15 up to 85: open
+turn K4 70 50
+expect par12 85
+bar 29 Cutoff back to 55
+turn K4 -30 50
+expect par12 55
+bar 32 END
+filmstop
+wavstop

@@ -1,0 +1,311 @@
+# the screen reader (fm1-reader, announce.c): a reader listens, and each page, knob, help card, button and
+# chord change is said once, in the screen's own text (the words file says it in full)
+wait 200
+listen
+wait 100
+# the page, its knobs and the header (the tempo too: it is the Key page's first knob, not Dub's)...
+said . Piece Basic, F Dorian, tempo 122, playing
+# ...then the main screen, queued: the chord, how far to the next, the section, the scale from the root up
+listen
+where
+said % of the way. Section Full, bar 1. Scale F, G, Ab, Bb, C, D, Eb
+# a page settles before it is said
+tap ENV
+wait 300
+said Chord page, voice Saws: Density 30, Throws 
+tap GLO
+wait 300
+said Setup page: Tune 0, MIDI out On, Lights On
+# a knob: its name and value, once it settles
+spin K1 5
+wait 300
+said Tune +3
+spin K3 1
+wait 300
+said Lights Keys
+spin K3 -1
+wait 300
+# SELECT turns the pages (the panel's order: Space, Chord, Bass, Setup, ...)
+turn SELECT -3
+wait 300
+said Space page: Echo 
+# the echo times, each in its own words (the words file)
+spin K2 -10
+wait 300
+said Echo time 1/8
+spin K2 1
+wait 300
+said Echo time 1/8.
+spin K2 1
+wait 300
+said Echo time 1/4
+spin K2 1
+wait 300
+said Echo time 1/4.
+spin K2 1
+wait 300
+said Echo time 1/2
+spin K2 1
+wait 300
+said Echo time 1 bar
+spin K1 -100
+wait 300
+said Echo 0
+spin K3 -100
+wait 300
+said Feedback 1.5 s
+spin K4 -100
+wait 300
+said Reverb 0
+# the page again, as now set
+tap SEQ
+wait 300
+said Drums page, kit Tight: Density 97, Hits 
+tap FX
+wait 300
+said Space page: Echo 0, Echo time 1 bar, Feedback 1.5 s, Reverb 0
+tap HOME
+wait 300
+said Dub page
+# Drift in bars
+spin K4 -20
+wait 300
+said Drift 2 bars
+# the Filter: down, the low-pass; it stops at the middle on the way back
+spin K1 -102
+wait 300
+said Filter Shut 100
+spin K1 80
+wait 300
+said Filter Off
+# HOME again: the Key page
+tap HOME
+wait 300
+said Key page: Tempo
+spin K1 -100
+wait 300
+said Tempo 90
+# HOME + SELECT: the tempo (the Key page's first knob says it)
+press HOME
+turn SELECT 2 200
+release HOME
+wait 300
+said Tempo 92
+# the keys: a note out of the scale and back in; the root stays
+tapkey w1
+said REMOVED G
+tapkey w1
+said ADDED G
+tapkey b3
+said ADDED C#
+tapkey b3
+said REMOVED C#
+tapkey w0
+said THE ROOT STAYS (HOME, KEY)
+# the mode (the Key page's KNOB 3, the most common first), ALGORITHM (off a layer's page: the screen), the piece
+spin K3 1
+said MODE Mixolyd
+spin K3 -1
+said MODE Dorian
+turn ALGO 1
+said SCREEN SCOPE
+turn ALGO -1
+said SCREEN RIPPLES
+turn PRESET 1
+said PIECE Chamber, A Minor, tempo 
+wait 300
+said_none Level
+turn PRESET -1
+said PIECE Basic, F Dorian, tempo 92
+wait 300
+# the buttons' messages, said once
+tap REC
+said DUB HOLD ON
+# the main screen says it is held
+where
+said , dub hold. Section 
+tap REC
+said DUB HOLD OFF
+tap PLAY
+said RESTING
+wait 300
+said_none PLAYING
+tap PLAY
+said PLAYING
+wait 300
+said_none RESTING
+# OCT- / OCT+ on a layer's page: its level (here the pings', on the Pings page)
+tap ARP
+wait 300
+said Pings page, voice Blip: Density 30, Octave 0, Wet 70, Cloud 30
+tap OCT+
+said PINGS 35
+tap OCT-
+said PINGS 30
+press EDIT
+wait 600
+release EDIT
+said NEXT CHORD ON THE BAR
+# a nudge (a layer's button held): the layer and its biggest change
+press LFO
+wait 700
+release LFO
+said BASS NUDGE
+press GLO
+wait 600
+release GLO
+said SAVED
+press REC
+wait 1000
+said EFFECTS GRID. White keys: Throw, Time x2, Tape stop, Swell; Low-pass
+release REC
+wait 100
+# the chord moving by itself (every two bars now): queued (said after what is being said)
+wait 8000
+said Chord
+# a MIDI clock arriving (a second and more of it: said after what is queued), and start / stop from it
+midi FA 00 00
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 20
+said Tempo EXT
+midi FC 00 00
+wait 300
+said RESTING
+wait 1000
+said Tempo 92
+tap HOME
+wait 300
+said Dub page
+# Drift Hold, and Evolve and Motion to known values
+spin K4 20
+wait 300
+said Drift Hold
+spin K2 -100
+wait 300
+said Evolve 0
+spin K3 100
+wait 300
+said Motion 100
+# WHERE: everything again (the chord held now)
+where
+said Dub page: Filter Off, Evolve 0, Motion 100, Drift Hold. Piece Basic, F Dorian, tempo 92, resting
+where
+said , held. Section 

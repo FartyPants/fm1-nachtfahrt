@@ -1,0 +1,210 @@
+# "4 a.m. to 5 a.m.": an hour in one take, for a long listening video (the screen alone, tools/film.py
+# --layout center). Four pieces, about 15 minutes each: Night Drive (still moving), Pressure (hypnotic,
+# heavy), Fog (lost, deep), Haze (dawn). The changes dub-style on the phrase lines: PERFORM, SHUT held (under
+# water), REC (dub hold) a bar later, the next piece on the next downbeat, SHUT let go, the held echo ringing
+# two bars, REC let go, PERFORM off. Between them a ghost performer, rarely: a move on a phrase line (a
+# multiple of eight bars), a slow knob, the scope and the spectrum for a minute or two.
+# Each `bar` prints the film's time there: the cue sheet (build/film/channel/long_videos/night/cues.txt).
+# The bar count runs on across a piece change (en_bars counts sixteenths since the start).
+# Too long for tools/make_film.sh (12 GB of film): rendered in two passes by tools/make_night.sh.
+# Night Drive (5), from the boot's Basic (0), before the film: the first frame is the launch screen.
+turn PRESET 5 5
+wait 30
+expect piece 5
+splash 0
+wav 20-night.wav
+film 20-night.film
+bar 0 4:00 NIGHT DRIVE: the launch screen; the music fades in
+splashrun
+expect view 0
+expect screen 0
+# ---------------------------------------------------------------- Night Drive (124, bars 0-464) ---
+bar 87 Night Drive: SEL (PERFORM)
+tap SEL
+bar 88 Night Drive: THROW, 2 bars
+key w6 down
+bar 90 Night Drive: let go; SEL off
+key w6 up
+tap SEL
+bar 136 Night Drive: Motion drifts up (KNOB 3, +6, slowly)
+turn K3 6 2500
+bar 176 Night Drive: HOME, the scope
+tap HOME
+bar 216 Night Drive: HOME, the spectrum
+tap HOME
+bar 256 Night Drive: HOME, the ripples again
+tap HOME
+expect screen 0
+bar 279 Night Drive: SEL (PERFORM)
+tap SEL
+bar 280 Night Drive: OPEN, 4 bars
+key w7 down
+bar 284 Night Drive: let go; SEL off
+key w7 up
+tap SEL
+bar 375 Night Drive: SEL (PERFORM)
+tap SEL
+bar 376 Night Drive: DROP, 2 bars
+key w9 down
+bar 378 Night Drive: the floor back on the downbeat; SEL off
+key w9 up
+tap SEL
+# ------------------------------------------------------------------- to Pressure (bar 464) ---
+bar 461 TO PRESSURE: SEL (PERFORM)
+tap SEL
+bar 462 TO PRESSURE: SHUT held, under water
+key w8 down
+bar 463 TO PRESSURE: REC, dub hold
+tap REC
+bar 464 4:15 PRESSURE: PRESETS, the next piece; SHUT let go
+turn PRESET 1 5
+key w8 up
+expect piece 6
+bar 466 Pressure: REC let go
+tap REC
+bar 467 Pressure: SEL off
+tap SEL
+wait 600
+expect view 0
+expect screen 0
+shot t1.png
+# ------------------------------------------------------------------- Pressure (128, bars 464-944) ---
+bar 559 Pressure: SEL (PERFORM)
+tap SEL
+bar 560 Pressure: ECHO pushed, 2 bars
+key w10 down
+bar 562 Pressure: let go; SEL off
+key w10 up
+tap SEL
+bar 608 Pressure: HOME, the scope
+tap HOME
+bar 648 Pressure: HOME, the spectrum
+tap HOME
+bar 680 Pressure: HOME, the ripples again
+tap HOME
+expect screen 0
+bar 711 Pressure: SEL (PERFORM)
+tap SEL
+bar 712 Pressure: DROP, 2 bars
+key w9 down
+bar 714 Pressure: the floor back on the downbeat; SEL off
+key w9 up
+tap SEL
+bar 760 Pressure: Motion drifts up (KNOB 3, +5, slowly)
+turn K3 5 2500
+bar 807 Pressure: SEL (PERFORM)
+tap SEL
+bar 808 Pressure: THROW, 2 bars
+key w6 down
+bar 810 Pressure: let go; SEL off
+key w6 up
+tap SEL
+# ------------------------------------------------------------------------ to Fog (bar 944) ---
+bar 941 TO FOG: SEL (PERFORM)
+tap SEL
+bar 942 TO FOG: SHUT held, under water
+key w8 down
+bar 943 TO FOG: REC, dub hold
+tap REC
+bar 944 4:30 FOG: PRESETS, the next piece (three back); SHUT let go
+turn PRESET -3 5
+key w8 up
+expect piece 3
+bar 946 Fog: REC let go
+tap REC
+bar 947 Fog: SEL off
+tap SEL
+wait 600
+expect view 0
+expect screen 0
+shot t2.png
+# ------------------------------------------------------------------------ Fog (112, bars 944-1364) ---
+bar 1039 Fog: SEL (PERFORM)
+tap SEL
+bar 1040 Fog: ECHO pushed, 2 bars
+key w10 down
+bar 1042 Fog: let go; SEL off
+key w10 up
+tap SEL
+bar 1088 Fog: Motion drifts up (KNOB 3, +6, slowly)
+turn K3 6 2500
+bar 1120 Fog: HOME, the scope
+tap HOME
+bar 1160 Fog: HOME, the spectrum
+tap HOME
+bar 1184 Fog: HOME, the ripples again
+tap HOME
+expect screen 0
+bar 1215 Fog: SEL (PERFORM)
+tap SEL
+bar 1216 Fog: SHUT, 4 bars, deeper under
+key w8 down
+bar 1220 Fog: let go; SEL off
+key w8 up
+tap SEL
+bar 1295 Fog: SEL (PERFORM)
+tap SEL
+bar 1296 Fog: THROW, 2 bars
+key w6 down
+bar 1298 Fog: let go; SEL off
+key w6 up
+tap SEL
+# ----------------------------------------------------------------------- to Haze (bar 1364) ---
+bar 1361 TO HAZE: SEL (PERFORM)
+tap SEL
+bar 1362 TO HAZE: SHUT held, under water
+key w8 down
+bar 1363 TO HAZE: REC, dub hold
+tap REC
+bar 1364 4:45 HAZE: PRESETS, the next piece (four on); SHUT let go
+turn PRESET 4 5
+key w8 up
+expect piece 7
+bar 1366 Haze: REC let go
+tap REC
+bar 1367 Haze: SEL off
+tap SEL
+wait 600
+expect view 0
+expect screen 0
+shot t3.png
+# ----------------------------------------------------------------------- Haze (116, bars 1364-1800) ---
+bar 1455 Haze: SEL (PERFORM)
+tap SEL
+bar 1456 Haze: THROW, 2 bars
+key w6 down
+bar 1458 Haze: let go; SEL off
+key w6 up
+tap SEL
+bar 1504 Haze: Evolve drifts up (KNOB 2, +5, slowly)
+turn K2 5 2500
+bar 1536 Haze: HOME, the scope
+tap HOME
+bar 1576 Haze: HOME, the spectrum
+tap HOME
+bar 1608 Haze: HOME, the ripples again
+tap HOME
+expect screen 0
+bar 1639 Haze: SEL (PERFORM)
+tap SEL
+bar 1640 Haze: OPEN, 4 bars, the light coming up
+key w7 down
+bar 1644 Haze: let go; SEL off
+key w7 up
+tap SEL
+bar 1719 Haze: SEL (PERFORM)
+tap SEL
+bar 1720 Haze: ECHO pushed, 2 bars
+key w10 down
+bar 1722 Haze: let go; SEL off
+key w10 up
+tap SEL
+# ------------------------------------------------------------------------------- the end ---
+bar 1800 5:00 THE END: the fade-out begins (20 s)
+bar 1804 THE END: PLAY, the rest; the echo and the plate ring out under the fade
+tap PLAY
+shot t4.png
+at 3620 END
+shot t5.png
+filmstop
+wavstop

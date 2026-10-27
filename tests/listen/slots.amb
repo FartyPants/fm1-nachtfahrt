@@ -1,0 +1,24 @@
+listen
+wait 2000
+tap EDIT
+wait 400
+shot sl_empty.png
+tapkey w0
+wait 200
+spin K3 2
+wait 200
+turn K1 1
+tapkey b2
+wait 200
+spin K2 -1
+wait 200
+turn K1 2
+tapkey w4
+spin K2 -5
+spin K2 1
+spin K3 1
+wait 300
+shot sl_written.png
+tap EDIT
+wait 9000
+shot sl_main.png

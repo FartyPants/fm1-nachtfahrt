@@ -1,0 +1,50 @@
+# the keys are the scale: toggles, the root stays, three notes at least; modes and the root
+wait 300
+# the first piece is in Dorian; its root to C (HOME on the Dub page, the Key page: KNOB 2, down to its lowest)
+expect par20 1
+tap HOME
+wait 200
+expect view 18
+spin K2 -12
+expect par19 0
+# C Dorian: C D Eb F G A Bb. E4 is key 11: add E (relative 4)
+expect pool 0x6AD
+tapkey 11
+expect pool 0x6BD
+tapkey 11
+expect pool 0x6AD
+# key 7 is C4: the root stays
+tapkey 7
+expect pool 0x6AD
+# the next mode: Mixolydian (the Key page's KNOB 3; the modes the most common first: Aeolian, Ionian,
+# Dorian, Mixolydian, pentatonic minor and major, Phrygian, Lydian)
+spin K3 1
+expect par20 4
+expect pool 0x6B5
+spin K3 -1
+expect par20 1
+expect pool 0x6AD
+# the root up a tone: D Dorian (the pool is relative to the root: the same)
+spin K2 2
+expect par19 2
+expect pool 0x6AD
+wait 300
+shot d_dorian.png
+# pentatonic minor (two on from Dorian), then strip it down to three notes and try a fourth removal
+spin K3 2
+expect par20 7
+expect pool 0x4A9
+# D pent min: D F G A C. Remove F (key 0 = F3) and G (key 2 = G3)
+tapkey 0
+tapkey 2
+expect pool 0x481
+# A (key 4 = A3): would leave two
+tapkey 4
+expect pool 0x481
+wait 300
+shot three.png
+# MIDI in, channel 1: G (note 55) back in
+midi 90 37 64
+wait 20
+expect pool 0x4A1
+expect dirty 1

@@ -1,0 +1,43 @@
+# The short (vertical, about 43 s, tools/film.py --layout vertical): already playing, then PERFORM (throw, shut,
+# the drop slamming back), dub hold, the effects grid with the riser landing on a downbeat. Every move on a bar's
+# downbeat; each `bar` prints the film's time there (the cue sheet for build/film/youtube/short-script.md).
+bar 8
+wav 10-short.wav
+film 10-short.film
+bar 8 0. PLAYING: the ripples, the lanes
+bar 10 SEL: PERFORM
+tap SEL
+bar 11 white 7 held: THROW
+key w6 down
+bar 13 white 9 held: SHUT (under water)
+key w6 up
+key w8 down
+bar 15 white 10 held: DROP
+key w8 up
+key w9 down
+bar 17 let go: the floor slams back
+key w9 up
+bar 18 SEL off; a tap on REC: DUB HOLD
+tap SEL
+tap REC
+bar 20 REC: let go
+tap REC
+bar 21 REC held: the effects grid
+press REC
+bar 22 TAPE STOP
+key w2 down
+bar 23 STUTTER
+key w2 up
+key w12 down
+bar 24 SIREN
+key w12 up
+key w14 down
+bar 26 RISER
+key w14 up
+key w15 down
+bar 28 let go: the riser lands
+key w15 up
+release REC
+bar 31 END
+filmstop
+wavstop

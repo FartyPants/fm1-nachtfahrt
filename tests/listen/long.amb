@@ -1,0 +1,6 @@
+# three minutes of the current piece
+wav long.wav
+wait 180000
+shot end.png
+wavstop
+expect peak_db_max -0.5

@@ -1,0 +1,6 @@
+wait 2000
+turn PRESET 5
+wait 1500
+tap GLO
+wait 2500
+shot setup_nd.png

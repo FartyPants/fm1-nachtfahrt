@@ -1,0 +1,14 @@
+# the video, clip 1: switched on, it plays; HOME again: the scope, the spectrum, the ripples
+splash 0
+wav 01-start.wav
+film 01-start.film
+splashrun
+wait 16000
+tap HOME
+wait 9000
+tap HOME
+wait 10000
+tap HOME
+wait 4000
+filmstop
+wavstop

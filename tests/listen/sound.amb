@@ -1,0 +1,37 @@
+listen
+wait 4000
+tap ENV
+wait 200
+tap ENV
+wait 300
+turn K1 20
+turn K4 15
+wait 400
+shot snd_chord.png
+tap ARP
+wait 200
+tap ARP
+wait 300
+turn K3 25
+wait 300
+shot snd_ping.png
+tap LFO
+tap LFO
+wait 300
+turn K3 -20
+wait 300
+shot snd_bass.png
+tap SEQ
+tap SEQ
+wait 300
+turn K1 3
+turn K2 20
+wait 300
+shot snd_drum.png
+tap SEQ
+wait 300
+shot back_drums.png
+press ENV
+wait 1100
+shot help_env.png
+release ENV
