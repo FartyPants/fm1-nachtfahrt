@@ -1,100 +1,95 @@
-# DUB-1 for the M-VAVE FM-1
+# BERLIN for the M-VAVE FM-1
 
-DUB-1 turns the M-VAVE FM-1 into a generative dub techno machine. It plays itself
-from the moment it's switched on: chord stabs through a resonant low-pass into a tape echo, short
-FM pings on loops of unequal length, a sub bass on one of five grooves, a kick that ducks the rest
-(four on the floor, or sparser, a phrase at a time), a shaker and an open hat, and a crackle that
-rings on the chord. An eight-bar arrangement takes the kick out for a break, thins the layers and
-brings them back with a fill, and now and then a stab is thrown into the echo, each repeat coming
-back darker and more dissolved. The drums and the bass play in phrases, a main bar three times and
-a variant on the fourth. You don't play it, you steer it: pick a piece and a scale, take notes out,
-sweep the filter, push the echo, hold it, mute and solo the layers, lock the groove.
+BERLIN turns the M-VAVE FM-1 into a generative Berlin School machine, after the 1970s music of
+Tangerine Dream, Klaus Schulze and Ashra: long, hypnotic pieces, repeating synthesizer sequences,
+slowly evolving textures, a strong sense of space. It plays itself from the moment it's switched on.
 
-DUB-1 is a fork of [AMB-1](https://github.com/charlesvestal/fm1-amb), Charles Vestal's generative
-ambient firmware for the FM-1, and keeps its platform, its panel and much of its sound engine.
+- a **Sequence** of up to 16 steps on a plucked analog-style voice (2600, Moog, Synthi, Pulse, Glass),
+  its filter wandering slowly, its notes **repeated** at the echo's times (a dotted eighth by default, the
+  classic Berlin School echo), so sparse notes fill in the spaces;
+- **Sequence 2**, often a step shorter, so the two drift apart and meet again;
+- a **Drone**: a chord on two banks of voices (Organ, Strings, Choir, Saws, Glass) with a pedal under it, a
+  phaser and a slow walk from chord to chord;
+- a **Lead**: one gliding voice (Odyssey, Mini, Flute, Theremin, Synthi) playing long, dreamy phrases deep in
+  the reverb and the echo, which you can also play on the white keys, in the scale;
+- an **Atmosphere**: Wind, Surf, Space, Air or Tape (or none);
+- an **arc**: a piece emerges from the drone, flows, lets the Lead take over, drifts, and ends (a crash into
+  the echo, a supernova of feedback, or a fade) before it begins again.
 
-![DUB-1's main screen: the piece Basic, F Dorian, 122; FULL and the phrase's dots top left, DUB top right, the stabs' ripples round the chord Fm7, the lanes below](docs/img/screen-main.png) ![PERFORM, THROW held: the stabs' echoes in trains of rings](docs/img/screen-perform.png) ![Dub hold: the rings and "hold" in red](docs/img/screen-hold.png)
+You don't play it, you steer it: pick a piece, change its key and tempo, thin or fill the sequences, push the
+echo, mute and solo the layers, play the Lead.
 
-- **Try it in your browser** (no FM-1 needed): <https://sbegueria.github.io/fm1-dub/emu/>
-- **Install it** (Chrome or Edge, with the FM-1 plugged in): <https://sbegueria.github.io/fm1-dub/install/>
-- **Read the manual**: <https://sbegueria.github.io/fm1-dub/manual/> (source: [docs/MANUAL.md](docs/MANUAL.md))
-- **Download the firmware file**: [releases](https://github.com/sbegueria/fm1-dub/releases)
-- To build it and listen to changes on a computer, see [EMULATOR.md](EMULATOR.md).
+BERLIN is a fork of [DUB-1](https://github.com/sbegueria/fm1-dub), itself a fork of
+[AMB-1](https://github.com/charlesvestal/fm1-amb), Charles Vestal's generative ambient firmware for the FM-1. It
+keeps their platform, panel, echo, plate and much of the engine.
 
-Installing it is at your own risk, though it's hard to get stuck: the web installer and M-VAVE's own
-updater can put the stock firmware back, and an FM-1 that fails to start twice comes up in a safe mode that the
-installer can reach.
+**Status: 0.1, in development.** It runs in the browser emulator and in the host simulator; it hasn't been
+built for or run on an FM-1 yet (see [PLAN.md](PLAN.md)).
+
+## The pieces
+
+| # | Piece | After | Key, tempo | |
+|---|---|---|---|---|
+| 1 | Timewind | Schulze, *Bayreuth Return* | D minor, 96 | One sequence, an organ through the phaser, a long emergence, ends in a crash |
+| 2 | Wahnfried | Schulze, *Wahnfried 1883* | B♭ Dorian, beatless | Drifting layers, the roots walking with no home, a screaming lead |
+| 3 | Phaedra | Tangerine Dream, *Phaedra* | D minor, 149 | A Moog bass line of 16 over a second line of 15, flutes, much filter movement |
+| 4 | Rubycon | Tangerine Dream, *Rubycon* | F minor, 144 | Dark organ, two sequences of 8 and 7 rising out of the drone |
+| 5 | Stratosfear | Tangerine Dream, *Stratosfear* | E minor, 138 | Brighter and driving, two sequences interlocking, the Lead forward |
+| 6 | Sunrain | Ashra, *New Age of Earth* | D major, 130 | The most hopeful: both echo repeats at full, bright strings, surf |
+| 7 | Mirage | Schulze, *Mirage* | F♯ minor, 95 | Icy glass sequences, a deep phaser, a long reverb, sparse |
+| 8 | Cyborg | Schulze, *Cyborg* | C Phrygian, beatless | Early and raw: deep organ drones beating, no sequence |
+
+The names are working titles and the keys and tempos are starting points (from analysis sites, to tune by ear).
+BERLIN is not connected with any of these artists.
 
 ## In short
 
 | | |
 |---|---|
-| Keys | The scale: each key adds its note or takes it out |
-| PLAY · REC · EDIT | Play / rest · a tap: dub hold, held: the effects grid (16 effects on the white keys) · a tap: the Chords page (eight slots: root, kind, type; Play Endless or Loop), held: the next chord, held on: new chords |
-| SEL | A tap: PERFORM: the knobs the master actions, Filter, Wet (the whole music dry or drowned in the echo), Energy and the piece's Duck (white 6 held: the mix); white keys 1–5 mute the layers (their levels kept), black keys 1–5 solo them; white 7–11, held: throw, open, shut, drop (the kick and the bass), push the echo. The keys that do something are lit; a page's button or SELECT leaves it. Held: **Lock**, each phrase keeping the kick, the drums' and the bass's plan and the noise's groove |
-| FX · ENV · LFO · GLO / HOME · SAVE · ARP · SEQ | The pages, as the buttons sit: Space (Echo, Echo time, Feedback in seconds, Reverb), Chord (Density, Throws, Wet, Cutoff), Bass (Density, Octave, Groove, Fifth), Setup (for every piece) / Dub (the Filter, Evolve, Motion, Drift), Noise (Density, Air, Tone, Decay), Pings (Density, Octave, Wet, Cloud), Drums (Density: the kick's shapes, Hits, Hats, Tone); KNOB 1–4 set their four values, and the line above them says what the one turning does; the page's name is top right. FX again: the Echo page (Blur, Tone, Width, Size). HOME again: the Key page (tempo, root, mode, swing). A layer's button again: its sound page (four more; the chord's Attack, Decay, Colour, Reso). A button with one page stays on it pressed again; one with several steps through them |
-| SELECT | The previous or next page, in the panel's order (the dots under the page's name show where); with HOME held, the tempo |
-| SEQ, twice, three times | The drums' sound page, then the **Pattern page**: five lanes (kick, shaker, open hat, rim, clap) of sixteen steps on the white keys, accents, chance |
-| ALGORITHM | On a layer's page, its voice (7 chord, 5 ping, 5 bass voices, 5 kits); on the Chords page, the walk (Home, Wander, Free); on the Noise page, its character; elsewhere, the screen (ripples, scope, spectrum). The mode is on the Key page (HOME again). An FM voice's layer button a third time: its FM page (the algorithm, ratio, feedback, and an LFO in time with the bars: the chord's filter, the pings' brightness, the bass's bite) |
-| PRESETS | The piece (eight of them) |
-| OCT− / OCT+ | On a layer's page (Chord, Pings, Bass, Drums, Noise): its level, 5 a press (held: on), shown as a ring; both together, quickly: the layer muted or back, its level kept (the same mutes as PERFORM's); held 5 s: the update mode |
-| SAVE | The Noise page (Density, Air, Tone, Decay; ALGORITHM its character: Vinyl, Tape, Dust, Room, Machine); again, Noise space (Width, Plate, Echo, LFO); held, a nudge to the noise |
-| GLO | The Setup page; held, saves (held on, the piece back to its recipe) |
+| White keys | Play the Lead, in the piece's scale (the key it sounds is lit); black keys do nothing |
+| PLAY · REC · EDIT | Play / rest · a tap: hold (the echo repeats what it holds), held: the effects grid (16 effects on the white keys) · a tap: the Chords page, held: the next chord |
+| SEL | PERFORM: the knobs Filter, Wet, Energy, Sweep; white 1–5 mute the Drone, Sequence, Lead, Sequence 2, Atmosphere; black 1–5 solo them; white 6 held: the levels; white 7–11 held: Sweep, Open, Shut, Drop (both sequences out), Echo. Held: Lock |
+| HOME | The Berlin page (Filter, Evolve, Motion, Drift); again, the Key page (Tempo, Root, Mode, Transpose) |
+| ENV | The Drone (Pedal, Reso, Phaser, Attack); again, its sound (Colour, Release, Reverb, Echo) |
+| ARP | The Sequence (Density, Octave, Length, Grid); again, its sound (Cutoff, Decay, Reverb, Echo); again, its Repeats (Repeat A, A time, Repeat B, B time) |
+| LFO | The Lead (Phrases, Octave, Glide, Vibrato); again, its sound (Tone, Attack, Reverb, Echo) |
+| SEQ | Sequence 2 (Chance, Octave, Length, Level); again, its sound; again, the Pattern page (write the steps on the keys) |
+| SAVE | The Atmosphere (Density, Width, Drift, Air); again, its sound (Colour, Ring, Reverb, Echo) |
+| FX | Space (Echo, Echo time, Feedback, Reverb); again, the Echo page (Blur, Tone, Width, Size) |
+| GLO | Setup (Tune, MIDI out, Lights, Save); again, the Arc (Emerge, Seq2 in, Lead in, Arc). Held: save; held on: the piece back to its recipe |
+| ALGORITHM | On a layer's page, its voice (the Atmosphere: its character) |
+| PRESETS | The piece |
+| OCT− / OCT+ | On a layer's page, its level; both together, quickly: mute it |
 
-Hold a layer's button (ENV, ARP, LFO, SEQ) for a nudge: its sound a small step somewhere new. Every
-long press says what it did on a card in the middle of the screen.
-
-DUB-1 also tells the [FM-1 Screen Reader](https://charlesvestal.github.io/fm1-reader/) what its
-screen shows, over USB: the page and its knobs, a knob's value as it turns, the piece, the chord as
-it moves, and what each button did.
-
-The [manual](docs/MANUAL.md) has the rest. [PLAN.md](PLAN.md) has the design, what's done and
-what's still to do.
+The [manual](docs/MANUAL.md) has the rest. [PLAN.md](PLAN.md) has what's done and what's still to do.
 
 ## Building and testing
 
-The toolchain is the same as X0X's (see [BUILDING.md](BUILDING.md)):
+The toolchain is the same as DUB-1's (see [BUILDING.md](BUILDING.md) and [EMULATOR.md](EMULATOR.md)):
 
 ```
-tests/run_tests.sh      # the instrument, the platform pieces, the app in a simulator, the web builds
-./build.sh              # build/amb.fwsc
+tests/run_tests.sh      # the engine, the platform pieces, the app in a simulator, the web builds
+web/emu/build.sh        # the browser emulator: build/emu (serve it, open index.html)
+./build.sh              # build/amb.fwsc, for the FM-1
 python3 tools/fm1_install.py build/amb.fwsc     # install it over USB
 ```
 
 `build/host/amb_host SCRIPT OUTDIR` runs the whole app on a computer from a script
-(`tests/scenarios/*.amb`), with audio and screenshots coming out. `web/emu/build.sh` builds the
-same code for the browser (the emulator); `web/app/build.sh` builds the engine alone into a web
-app for phone and desktop. [EMULATOR.md](EMULATOR.md) says how to set these up on a Mac and how to
-listen to a change.
+(`tests/scenarios/*.amb`), with audio and screenshots coming out; `build/host/en_render OUT.wav SECS piece=N`
+renders the engine alone.
 
 ## Credits
 
-DUB-1 is a fork of [AMB-1](https://github.com/charlesvestal/fm1-amb) by Charles Vestal
-(GPL-3.0-only): the engine's loops, echo chain, plate and pieces system, the UI and the platform
-all come from there. The idea comes from AMB-1 and from dub techno in general: chords dissolving
-in a tape echo over a steady kick. The reverb is Jon Dattorro's plate ("Effect Design, Part 1",
-JAES 1997), as in [FoMni-1](https://github.com/charlesvestal/fm1-fomni); the granular cloud follows the
-design of CLOUD in [JIANT](https://github.com/juanjiant-bit/JIANT) (GPL-3.0); the Euclidean rhythms
-are Godfried Toussaint's reading of Bjorklund's algorithm; the noise machine (a crackle groove
-ringing resonators tuned to the chord) follows Bahadirhan Kocer's "Using Resonators in Live". The platform (hardware layer, USB,
-update loader, storage, installer) is [Felucca](https://github.com/hugelton/Felucca)'s by Leo
-Kuroshita (Hügelton Instruments), by way of [X0X](https://github.com/charlesvestal/fm1-x0x),
-FoMni-1 and AMB-1. The idea of running FM-1 firmware in the browser comes from
-[Groove OS](https://www.groove-os.com/). GPL-3.0-only; see [LICENSING.md](LICENSING.md).
+BERLIN is a fork of [DUB-1](https://github.com/sbegueria/fm1-dub), a fork of
+[AMB-1](https://github.com/charlesvestal/fm1-amb) by Charles Vestal (GPL-3.0-only): the echo chain, the plate,
+the pieces system, the chord walk, the UI and the platform come from there. The reverb is Jon Dattorro's plate
+("Effect Design, Part 1", JAES 1997), as in [FoMni-1](https://github.com/charlesvestal/fm1-fomni); the granular
+cloud (Freeze) follows the design of CLOUD in [JIANT](https://github.com/juanjiant-bit/JIANT) (GPL-3.0); the Tape
+atmosphere is DUB-1's crackle, after Bahadirhan Kocer's "Using Resonators in Live". The way the sequence is
+played (a root accented, sparse notes, a dotted-eighth repeat as loud as the note, two delays) owes much to
+Synth Seeker's videos on Berlin School sequencing. The platform (hardware layer, USB, update loader, storage,
+installer) is [Felucca](https://github.com/hugelton/Felucca)'s by Leo Kuroshita (Hügelton Instruments), by way
+of [X0X](https://github.com/charlesvestal/fm1-x0x), FoMni-1, AMB-1 and DUB-1. The idea of running FM-1 firmware
+in the browser comes from [Groove OS](https://www.groove-os.com/). GPL-3.0-only; see [LICENSING.md](LICENSING.md).
 
-**The random chords.** When no chord slots are set, the chords come from a weighted random walk over
-the degrees of the piece's scale, taken from AMB-1's `chord_change` (Charles Vestal) and re-weighted
-for dub. Each chord is stacked in thirds from the scale, so it always fits the piece. When Drift
-says it's time, the walk moves to another degree. In a seven-note scale the weights are iv 3.0, VII
-2.0, v and VI 1.5, III 1.0 and ii 0.4. Away from home it goes back to i 65% of the time, so the
-music keeps returning to its tonic. A degree whose fifth is diminished (the half-diminished chord)
-is never chosen; in a shorter scale every degree weighs the same. The voicing comes from dub
-techno's chord-memory stab (Basic Channel, Maurizio), where one chord shape is played from every
-key. The shape is kept and moved whole, either an open seventh (root, 5th, 7th, 10th) or a ninth
-without its fifth. Its root lands nearest the one before, within a tritone and between F#2 and F3,
-so the stabs slide in parallel instead of jumping. Evolve now and then swaps one shape for the
-other. AMB-1's own walk weights the degrees differently (home and the near, strong moves first).
-The code is `chord_change` and `voice_chord` in `firmware/src/dsp/amb.c`.
-
-M-VAVE and FM-1 are trademarks of their owners. DUB-1 is not affiliated with M-VAVE or Hügelton
-Instruments.
+M-VAVE and FM-1 are trademarks of their owners. BERLIN is not affiliated with M-VAVE or Hügelton Instruments.

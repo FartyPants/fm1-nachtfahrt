@@ -48,3 +48,24 @@ DUB-1's device readings for scale (its PLAN.md, 2026-10-16, not re-measured): Ba
 ## Memory on the device (DUB-1's PLAN.md, not re-measured until the device build)
 
 RAM 74.7 of 96 KB; the buffer pool 332 of 344 KB; `tools/build.py` fails a build with under 8 KiB of pool spare.
+
+# BERLIN 0.1 (measured 2026-10-27, Task 15)
+
+Same machine and method (`tests/listen/baseline.sh`, each piece a minute from its start, three runs). The first
+minute of Timewind, Rubycon and Mirage is mostly Emerge (lighter); the stress run has no Emerge.
+
+| Script | Piece | Runs | Median | Peak |
+|---|---|---|---|---|
+| baseline_0 | Timewind | 0.83 0.69 0.65 | 0.69 | −15.7 dBFS |
+| baseline_1 | Wahnfried | 0.64 0.63 0.66 | 0.64 | −10.1 dBFS |
+| baseline_2 | Phaedra | 0.71 0.71 0.70 | 0.71 | −7.6 dBFS |
+| baseline_3 | Rubycon | 0.59 0.60 0.61 | 0.60 | −17.2 dBFS |
+| baseline_4 | Stratosfear | 0.73 0.75 0.74 | 0.74 | −4.3 dBFS |
+| baseline_5 | Sunrain | 0.83 0.85 0.82 | 0.83 | −3.8 dBFS |
+| baseline_6 | Mirage | 0.81 0.78 0.79 | 0.79 | −17.0 dBFS |
+| baseline_7 | Cyborg | 0.58 0.59 0.58 | 0.58 | −16.3 dBFS |
+| baseline_stress | Sunrain: Density, Repeat A and B, Sequence 2, Phaser, Phrases at 100 | 0.84 0.85 0.85 | 0.85 | −3.7 dBFS |
+
+The effects scenario (`tests/scenarios/effects.amb`: each of the sixteen held in turn, and all sixteen at once)
+ran at 0.98%. **Everything is within the 1.10% budget; nothing was cut.** The device's own readings wait for the
+device build (PLAN.md).

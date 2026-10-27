@@ -1,29 +1,57 @@
-# the manual's page screenshots
-wait 9000
+# the manual's screenshots (BERLIN): Stratosfear playing (no Emerge: both sequences from the first bar), each page,
+# PERFORM, hold, the effects grid; build/host/amb_host tests/listen/docshots.amb docs/img
+wait 300
+turn PRESET 4
+wait 20000
+shot screen-main.png
+tap HOME
+wait 400
+shot screen-key.png
 tap ENV
 wait 400
-shot screen-chord.png
+shot screen-drone.png
 tap ARP
 wait 400
-shot screen-pings.png
+shot screen-sequence.png
+tap ARP
+wait 400
+tap ARP
+wait 400
+shot screen-repeats.png
 tap LFO
 wait 400
-shot screen-bass.png
+shot screen-lead.png
 tap SEQ
 wait 400
-shot screen-drums.png
-tap GLO
+shot screen-seq2.png
+tap SAVE
 wait 400
-shot screen-setup.png
+shot screen-atmos.png
 tap FX
 wait 400
 shot screen-space.png
-turn K3 3
-wait 300
-shot screen-turning.png
+tap GLO
+wait 400
+tap GLO
+wait 400
+shot screen-arc.png
 tap HOME
-wait 2000
-press GLO
-wait 1100
-shot screen-help.png
-release GLO
+wait 400
+tap SEL
+wait 1500
+shot screen-perform.png
+tap SEL
+wait 400
+tap REC
+wait 3000
+shot screen-hold.png
+tap REC
+wait 400
+press REC
+wait 400
+key w12 down
+wait 300
+shot screen-grid.png
+key w12 up
+release REC
+wait 300
