@@ -193,6 +193,11 @@ void en_piece(int i, int16_t *par, uint16_t *pool)
         par[p] = PIECES[i].v[p];
     for (k = 0; k < sizeof NEW; k++)
         par[NEW[k]] = PARAMS[NEW[k]].def;
+    {   /* (until BERLIN's own recipes: an Atmosphere in half of them, of the four the user likes: Wind, Tape, Space,
+         * Surf; the rest None) */
+        static const uint8_t ATM[EN_NPIECES] = {1, 0, 5, 0, 3, 0, 2, 0};
+        par[P_NCHAR] = ATM[i];
+    }
     *pool = EN_MODE_POOL[PIECES[i].v[P_MODE]];
 }
 

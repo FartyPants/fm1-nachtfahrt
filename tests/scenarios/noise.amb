@@ -75,7 +75,7 @@ wait 600
 release GLO
 reboot
 wait 1000
-expect format 3
+expect format 4
 expect par110 1
 expect par106 20
 # Setup's KNOB 4: Save, a turn saves (Saved once done)
