@@ -948,6 +948,67 @@ int main(void)
         CHECK(peak < 1e-4f, "test_fx_supernova: from silence, held: %.4f", (double)peak);
     }
 
+    /* (BERLIN) the black keys' Transpose: a written pattern played with Transpose held is the same pattern written three
+     * scale steps up */
+    {
+        static const int8_t A[8] = {0, 2, 4, 1, 3, 5, 7, 6};
+        int8_t B[8];
+        int i, k, nt[2], notes[2][8], ok = 1;
+        for (i = 0; i < 8; i++)
+            B[i] = (int8_t)(A[i] + 3);
+        for (k = 0; k < 2; k++) {
+            fresh();
+            en_set(P_TEMPO, 120);
+            en_set(P_SEQ2, 0);
+            en_set(P_TAPA, 0);
+            en_set(P_TAPB, 0);
+            en_set(P_DENSITY, 100);
+            seq_write(8, 0xFFu, k ? A : B);
+            if (k)
+                en_move(EN_MV_TRANSPOSE);
+            en_play(1);
+            run(4.5f);
+            nt[k] = (int)sq_n;
+            for (i = 0; i < 8 && (int)sq_n >= 16; i++)
+                notes[k][i] = sq_note[sq_n - 8 + i];
+        }
+        for (i = 0; i < 8; i++)
+            ok &= notes[0][i] == notes[1][i];
+        if (!ok)
+            for (i = 0; i < 8; i++)
+                printf("  transpose: step %d: written up %d, held %d\n", i, notes[0][i], notes[1][i]);
+        CHECK(ok && nt[0] >= 16 && nt[1] >= 16, "test_move_transpose: held, not the pattern three steps up");
+        en_move(0);
+    }
+
+    /* (BERLIN) everything at once: every layer's Width and Rate 100, Bridge 100, Motion 100, Rise and Close and all
+     * sixteen effects held, 160 BPM, a minute: nothing broken, the offsets bounded; let go: back under -0.5 dBFS */
+    {
+        static const int W[5] = {P_MW0, P_MW1, P_MW2, P_MW3, P_MW4}, R[5] = {P_MR0, P_MR1, P_MR2, P_MR3, P_MR4};
+        int k, okf = 1;
+        fresh();
+        piece(4);
+        en_set(P_TEMPO, 160);
+        en_set(P_MOTION, 100);
+        en_set(P_BRIDGE, 100);
+        for (k = 0; k < 5; k++)
+            en_set(W[k], 100), en_set(R[k], 100);
+        en_play(1);
+        en_fx(0xFFFFu);
+        en_move(EN_MV_RISE | EN_MV_CLOSE | EN_MV_TRANSPOSE);
+        bad = 0;
+        run(60.0f);
+        for (k = 0; k < 5; k++)
+            okf &= en_fo[k] == en_fo[k] && fabsf(en_fo[k]) < 12.0f;
+        en_fx(0);
+        en_move(0);
+        run(10.0f);
+        peak = 0.0f;
+        run(5.0f);
+        CHECK(!bad && okf && peak < 0.944f, "test_fm_extremes: bad %d, offsets ok %d, peak after %.3f", bad, okf,
+              (double)peak);
+    }
+
     /* every voice of every layer: it sounds, without NaN, under full scale */
     {
         static const int VP[3] = {P_CVOICE, P_SVOICE, P_LVOICE}, LV[3] = {P_CHORD, P_SEQ, P_LEAD};

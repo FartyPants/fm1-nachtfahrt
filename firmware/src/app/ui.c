@@ -216,6 +216,8 @@ static struct {
     uint32_t solo;                     /* the layers soloed (EN_M_*): the others muted while any is */
     int8_t mac[EN_NMAC];               /* the master actions (HOME's Filter, PERFORM's knobs): -50..50, never saved */
     uint32_t fx;                       /* the effects held (EN_FX_*), REC's grid */
+    uint32_t bfx;                      /* (BERLIN) the grid's effects held on the black keys (EN_FX_*) */
+    uint8_t mv;                        /* (BERLIN) the black keys' moves held (EN_MV_*) */
     uint8_t slot, chords_from;         /* the Chords page: the slot edited; the page it was opened from */
     uint8_t noise_from;                /* the Noise page (SAVE): the page it was opened from */
     uint8_t noise_round;               /* (1: SELECT brought it, and goes on from it) */
@@ -832,7 +834,7 @@ static int fx_key(uint32_t key, int down)        /* 1: the key was an effect's *
     } else {
         ui.fx &= ~(1u << e);
     }
-    en_fx(ui.fx);
+    en_fx(ui.fx | ui.bfx);
     return 1;
 }
 
@@ -914,6 +916,32 @@ static void edit_released(uint32_t held)
  * the accents' strength, KNOB 3 the lane's chance, KNOB 4 Play: Auto (generated, as ever) or Pattern. The first
  * edit takes the pattern over from what Auto plays. The arrangement still takes lanes out (a Break, a fill) */
 static const uint8_t STEP_KEY[16] = {0, 2, 4, 6, 7, 9, 11, 12, 14, 16, 18, 19, 21, 23, 24, 26};   /* the white keys */
+/* (BERLIN, spec 13) the black keys in normal playing: an effect each while held, eight of the grid's and three moves
+ * (EN_MV_*, coded 100 + the move) */
+#define NBLACK 11
+static const uint8_t BLACK_KEY[NBLACK] = {1, 3, 5, 8, 10, 13, 15, 17, 20, 22, 25};
+static const uint8_t BLACK_DO[NBLACK] = {EN_FX_TAKEOFF, EN_FX_SUPERNOVA, EN_FX_TWITTER, EN_FX_REPEAT, EN_FX_SWELL,
+                                         EN_FX_FREEZE, EN_FX_OCTAVE, EN_FX_RETURN, 100 + EN_MV_RISE, 100 + EN_MV_CLOSE,
+                                         100 + EN_MV_TRANSPOSE};
+static const char *const BLACK_NAME[NBLACK] = {"Take-off", "Supernova", "Twitter", "Repeat", "Swell", "Freeze",
+                                               "Octave", "Return", "Rise", "Close", "Transpose"};
+static int black_of(uint32_t key)                /* the black key's index (0..10), or -1 */
+{
+    int b;
+    for (b = 0; b < NBLACK && BLACK_KEY[b] != key; b++)
+        ;
+    return b < NBLACK ? b : -1;
+}
+static void black_set(int b, int on)             /* a black key's effect on or off, to the engine */
+{
+    const int d = BLACK_DO[b];
+    if (d >= 100)
+        ui.mv = (uint8_t)(on ? ui.mv | (d - 100) : ui.mv & ~(d - 100));
+    else
+        ui.bfx = on ? ui.bfx | 1u << d : ui.bfx & ~(1u << d);
+    en_fx(ui.fx | ui.bfx);
+    en_move(ui.mv);
+}
 static uint32_t lane_steps(int d) { return proj.par[P_SMODE] ? (uint32_t)(uint16_t)proj.par[P_SGATE0 + d] : en_seq_lane[d]; }
 static void pattern_key(uint32_t key, uint32_t keys)
 {
@@ -1372,6 +1400,8 @@ static void input(void)
     for (i = 0; i < NKEYS; i++)
         if (ch >> i & 1u) {
             int down = (int)(keys >> i & 1u);
+            if (!down && black_of(i) >= 0)       /* (BERLIN) a black key let go: its effect ends, whatever took it */
+                black_set(black_of(i), 0);
             if (!down) {                         /* (BERLIN) a white key let go: the Lead let go of it first, whatever
                                                   * takes the key now (REC, an effect, PERFORM, a page); the engine
                                                   * ignores a release that isn't its key */
@@ -1404,6 +1434,10 @@ static void input(void)
                     ;
                 if (st < 16 && down)
                     en_lead_key(st, 1);          /* (its release sent above) */
+                else if (down && black_of(i) >= 0) {   /* the black keys: their effects (spec 13) */
+                    black_set(black_of(i), 1);
+                    say(BLACK_NAME[black_of(i)], 0);
+                }
             }
         }
     if (btn || keys || ch)
@@ -2484,8 +2518,12 @@ static void leds(void)
     } else if (proj.leds) {                      /* (BERLIN) the white key of the note the Lead sounds */
         const int d = en_lead_deg;
         (void)ap;
+        int bk;
         if (d >= 0 && d < 16)
             k |= 1u << STEP_KEY[d];
+        for (bk = 0; bk < NBLACK; bk++)          /* (a black key's effect held: lit) */
+            if (BLACK_DO[bk] >= 100 ? ui.mv & (BLACK_DO[bk] - 100) : ui.bfx >> BLACK_DO[bk] & 1u)
+                k |= 1u << BLACK_KEY[bk];
     }
     plat_glow(proj.leds == 1);
     plat_leds(b, k);

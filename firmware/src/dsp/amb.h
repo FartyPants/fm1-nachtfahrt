@@ -150,6 +150,10 @@ enum { EN_FX_REPEAT, EN_FX_TIME, EN_FX_TAPESTOP, EN_FX_SWELL, EN_FX_LOWPASS, EN_
        EN_NFX };
 extern const char *const EN_FX_NAME[EN_NFX];
 void en_fx(uint32_t mask);
+/* (BERLIN) the black keys' moves, held: every layer's filter opened together (Rise, +2 octaves), closed (Close, -4),
+ * both sequences three scale steps up (Transpose) */
+enum { EN_MV_RISE = 1, EN_MV_CLOSE = 2, EN_MV_TRANSPOSE = 4 };
+void en_move(uint32_t mask);
 /* MIDI clock in (as FoMni): ticks drive the 1/16 grid (6 a step) while they keep coming */
 enum { EN_CLK_TICK, EN_CLK_START, EN_CLK_CONTINUE, EN_CLK_STOP };
 void en_clock(int msg);

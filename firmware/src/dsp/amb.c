@@ -401,7 +401,7 @@ const char *en_chord_name(const int *pcs, int n, char *buf)
 }
 
 /* ------------------------------------------------------------ commands --- */
-enum { C_SET, C_POOL, C_PLAY, C_NEXT, C_FREEZE, C_SEED, C_PANIC, C_CLOCK, C_REGROW, C_MUTE, C_PERF, C_FX, C_SEQ, C_MACRO, C_PROT, C_REWALK, C_LOCK, C_SEQSET, C_LKEY };
+enum { C_SET, C_POOL, C_PLAY, C_NEXT, C_FREEZE, C_SEED, C_PANIC, C_CLOCK, C_REGROW, C_MUTE, C_PERF, C_FX, C_SEQ, C_MACRO, C_PROT, C_REWALK, C_LOCK, C_SEQSET, C_LKEY, C_MOVE };
 #define QN 512u                                 /* (a piece is every parameter at once: room for twice over and more) */
 _Static_assert(QN >= 2u * (P_NPARAMS + 8), "the command queue can't hold a piece's parameters twice over");
 static uint32_t q[QN];
@@ -427,6 +427,7 @@ void en_regrow(void) { post(C_REGROW, 0, 0); }
 void en_mute(uint32_t m) { post(C_MUTE, (int)(m & 0xFFu), 0); }
 void en_perf(uint32_t f) { post(C_PERF, (int)(f & 0xFFu), 0); }
 void en_fx(uint32_t m) { post(C_FX, 0, (int)(m & 0xFFFFu)); }
+void en_move(uint32_t m) { post(C_MOVE, 0, (int)(m & 0xFFu)); }
 void en_macro(int i, int v) { post(C_MACRO, i, v + 50); }   /* (sent as 0..100) */
 void en_lock(int on) { post(C_LOCK, on != 0, 0); }
 void en_prog_rotate(void) { post(C_PROT, 0, 0); }
@@ -1005,6 +1006,8 @@ static float fo_v[NFO], fo_a[NFO], fo_b[NFO], fo_p[NFO] = {1.0f, 1.0f, 1.0f, 1.0
                                                   * (1: arrived), bars to the next */
 static float fo_bs[NFO], fo_be;                  /* the Bridge's move by layer (-1..1 of Bridge), how far in (0..1) */
 static float fo_ib;                              /* bars since the piece started (the intros) */
+static uint32_t mvm;                             /* (BERLIN) the black keys' moves held: EN_MV_* */
+static float mv_rise, mv_close;                  /* Rise and Close, eased (0..1) */
 static uint32_t fo_rng[NFO], fo_pulses, fo_pp;   /* (the clock: pulses so far, the last counted, how far through the */
 static float fo_f = 1.0f;                        /* pulse after it) */
 static float fo_u(int l) { return (float)(seq_rand(&fo_rng[l]) >> 8) * (1.0f / 16777216.0f); }
@@ -1058,6 +1061,11 @@ static void fo_step(uint32_t n)                  /* once a chunk: the clock on, 
     be = ar_sec == EN_SEC_BRIDGE && ar_left > 4 ? 1.0f : 0.0f;   /* the Bridge: in over four bars, out over its last */
     fo_be = be > fo_be ? fm_minf(fo_be + 0.25f * d, 1.0f) : fm_maxf(fo_be - 0.25f * d, 0.0f);
     be = fo_ease(fo_be) * 3.0f * (float)pe(P_BRIDGE) * 0.01f;
+    {   /* the black keys' Rise and Close: in over about a second, out over about three */
+        const float up = (float)n / EN_SR, dn = (float)n / (3.0f * EN_SR);
+        mv_rise = mvm & EN_MV_RISE ? fm_minf(mv_rise + up, 1.0f) : fm_maxf(mv_rise - dn, 0.0f);
+        mv_close = mvm & EN_MV_CLOSE ? fm_minf(mv_close + up, 1.0f) : fm_maxf(mv_close - dn, 0.0f);
+    }
     for (l = 0; l < NFO; l++) {
         const int lead = l == FO_LEAD, r = pe(FO_R[l]), in = pe(FO_I[l]);
         const float t = fm_maxf(fm_exp2f((float)pe(FO_T[l]) * 0.05f), lead ? 4.0f : 1.0f);   /* 1 .. 32 bars */
@@ -1074,7 +1082,8 @@ static void fo_step(uint32_t n)                  /* once a chunk: the clock on, 
             }
         }
         fo_v[l] = fo_a[l] + (fo_b[l] - fo_a[l]) * fo_ease(fo_p[l]);
-        o = (lead ? FO_LEAD_CAP : 2.0f) * (float)pe(FO_W[l]) * 0.01f * fo_v[l] + (lead ? be * (1.0f / 3.0f) : be) * fo_bs[l];
+        o = (lead ? FO_LEAD_CAP : 2.0f) * (float)pe(FO_W[l]) * 0.01f * fo_v[l] + (lead ? be * (1.0f / 3.0f) : be) * fo_bs[l] +
+            2.0f * fo_ease(mv_rise) - 4.0f * fo_ease(mv_close);   /* (the black keys' Rise and Close) */
         if (lead)
             o = fm_clampf(o, -FO_LEAD_CAP, FO_LEAD_CAP);
         if (l == FO_SEQ)
@@ -1332,10 +1341,17 @@ static void seq_take(void)                      /* a piece's kept patterns, back
 
 static int seq_note(const seq_t *q, int l, int s)   /* step s's note, transposed by the chord as the piece says */
 {
+    seq_t t;
     const int root = par[P_ROOT] % 12, tr = par[P_TRANS],
               off = tr == 2 ? 0 : ((int)en_chord_root % 12 - root + 12) % 12,
-              base = 48 + root + 12 * (l ? par[P_SEQ2OCT] : par[P_SEQOCT]),
-              n = seq_pitch(q, s, steps, nsteps, base, tr == 0, off);
+              base = 48 + root + 12 * (l ? par[P_SEQ2OCT] : par[P_SEQOCT]);
+    int n;
+    if (mvm & EN_MV_TRANSPOSE) {                 /* (BERLIN) the black keys' Transpose: three scale steps up */
+        t = *q;
+        t.deg[s] = (int8_t)(t.deg[s] + 3);
+        q = &t;
+    }
+    n = seq_pitch(q, s, steps, nsteps, base, tr == 0, off);
     return n < 24 ? 24 : n > 108 ? 108 : n;
 }
 
@@ -2347,6 +2363,7 @@ static void drain(void)
         case C_MUTE: mutes = (uint32_t)a; break;
         case C_PERF: perf = (uint32_t)a; break;
         case C_FX: fxm = c & 0xFFFFu; break;
+        case C_MOVE: mvm = c & 0xFFu; break;
         case C_REWALK: {                         /* the walk's slots walked again, all but the one playing, each from
                                                   * the slot before (yours and the gaps kept) */
             int k, prev = deg;
