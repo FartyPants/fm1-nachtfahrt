@@ -484,9 +484,6 @@ volatile uint8_t en_stab_thrown;
 volatile uint16_t en_lane[6];
 volatile int16_t en_scope[EN_SCOPE_N];
 volatile uint32_t en_scope_w;
-volatile int16_t en_spec[EN_SPEC_N];
-volatile uint32_t en_spec_w;
-volatile uint8_t en_view_layer;
 volatile uint32_t en_hits[5];
 volatile float en_hit_vel[5];
 volatile float en_echo_pk;
@@ -506,7 +503,7 @@ static void nev(int k, float s, float p)         /* a noise event, for the scree
     en_nev_w = w + 1u;
 }
 static void hit(int l, float vel) { en_hit_vel[l] = vel; en_hits[l]++; }
-static float scope_acc, spec_acc;
+static float scope_acc;
 static uint32_t scope_ph;
 static uint32_t mutes, perf, fxm, fxm_was;      /* performance: the layers muted, the moves held; the effects held */
 static float perf_sw, perf_echo, mb_c[4], mb_s[4];   /* (mb: Open's and Shut's filter on the music, the kick left out) */                /* the filter pushed open (+) or shut (-), the echo pushed */
@@ -3576,7 +3573,6 @@ static void widen(uint32_t n)
     }
 }
 
-static float tapb[BLK];                          /* the layer the screen listens to, alone (en_view_layer) */
 /* (bassb: the bass, mono, on its own so the duck takes it deeper than the rest) */
 
 static void render_stabs(uint32_t n)
@@ -4780,43 +4776,19 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
     for (j = 0; j < n; j++)
         mixl[j] = mixr[j] = rsend[j] = esend[j] = kickb[j] = bassb[j] = 0.0f;
     lfo_step();
-    {   /* (a layer's own part of the dry mix: what its render adds; the bass, the kick and the noise their own) */
-        const int tl = en_view_layer;
-        render_stabs(n);
-        if (tl == 1)
-            for (j = 0; j < n; j++)
-                tapb[j] = mixl[j] + mixr[j];
-        render_bass(n);
-        if (tl == 2)
-            for (j = 0; j < n; j++)
-                tapb[j] = -(mixl[j] + mixr[j]);
-        render_bells(n);
-        render_plucks(n);
-        render_drone(n);
-        render_lead(n);
-        render_crash(n);
-        widen(n);                                /* (the chord's and the pings' dry, wider) */
-        if (tl == 2)
-            for (j = 0; j < n; j++)
-                tapb[j] += mixl[j] + mixr[j];
-        if (tl == 4)
-            for (j = 0; j < n; j++)
-                tapb[j] = -(mixl[j] + mixr[j]);
-        render_drums(n);
-        if (tl == 4)
-            for (j = 0; j < n; j++)
-                tapb[j] += mixl[j] + mixr[j] + 2.0f * kickb[j];
-        if (tl == 3)
-            for (j = 0; j < n; j++)
-                tapb[j] = 2.0f * bassb[j];
-        if (atm_char == ATM_TAPE)
-            render_crackle(n);
-        else
-            render_atmos(n);
-        if (tl == 5)
-            for (j = 0; j < n; j++)
-                tapb[j] = crl[j] + crr[j];
-    }
+    render_stabs(n);
+    render_bass(n);
+    render_bells(n);
+    render_plucks(n);
+    render_drone(n);
+    render_lead(n);
+    render_crash(n);
+    widen(n);                                    /* (the chord's and the pings' dry, wider) */
+    render_drums(n);
+    if (atm_char == ATM_TAPE)
+        render_crackle(n);
+    else
+        render_atmos(n);
     if (fxm || tw_env > 1e-4f || fx_ph > 0.005f)
         render_fx(n);
     eg += (1.0f - eg) * fx_wash;                 /* Wash: everything into the echo */
@@ -4900,16 +4872,7 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
         r = soft(r);
         out[2 * j] = (int32_t)(l * 8300000.0f);
         out[2 * j + 1] = (int32_t)(r * 8300000.0f);
-        {   /* (the screen's scope and spectrum: the output, or a layer alone) */
-            const float v = en_view_layer ? tapb[j] * 0.75f * gain : l + r;
-            scope_acc += v;
-            spec_acc += v;
-        }
-        if (scope_ph & 1u) {
-            en_spec[en_spec_w & (EN_SPEC_N - 1u)] = (int16_t)(fm_clampf(spec_acc, -4.0f, 4.0f) * 8000.0f);
-            en_spec_w++;
-            spec_acc = 0.0f;
-        }
+        scope_acc += l + r;                      /* (the ripples' outlines: the output) */
         if (++scope_ph >= 8u) {                  /* (an eighth of the rate, each the mean of its eight) */
             scope_ph = 0;
             en_scope[en_scope_w & (EN_SCOPE_N - 1u)] = (int16_t)(fm_clampf(scope_acc, -16.0f, 16.0f) * 2000.0f);

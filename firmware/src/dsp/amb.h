@@ -212,15 +212,11 @@ extern volatile uint8_t en_stab_thrown;        /* the last one was thrown */
 extern volatile float en_echo_ms, en_echo_g;   /* the echo's time; the level a repeat keeps of the last (1: held) */
 extern volatile float en_echo_in;              /* how much of the stab goes into the echo, 0..1 */
 extern volatile float en_duck;                 /* the ducking now, 0 .. 1 (full depth) */
-/* the output, for the screen's scope and spectrum: the last 256 samples (mono, a mean of each eight), and the
- * last 512 (mono, a mean of each two: 22 kHz), each with where the next goes */
+/* the output, for the ripples' outlines: the last 256 samples (mono, a mean of each eight), with where the next goes */
 #define EN_SCOPE_N 256
-#define EN_SPEC_N 512
-extern volatile int16_t en_scope[EN_SCOPE_N], en_spec[EN_SPEC_N];
-extern volatile uint32_t en_scope_w, en_spec_w;
-/* what the scope and spectrum listen to: 0 the whole output, 1..5 one layer alone, dry (the chord, the pings, the
- * bass, the drums, the noise), for a layer's page; and each layer's notes struck so far, the last one's strength */
-extern volatile uint8_t en_view_layer;
+extern volatile int16_t en_scope[EN_SCOPE_N];
+extern volatile uint32_t en_scope_w;
+/* each layer's notes struck so far, the last one's strength */
 extern volatile uint32_t en_hits[5];
 extern volatile float en_hit_vel[5];
 extern volatile float en_echo_pk;               /* the echo's output, its peak since the screen last took it */

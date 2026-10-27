@@ -12,7 +12,7 @@
  *   SEL            PERFORM: the keys mute (white 1-5) and solo (black 1-5) the layers and, held, make the dub moves
  *                  (white 7-11); the knobs the master actions (Filter, Dub, Energy, Space), with white 6 held the mix
  *   SELECT         the pages, in the panel's order (with HOME held: the tempo)   ALGORITHM the voice, the walk
- *                  (Chords), the noise's character, else the screen   PRESETS the piece
+ *                  (Chords), the noise's character                    PRESETS the piece
  *   FX ENV LFO GLO / HOME SAVE ARP SEQ   the pages: SPACE, CHORD, BASS, SETUP / DUB, NOISE, PINGS, DRUMS
  *   KNOB 1-4       the page's four values
  *   GLO held       saves (it also saves by itself a few seconds after a change, while resting);
@@ -1411,7 +1411,7 @@ static void input(void)
         }
         ui.turn_t = plat_ms();
     }
-    if ((e = plat_enc(EN_ALGO)) != 0) {         /* a layer's page: its voice; the Chords page: the walk; elsewhere: the screen */
+    if ((e = plat_enc(EN_ALGO)) != 0) {         /* a layer's page: its voice; the Chords page: the walk */
         int vp = view_voice(ui.view);
         if (ui.view == V_NSND || ui.view == V_NSND2) {   /* the Noise pages: its character */
             int c = ((proj.par[P_NCHAR] + (int)(e % EN_NNCHAR)) % EN_NNCHAR + EN_NNCHAR) % EN_NNCHAR;
@@ -1428,13 +1428,7 @@ static void input(void)
             }
         } else if (vp >= 0) {
             set_voice(vp, proj.par[vp] + (int)e);   /* (every detent: a quick turn comes as several at once) */
-        } else {                                 /* the middle of the screen: the ripples, a scope, a spectrum (the mode,
-                                                  * a piece's choice, is on the Key page) */
-            static const char *const SCREEN_NAME[3] = {"RIPPLES", "SCOPE", "SPECTRUM"};
-            proj.screen = (uint8_t)(((int)proj.screen + (int)(e % 3) + 3) % 3);
-            mark_dirty();
-            say("SCREEN", SCREEN_NAME[proj.screen]);
-        }
+        }                                        /* (elsewhere: nothing; the scope and the spectrum are gone) */
         ui.turn_t = plat_ms();
     }
     if ((e = plat_enc(EN_PRESET)) != 0) {
@@ -1826,7 +1820,7 @@ static void ripples_take(uint32_t now)
     rip_stabs = n;
     if (src >= 0 && (ui.mutes & LAYER_MUTE[src]) == LAYER_MUTE[src])   /* (a layer muted: no rings) */
         return;
-    if (src == 4)                                /* (the Noise page shows its spectrum) */
+    if (src == 4)                                /* (the Noise page: no rings) */
         return;
     for (i = 0; i < RIP_N; i++) {
         if (!rip[i].on) {
@@ -2044,139 +2038,6 @@ static void draw_orbits(void)                    /* the ping loops, around the r
     }
 }
 
-/* the middle as a scope: the output (mono), from a rising zero crossing so it stands, a thick line with a
- * glow over the two traces before it, fading; its height following the level shown (the gain rises for a
- * quiet moment) */
-#define SC_X 56
-#define SC_W 128
-#define SC_Y 58
-#define SC_H 26
-static void draw_scope(void)
-{
-    static int16_t s[EN_SCOPE_N];
-    static int8_t was[2][SC_W];                  /* the last two traces, fading (a phosphor's) */
-    static float gain = 4.0f;
-    const uint16_t c = en_frozen ? K_FROST : K_PAD, gl = mix(K_BG, c, 5), ph[2] = {mix(K_BG, c, 6), mix(K_BG, c, 3)};
-    uint32_t w = en_scope_w;
-    int i, t0 = 0, m = 1;
-    int32_t x;
-    for (i = 0; i < EN_SCOPE_N; i++)             /* (the oldest first) */
-        s[i] = en_scope[(w + (uint32_t)i) & (EN_SCOPE_N - 1u)];
-    for (i = 2; i < EN_SCOPE_N - SC_W; i++)
-        if (s[i - 1] < 0 && s[i] >= 0 && s[i + 1] - s[i - 2] > 200) {
-            t0 = i;
-            break;
-        }
-    for (x = 0; x < SC_W; x++)
-        m = s[t0 + x] > m ? s[t0 + x] : -s[t0 + x] > m ? -s[t0 + x] : m;
-    gain += (fm_minf(0.85f * 32000.0f / (float)(m > 600 ? m : 600), 30.0f) - gain) * 0.25f;
-    for (x = 0; x <= SC_W; x += 4)               /* the graticule: the middle dotted, ticks along the edges */
-        cv_rect(SC_X + x, SC_Y, 1, 1, K_LINE);
-    for (x = 0; x <= SC_W; x += SC_W / 8) {
-        cv_rect(SC_X + x, SC_Y - SC_H - 2, 1, 3, K_LINE);
-        cv_rect(SC_X + x, SC_Y + SC_H, 1, 3, K_LINE);
-    }
-    for (i = 1; i >= 0; i--)                     /* the traces before, older dimmer */
-        for (x = 1; x < SC_W; x++)
-            line(SC_X + x - 1, SC_Y - was[i][x - 1], SC_X + x, SC_Y - was[i][x], ph[i]);
-    for (x = 0; x < SC_W; x++) {
-        float v = (float)s[t0 + x] * (1.0f / 32000.0f) * gain;
-        was[1][x] = was[0][x];
-        was[0][x] = (int8_t)(fm_clampf(v, -1.0f, 1.0f) * (float)SC_H + (v < 0.0f ? -0.5f : 0.5f));
-    }
-    for (x = 1; x < SC_W; x++) {                 /* the trace: a glow, then two pixels bright */
-        int32_t y0 = SC_Y - was[0][x - 1], y1 = SC_Y - was[0][x];
-        line(SC_X + x - 1, y0 - 1, SC_X + x, y1 - 1, gl);
-        line(SC_X + x - 1, y0 + 2, SC_X + x, y1 + 2, gl);
-    }
-    for (x = 1; x < SC_W; x++) {
-        int32_t y0 = SC_Y - was[0][x - 1], y1 = SC_Y - was[0][x];
-        line(SC_X + x - 1, y0, SC_X + x, y1, c);
-        line(SC_X + x - 1, y0 + 1, SC_X + x, y1 + 1, c);
-    }
-}
-
-/* the middle as a spectrum (a Winamp's): the output's last 512 samples at 22 kHz, windowed and transformed,
- * in 18 bands a third of an octave or more wide, 43 Hz to 11 kHz; each a column of segments, teal low, brass,
- * amber, red at the top, rising at once and falling slowly, a cap held at its peak a moment */
-#define SP_NB 18
-#define SP_X 58
-#define SP_BOT 86
-#define SP_SEG 18                                /* segments a column, 3 px each */
-static void fft512(float *re, float *im)         /* in place, radix 2 */
-{
-    int n = EN_SPEC_N, i, j = 0, len, k;
-    for (i = 1; i < n; i++) {                    /* the bit-reversed order */
-        int b = n >> 1;
-        for (; j & b; b >>= 1)
-            j ^= b;
-        j ^= b;
-        if (i < j) {
-            float t = re[i];
-            re[i] = re[j], re[j] = t;
-            t = im[i];
-            im[i] = im[j], im[j] = t;
-        }
-    }
-    for (len = 2; len <= n; len <<= 1) {
-        float a = -6.2831853f / (float)len, wr = fm_cosf(a), wi = fm_sinf(a);
-        for (i = 0; i < n; i += len) {
-            float cr = 1.0f, ci = 0.0f;
-            for (k = 0; k < len / 2; k++) {
-                int p = i + k, q = p + len / 2;
-                float tr = re[q] * cr - im[q] * ci, ti = re[q] * ci + im[q] * cr, nr;
-                re[q] = re[p] - tr, im[q] = im[p] - ti;
-                re[p] += tr, im[p] += ti;
-                nr = cr * wr - ci * wi;
-                ci = cr * wi + ci * wr;
-                cr = nr;
-            }
-        }
-    }
-}
-
-static void draw_spec(void)
-{
-    static const uint16_t EDGE[SP_NB + 1] = {1, 2, 3, 4, 5, 6, 7, 9, 12, 16, 22, 30, 40, 55, 75, 102, 138, 188, 256};
-    static float re[EN_SPEC_N], im[EN_SPEC_N], lv[SP_NB], cap[SP_NB];
-    static uint8_t hold[SP_NB];
-    uint32_t w = en_spec_w;
-    int i, b, g;
-    for (i = 0; i < EN_SPEC_N; i++) {            /* (the oldest first, a Hann window) */
-        float h = 0.5f - 0.5f * fm_cosf(6.2831853f * (float)i * (1.0f / (float)(EN_SPEC_N - 1)));
-        re[i] = (float)en_spec[(w + (uint32_t)i) & (EN_SPEC_N - 1u)] * (1.0f / 32000.0f) * h;
-        im[i] = 0.0f;
-    }
-    fft512(re, im);
-    for (b = 0; b < SP_NB; b++) {
-        float pw = 1e-9f, db, f;
-        int32_t x = SP_X + b * 7, n;
-        for (i = EDGE[b]; i < EDGE[b + 1]; i++)
-            pw += re[i] * re[i] + im[i] * im[i];
-        db = 3.0103f * fm_log2f(pw) - 42.1f + 1.5f * (float)b;   /* dB of full scale, tilted up 1.5 dB a band */
-        f = fm_clampf((db + 56.0f) * (1.0f / 48.0f), 0.0f, 1.0f);
-        if (!en_playing)
-            f = 0.0f;
-        lv[b] = f > lv[b] ? f : lv[b] - 0.04f;   /* up at once, down slowly */
-        if (lv[b] >= cap[b]) {
-            cap[b] = lv[b];
-            hold[b] = 12;                        /* (frames: ~0.6 s) */
-        } else if (hold[b]) {
-            hold[b]--;
-        } else {
-            cap[b] -= 0.025f;
-        }
-        n = (int32_t)(lv[b] * (float)SP_SEG + 0.5f);
-        for (g = 0; g < SP_SEG; g++) {
-            uint16_t c = g >= SP_SEG - 3 ? K_FROST : g >= SP_SEG * 2 / 3 ? K_PULSE : g >= SP_SEG / 3 ? K_BASS : K_PAD;
-            if (en_frozen)
-                c = K_FROST;
-            cv_rect(x, SP_BOT - 3 * g - 2, 6, 2, g < n ? c : g == 0 ? K_LINE : K_BG);
-        }
-        if (cap[b] > 0.03f)
-            cv_rect(x, SP_BOT - 3 * (int32_t)(cap[b] * (float)SP_SEG + 0.5f) - 1, 6, 1, K_TEXT);
-    }
-}
 
 /* a sound page: its layer's envelope (its level; the chord's filter envelope, the pings' bend, the kick's
  * pitch, dimmer), over the time it lasts */
@@ -2571,7 +2432,6 @@ static void draw_main(void)
 {
     uint32_t now = plat_ms(), h = hash(2166136261u, (uint32_t)en_frozen << 16 | proj.piece << 24 | (uint32_t)en_playing << 17), i;
     static uint8_t moving;
-    en_view_layer = (uint8_t)(scr_layer(ui.view) + 1);   /* (the scope and spectrum: this page's layer, or the whole) */
     echo_take(now);                              /* (the ripples: each frame, so the repeats are measured on time) */
     ripples_take(now);
     if (ui.frame % 3u)                           /* 20 frames a second is plenty */
@@ -2645,15 +2505,6 @@ static void draw_main(void)
     if (ui.view == V_CFM || ui.view == V_BFM) {  /* an FM page: the algorithm */
         draw_alg(layer_of(ui.view));
         moving = 0;
-    } else if (ui.view == V_NSND || ui.view == V_NSND2) {   /* the Noise pages: the spectrum, its colour as it moves */
-        draw_spec();
-        moving = 1;
-    } else if (proj.screen % 3u == 1u) {         /* (HOME again: a scope, a spectrum, or the ripples) */
-        draw_scope();
-        moving = 1;
-    } else if (proj.screen % 3u == 2u) {
-        draw_spec();
-        moving = 1;
     } else {
         specks_take(now);
         moving = rip_src < 0 ? (uint8_t)draw_specks(now) : 0;   /* (the noise, under the rings: on the whole only) */
@@ -2679,9 +2530,7 @@ static void draw_main(void)
     ch_c = en_frozen ? K_FROST : ch_age < 900u ? mix(K_ACC, K_TEXT, (int)(ch_age * 16u / 900u)) : K_TEXT;
     if (ch_age < 900u)
         moving = 1;
-    if (named && proj.screen % 3u) {          /* the chord: over the scope or the spectrum, small */
-        text_c(CX, 1, &FONT_S, nm, ch_c);
-    } else if (named) {                          /* the chord, in the middle */
+    if (named) {                                 /* the chord, in the middle */
         if ((ch_age < 200u || (ch_age >= 400u && ch_age < 600u)) && text_w(&FONT_L, nm) <= 96) {   /* (big, small, big,
                                                                                          * small: a ping-pong) */
             int32_t w = text_w(&FONT_L, nm);

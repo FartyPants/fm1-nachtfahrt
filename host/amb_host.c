@@ -550,7 +550,7 @@ static int expect(const char *what, const char *val)
         got = (int)(lit_keys >> (atoi(what + 6) % 27) & 1u);
     else if (!strcmp(what, "mutes"))              /* the layers muted (EN_M_*: 1 chord .. 16 hats, 32 noise) */
         got = (int)ui.mutes;
-    else if (!strcmp(what, "scopepk")) {          /* the scope's buffer, its peak (the page's layer alone, or the whole) */
+    else if (!strcmp(what, "scopepk")) {          /* the scope buffer (the ripples' outlines), its peak */
         int i;
         got = 0;
         for (i = 0; i < EN_SCOPE_N; i++)
@@ -584,8 +584,6 @@ static int expect(const char *what, const char *val)
         got = card_on(plat_ms()) ? 1 + ui.card_shake : 0;
     else if (!strcmp(what, "lock"))               /* PERFORM's Lock (SEL held) */
         got = ui.lock;
-    else if (!strcmp(what, "viewlayer"))          /* what the scope and spectrum listen to (0 the whole, 1.. a layer) */
-        got = en_view_layer;
     else if (!strcmp(what, "octring"))            /* the level ring showing: its layer + 1 (0: none) */
         got = oct_ring_on(plat_ms());
     else if (!strcmp(what, "dirty"))
