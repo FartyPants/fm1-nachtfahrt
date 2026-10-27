@@ -4,12 +4,8 @@
 #include "fastmath.h"
 #include "seq.c"
 
-/* (BERLIN: DUB-1's stabs, bass, pings, drums and phrase plan are gone. What is left of the dub is what the music
- * still leans on: its section machine (section_set, section_pick: the arc it sets, arcm, moves the echo's tone, the
- * reverb's send and the cloud; sec moves the cloud and the Tape noise), and the draws its dead parts make on the
- * shared dice (rng: tick's, bar_start's stabs_evolve, hats_evolve, stabs_bar and the fill, regrow's loop_regrow,
- * heads_step's second head), which the walk, the Sequence's chances, the echo's heads and the Flute draw after.
- * Taking them out changes the sound: the user's call) */
+/* (BERLIN: DUB-1's stabs, bass, pings, drums, phrase plan and section machine are gone, and with them the draws
+ * its dead parts made on the shared dice: the arc (the arc's sections, the filter motion) is the only movement) */
 
 #ifdef EN_HOST
 #define EN_POOL
@@ -450,7 +446,6 @@ volatile uint8_t en_drum_pos[EN_NDRUM];
 volatile uint32_t en_drum_pat[EN_NDRUM];
 volatile float en_drum_glow[EN_NDRUM];
 volatile uint32_t en_bars;
-volatile float en_arc;
 volatile uint8_t en_pulse_rest;
 volatile uint8_t en_pad_note[EN_NPAD];
 volatile float en_pad_amp[EN_NPAD];
@@ -597,7 +592,7 @@ static void svf_coefs(float *c, float f, float k)   /* TPT SVF (Zavalishin): a1,
 }
 
 /* ------------------------------------------------- slow random motion --- */
-#define NMOD 9                                  /* 0..4 the stab's, 5..8 the echo's */
+#define NMOD 2                                  /* the echo's: 0 its band-pass and wow, 1 its first head's place */
 static struct {
     float v, tgt, rate;
     uint32_t left;                              /* samples until a new target */
@@ -619,7 +614,6 @@ static void mods_step(uint32_t n)
     }
 }
 static float motion, evolve;                    /* 0..1: Motion, Evolve */
-static float arcm;                              /* the sweep, -1 dark .. +1 open, times Motion */
 
 /* -------------------------------------------------------------- chord --- */
 /* the chord as voiced: its four notes (the Drone's, drone_chord), its level (the Drone's) */
@@ -633,23 +627,10 @@ static int shape, root_note = 55;               /* the voicing's shape, the chor
 enum { CV_SAWS, CV_KEYS, CV_ORGAN, CV_PAD, CV_BELL };
 static int cvoice;                              /* the chord's voice now */
 
-/* ----------------------------------------------------------------- pings --- */
-/* (the dub's ping loops: their pings gone, their notes still grown at a regrow, the music's dice drawn as they were) */
-static int8_t loop_note[EN_NLOOP][EN_LOOP_MAX];
-static uint8_t loop_vel[EN_NLOOP][EN_LOOP_MAX];
-
-/* ----------------------------------------------------------------- drums --- */
-/* (the dub's drums: gone; their patterns still published, en_drum_pat, and the shaker's still turned, hats_evolve,
- * its draws keeping the music's dice where they were) */
-static uint32_t drum_pat[EN_NDRUM];             /* 0 the kick's (four on the floor), 1 the shaker's, 2 the open hat's */
+/* ------------------------------------------------------------------ the grid --- */
 static float swing;                              /* (never set: the grid straight) */
 static float step_len, pulse_left;               /* a sixteenth, in samples; to the next MIDI clock pulse */
 static uint32_t cnoise = 4321u;
-/* the shaker's steps, the most wanted first (the off sixteenths before the downbeats; never the open
- * hat's off beats) */
-static uint8_t hat_order[12];
-static const uint8_t HAT_ORDER[12] = {3, 11, 7, 15, 1, 9, 5, 13, 0, 8, 4, 12};
-static int hat_k, hat_kb;
 
 /* ------------------------------------------------------------------ space --- */
 static float echo_send, rev_send, echo_len, echo_len_t, echo_fb = 0.6f, ein_gain = 1.0f, echo_t60 = 6.0f;
@@ -662,15 +643,11 @@ static float crackle_vol, cloud_amt;
 
 /* ------------------------------------------------------- the arrangement --- */
 static uint32_t sixteenth, bar, chord_bars;    /* bars since the start, since the chord moved */
-static uint8_t sec, sec_next, fill;
-static uint8_t lay_kick = 1, lay_stabs = 1;     /* (the section's: the kick in, en_pulse_rest; the stabs' pattern) */
-static uint8_t lock;                             /* (PERFORM's Lock: the shaker's pattern and the noise's groove kept) */
-volatile uint8_t en_change_next;                 /* the next phrase brings a change: 4 the section */
+static uint8_t lock;                             /* (PERFORM's Lock: the sequences' and the noise's groove kept) */
 static void noise_pattern(void);
 static int cr_dbars;                            /* bars till the drifts' next targets (on a barline) */
 static void noise_step(int s);
 static uint8_t nz_drawn;
-static float arc, arc_tgt, arc_tau = 1.0f;     /* the sweep, its target, its time (samples) */
 static uint8_t change_pending;
 
 /* -------------------------------------------------------------- harmony --- */
@@ -987,52 +964,6 @@ static void chord_change(void)
     en_prog_pos = 0;
     prog_publish();
     slot_play(0);
-}
-
-/* ------------------------------------------------------------- the loops --- */
-static int rand_offset(void)                    /* scale steps above the chord's degree */
-{
-    if (frand() < 0.75f) {                      /* a chord tone, sometimes an octave up */
-        int o = 2 * irand(chord_nt);
-        return o + (frand() < 0.25f ? nsteps : 0);
-    }
-    return 1 + 2 * irand(3);                    /* a passing note: the 2nd, 4th or 6th */
-}
-
-static int loop_target(void)                    /* 0..5 notes: Density, thinned in the dark */
-{
-    float d = (float)pe(P_DENSITY) * 0.05f * (1.0f + 0.5f * arcm);
-    return (int)(fm_clampf(d, 0.0f, 5.0f) + frand());
-}
-
-static void loop_add(int l)
-{
-    int len = EN_LOOP_LEN[l], i, s;
-    for (i = 0; i < 8; i++) {
-        s = irand(len);
-        if (loop_note[l][s] < 0) {
-            loop_note[l][s] = (int8_t)rand_offset();
-            loop_vel[l][s] = (uint8_t)(50 + irand(50));
-            return;
-        }
-    }
-}
-
-static void loop_publish(int l)
-{
-    int i;
-    for (i = 0; i < EN_LOOP_MAX; i++)
-        en_loop_note[l][i] = i < EN_LOOP_LEN[l] ? loop_note[l][i] : -1;
-}
-
-static void loop_regrow(int l)
-{
-    int i, n = loop_target();
-    for (i = 0; i < EN_LOOP_MAX; i++)
-        loop_note[l][i] = -1;
-    for (i = 0; i < n; i++)
-        loop_add(l);
-    loop_publish(l);
 }
 
 /* ---------------------------------------------------------------- the arc --- */
@@ -1512,216 +1443,30 @@ static void lead_tick(void)                      /* a sixteenth: the phrase goes
     ld_rest = (uint8_t)(2 + seq_rand(&ld_rng) % (uint32_t)(1 + 6 * (100 - pe(P_LDENS)) / 100));
 }
 
-/* ------------------------------------------------------------- the stabs --- */
-static int stab_k, stab_kb, stab_rot;
-static uint32_t stab_home;                      /* the pattern, before this bar's gaps */
-
-static void stabs_home(void)                    /* Stabs: one a bar .. six, off the beat */
-{
-    stab_kb = stab_k = 1 + (30 * 5 + 50) / 100;
-    stab_rot = 2;
-    stab_home = en_euclid(stab_k, 16, stab_rot);
-}
-
-static void stabs_evolve(void)                  /* the pattern turns a step, or gains or loses a stab */
-{
-    if (frand() < 0.6f) {
-        stab_rot = (stab_rot + (frand() < 0.5f ? 1 : 15)) % 16;
-    } else {
-        int k = stab_k + (frand() < 0.5f ? 1 : -1);
-        if (k >= stab_kb - 1 && k <= stab_kb + 1 && k >= 1 && k <= 8)
-            stab_k = k;
-    }
-    stab_home = en_euclid(stab_k, 16, stab_rot);
-}
-
-static void stabs_bar(void)                     /* this bar's stabs: the pattern, with gaps */
-{
-    uint32_t p = stab_home, out = 0;
-    int i, first = 1;
-    if (!lay_stabs)
-        p = 0;
-    else if (sec == SEC_GROOVE)                 /* a Groove: every other stab */
-        for (i = 0; i < 16; i++)
-            if (p >> i & 1u) {
-                if (!first)
-                    p &= ~(1u << i);
-                first = !first;
-            }
-    first = 1;
-    for (i = 0; i < 16; i++)
-        if (p >> i & 1u) {
-            if (first || frand() >= 0.3f * evolve)
-                out |= 1u << i;
-            first = 0;
-        }
-    if (sec != SEC_BREAK && frand() < 0.5f * evolve)   /* (1.3.0: now and then a bar with none: the echo carries it;
-                                                      * ~20% at Evolve 40) */
-        out = 0;
-    en_stab_pat = out;
-}
-
-/* ---------------------------------------------------------------- drums --- */
-static void hats_publish(void)
-{
-    uint32_t c = 0, o = 0;
-    int i, k = 50, ko = k < 15 ? 0 : k < 40 ? 2 : 4;
-    for (i = 0; i < hat_k && i < 12; i++)
-        c |= 1u << hat_order[i];
-    if (ko >= 2)
-        o |= 1u << 2 | 1u << 10;
-    if (ko >= 4)
-        o |= 1u << 6 | 1u << 14;
-    drum_pat[1] = c;
-    drum_pat[2] = o;
-    drum_pat[0] = 0x1111u;                       /* (the dub's kick, four on the floor: published only) */
-    drum_pat[3] = k >= 70 ? 0x1010u : 0u;       /* the rim, with many hits: on two and four */
-    drum_pat[4] = 0x1010u;                       /* the clap: two and four, now and then (clap_auto) */
-    en_drum_pat[0] = drum_pat[0];
-    en_drum_pat[1] = c;
-    en_drum_pat[2] = o;
-    en_drum_pat[3] = drum_pat[3];
-    en_drum_pat[4] = drum_pat[4];
-}
-
-static void hats_home(void)                     /* Hits: the shaker's count, its steps home */
-{
-    int i;
-    for (i = 0; i < 12; i++)
-        hat_order[i] = HAT_ORDER[i];
-    hat_kb = hat_k = (50 * 12 + 50) / 100;
-    hats_publish();
-}
-
-static void hats_evolve(void)                   /* a shaker step trades places, or one more or less */
-{
-    if (frand() < 0.6f) {
-        int a = irand(11), t = hat_order[a];
-        hat_order[a] = hat_order[a + 1];
-        hat_order[a + 1] = (uint8_t)t;
-    } else if (hat_kb) {
-        int k = hat_k + (frand() < 0.5f ? 1 : -1);
-        if (k >= hat_kb - 2 && k <= hat_kb + 2 && k >= 1 && k <= 12)
-            hat_k = k;
-    }
-    hats_publish();
-}
-
-/* ------------------------------------------------------- the arrangement --- */
-static void section_set(int s)
-{
-    float bl = 16.0f * step_len;
-    sec = (uint8_t)s;
-    (void)0;                                     /* (BERLIN: en_section is the arc's) */
-    lay_kick = lay_stabs = 1;
-    switch (s) {
-    case SEC_BREAK:                             /* the kick and the bass out; dark, then building */
-        lay_kick = 0;
-        arc_tgt = -1.0f;
-        arc_tau = 0.7f * bl;
-        break;
-    case SEC_GROOVE:                            /* fewer stabs, the drums to the front */
-        arc_tgt = -0.2f + 0.5f * frand();
-        arc_tau = 3.0f * bl;
-        break;
-    case SEC_THIN:                              /* no bass, no shaker */
-        arc_tgt = -0.5f + 0.6f * frand();
-        arc_tau = 3.0f * bl;
-        break;
-    default:
-        arc_tgt = -0.1f + 1.1f * frand();
-        arc_tau = 4.0f * bl;
-        break;
-    }
-    en_pulse_rest = (uint8_t)!lay_kick;
-}
-
-/* the next phrase (the classics pass, REPORT9: the classics hold one loop for minutes, the kick never leaving). Motion
- * in three regions: under 40 the loop holds (Full only: the change is the filter's, the echo's, the texture's); 40-70
- * a variation now and then (Groove or Thin, a phrase or two; the kick half-time at most); from 70 Breaks too (the
- * kick and the bass out, a phrase). Within a region, more often as Motion rises; at least four phrases (32 bars) in
- * Full between departures */
-static uint8_t sec_age;                         /* phrases in Full since the last departure */
-static int section_pick(void)
-{
-    float r = frand(), m;
-    if (motion < 0.4f)
-        return SEC_FULL;
-    if (sec != SEC_FULL)                         /* back, mostly; from a Break, a Thin now and then */
-        return r < 0.75f ? SEC_FULL : sec == SEC_BREAK ? SEC_THIN : motion >= 0.7f && frand() < 0.5f ? SEC_BREAK : sec;
-    if (sec_age < 4)
-        return SEC_FULL;
-    m = motion < 0.7f ? (motion - 0.4f) * (1.0f / 0.3f) : (motion - 0.7f) * (1.0f / 0.3f);
-    if (r >= 0.15f + 0.35f * m)
-        return SEC_FULL;
-    if (motion >= 0.7f && frand() < 0.4f + 0.3f * m)
-        return SEC_BREAK;
-    return frand() < 0.5f ? SEC_GROOVE : SEC_THIN;
-}
-
+/* ------------------------------------------------------- the bar line --- */
 static void bar_start(void)
 {
     int pb = (int)(bar & 7u), db = en_drift_bars(par[P_DRIFT]);
-    en_phrase_bar = (uint8_t)pb;
+    en_phrase_bar = (uint8_t)pb;                 /* (eight bars: the screen's, and Evolve's nudges on the first) */
     if (cr_dbars > 0)                            /* (the noise's drifts: their next targets on a barline) */
         cr_dbars--;
-    if (pb == 0 && bar > 0) {
-        section_set(sec_next);
-        sec_age = sec != SEC_FULL ? 0 : sec_age < 255 ? sec_age + 1 : 255;
-        if (!lock)                               /* (Lock: the noise's groove kept) */
-            noise_pattern();                     /* (the noise's groove: new, or the last one again) */
-        en_change_next = 0;
-    }
-    if (sec == SEC_BREAK && pb == 2)            /* two bars in, the filter starts to open */
-        arc_tgt = 1.0f, arc_tau = 2.2f * 16.0f * step_len;
-    fill = 0;
-    if (pb == 7) {
-        sec_next = (uint8_t)section_pick();
-        /* the last bar before the kick: a fill (the kick drops out halfway, the last stab is thrown) */
-        /* (the classics pass: under Motion 40 none, the kick never leaving; then into or out of a change, or now and
-         * then as Motion rises) */
-        if (sec_next != SEC_BREAK && (sec == SEC_BREAK || (motion >= 0.4f && (sec_next != sec ||
-                                                                             frand() < 0.5f * (motion - 0.4f)))))
-            fill = 1;
-        /* Energy far down: the next phrase Thin (no bass, no shaker); far up: Full, with a fill into it (after the
-         * draws, which stay as they were: at Energy 0 the music is the same) */
-        if (mac[EN_MAC_ENERGY] <= -25)
-            sec_next = SEC_THIN;
-        else if (mac[EN_MAC_ENERGY] >= 25)
-            sec_next = SEC_FULL, fill = 1;
-        en_change_next = (uint8_t)((sec_next != sec) << 2);   /* (the screen: a change is coming) */
-    }
+    if (pb == 0 && bar > 0 && !lock)             /* (Lock: the noise's groove kept) */
+        noise_pattern();                         /* (the noise's groove: new, or the last one again) */
     if (!en_frozen && (change_pending || (db && bar > 0 && chord_bars >= (uint32_t)db))) {
         change_pending = 0;
         chord_change();
     }
     en_drift = db ? fm_clampf((float)chord_bars / (float)db, 0.0f, 1.0f) : 0.0f;
     chord_bars++;
-    if ((bar & 1u) == 0u && bar > 0 && frand() < evolve * 0.6f)   /* (1.3.0: every two bars, was four) */
-        stabs_evolve();
-    if (pb == 0 && !lock && frand() < evolve * 0.8f)   /* (1.3.0: the shaker's steps trade places at a phrase's start, not
-                                                  * any bar: the A bars the same) */
-        hats_evolve();
-    stabs_bar();
     bar++;
-}
-
-/* the screen's lanes, the bar as it plays: what is muted or at level 0, gone at once (the dub's: only the stabs' pattern
- * left, the others empty; Task 2 draws the sequences' instead) */
-static void lanes(void)
-{
-    en_lane[0] = (uint16_t)(mutes & EN_M_CHORD || !par[P_CHORD] ? 0u : en_stab_pat);
 }
 
 /* the grid: one call a sixteenth (MIDI clock: 6 ticks) */
 static void tick(void)
 {
     int st = (int)(sixteenth & 15u), d;
-    (void)frand();                               /* (the dub's drums' draw, every sixteenth: kept, so the music's dice
-                                                  * fall where they did; the walk and the Sequence's chances draw on) */
     if (st == 0)
         bar_start();
-    lanes();
     noise_step((int)(sixteenth & 31u));         /* (the noise's groove: two bars) */
     for (d = 0; d < EN_NDRUM; d++)
         en_drum_pos[d] = (uint8_t)st;
@@ -1848,10 +1593,7 @@ static int16_t tape[TAPE_N] EN_POOL;
 static int tape_w, tape_ph;
 static float tape_acc, tape_lp, tape_hp, tape_p1, tape_c1, tape_p3, tape_c3;   /* (3: the right's, a
                                                  * few ms behind the left: Width) */
-static const float HEAD2[5] = {0.75f, 0.6667f, 0.5f, 0.375f, 0.25f};    /* the second head's parts */
-static float head2 = 0.75f, head2_t = 0.75f, head2_v;   /* its place (of the loop), target, speed */
 static float hg[2] = {1.0f, 0.0f};              /* the first head's pan gains: left, right */
-static uint32_t head_left;                       /* samples until the second head may move */
 
 static inline float tape_read(float d)           /* d quarter-rate samples ago */
 {
@@ -1888,33 +1630,22 @@ static void echo_time(void)
         echo_len = echo_len_t;
 }
 
-/* once a chunk: where the heads sit, how the feedback leans, the second head's slide, the band-pass */
-static void heads_step(uint32_t n)
+/* once a chunk: where the head sits, the band-pass */
+static void heads_step(void)
 {
-    float p, want, vmax, sw;
+    float p, sw;
     /* (1.3.0) the loop's gain from the tail's length: whatever the echo's time, the repeats are gone (-60 dB) in
      * Feedback's seconds; long delays vanish as quickly as short ones (Dub and the throws still push past it) */
     echo_fb = fm_exp2f(-9.966f * (echo_len_t * (1.0f / TAPE_SR)) / echo_t60);
     /* (1.3.0: the first head near the middle, drifting with Motion; Width spreads it: 0 mono, 2 as wide as before) */
-    p = fm_clampf(ec_wide * (0.0f + 0.25f * (0.4f + 0.6f * motion) * mod[6].v), -1.0f, 1.0f);
+    p = fm_clampf(ec_wide * (0.0f + 0.25f * (0.4f + 0.6f * motion) * mod[1].v), -1.0f, 1.0f);
     p = (p + 1.0f) * (FM_PI / 4.0f);
     hg[0] = fm_cosf(p);
     hg[1] = fm_sinf(p);
-    if (head_left <= n) {                        /* (the second head's moves: heard no more, the throws gone; their
-                                                  * draws keep the music's dice where they were) */
-        head_left = (uint32_t)((16.0f + 32.0f * frand()) * EN_SR);
-        if (en_playing && !en_frozen && frand() < motion * 0.6f)
-            head2_t = HEAD2[irand(5)];
-    } else {
-        head_left -= n;
-    }
-    vmax = 0.008f / fm_maxf(echo_len, 100.0f);
-    want = fm_clampf((head2_t - head2) * (1.0f / (2.0f * TAPE_SR)), -vmax, vmax);
-    head2_v += (want - head2_v) * fm_minf((float)n * (1.0f / EN_SR), 1.0f);
     /* the band-pass: ~220..800 Hz below (1.3.0: from ~60..500, so the repeats thin; the classics pass: from ~165..700), ~1.1..2.6 kHz above, moving
      * up together */
     dub_up = 0.0f;                               /* (1.3.0: PERFORM's second knob is Wet now, not Dub) */
-    sw = fm_clampf(0.45f + 0.5f * arcm + 0.3f * perf_sw + 0.5f * motion * mod[5].v - 0.3f * dub_up, 0.0f, 1.0f);   /* (Dub up: darker) */
+    sw = fm_clampf(0.45f + 0.3f * perf_sw + 0.5f * motion * mod[0].v - 0.3f * dub_up, 0.0f, 1.0f);   /* (Dub up: darker) */
     tape_hpc = 0.12f + 0.24f * sw * sw;          /* (the classics pass: ~220 Hz at the bottom, was ~165) */
     tape_lpc = 0.58f + 0.3f * sw;
 }
@@ -1960,8 +1691,7 @@ static inline void echoes(float in, float *el, float *er)
         if (echo_len > (float)(TAPE_N - 8))      /* (Tape stop slows a long echo past the tape: it stops at its end;
                                                   * the hold below reads echo_len itself. Reported by genkigenki) */
             echo_len = (float)(TAPE_N - 8);
-        head2 += head2_v;
-        d = echo_len * (1.0f + 0.002f * motion * mod[5].v);   /* wow */
+        d = echo_len * (1.0f + 0.002f * motion * mod[0].v);   /* wow */
         if (d > (float)(TAPE_N - 4))
             d = (float)(TAPE_N - 4);
         /* (BERLIN) ping-pong, from the one tape (Schulze's Revox): what goes round is read at twice the time, so the
@@ -2122,16 +1852,12 @@ static inline void cloud(float in, float *ol, float *or_)
 /* ------------------------------------------------------------ parameters --- */
 static int pulse;
 /* (1.3.0) an LFO synced to the bar, a sine from the grid's place, eased: the noise's (lfo_n), its rings' tone over a
- * bar, +-1 octave at 100. (lfo_c, the stabs' filter's, over two bars: its reader went with the stabs, but this
- * declaration is the plate's lfo_c too (reverb(), declared above with "lfo_s, lfo_c = 1.0f": in C one file-scope
- * object), so its line in lfo_step pulls the plate's modulation towards 0 every chunk, and taking it out changes the
- * sound: kept, for the user to decide) */
-static float lfo_c, lfo_n;
+ * bar, +-1 octave at 100. (BERLIN: the stabs' filter LFO, lfo_c, is gone; its name was the plate's modulation
+ * oscillator's too, and its line here damped the plate's modulation every chunk: the plate is its own again) */
+static float lfo_n;
 static void lfo_step(void)
 {
     const float pos = (float)(sixteenth & 63u) + (float)pulse * (1.0f / 6.0f);   /* (four bars of sixteenths) */
-    const float tc = fm_sinf(6.2831853f * pos * (1.0f / 32.0f));
-    lfo_c += (1.5f * (float)par[P_CFDEC] * 0.01f * tc - lfo_c) * 0.2f;
     lfo_n += (0.67f * (float)par[P_NLFO] * 0.01f * fm_sinf(6.2831853f * pos * (1.0f / 16.0f)) - lfo_n) * 0.2f;
 }
 static uint32_t ext_age;
@@ -2148,13 +1874,12 @@ static void apply(int p, int v)
     par[p] = (int16_t)v;
     v = pe(p);                                   /* (as the master actions move it) */
     switch (p) {
-    case P_CHORD: chord_vol = (float)(v * v) * 0.0001f; lanes(); break;
+    case P_CHORD: chord_vol = (float)(v * v) * 0.0001f; break;
     case P_SEQ: seq_vol = (float)(v * v) * 0.0001f; break;
     case P_LEAD: lead_vol = (float)(v * v) * 0.0001f; break;
     case P_GLIDE: ld_gk = 1.0f - fm_expf(-1.0f / ((0.001f + 0.0015f * (float)v) * EN_SR)); break;   /* ~1 .. 150 ms (the
                                                   * user: 37 .. 49 ms sounds right, more is a theremin) */
     case P_SEQ2: seq2_vol = (float)(v * v) * 0.0001f; break;
-    case P_SMODE: case P_SGATE0: case P_SGATE1: case P_SOCT0: case P_SOCT1: case P_SSKIP0: lanes(); break;
     case P_SEQLEN: seq_resize(0, v); break;
     case P_SEQ2LEN: seq_resize(1, v); break;
     case P_ECHO: echo_send = (float)(v * v) * 0.0001f; break;
@@ -2287,12 +2012,9 @@ static void pool_set(uint32_t p)
     voice_chord();
 }
 
-static void regrow(void)                        /* a new piece: fresh loops, home chord, patterns home */
+static void regrow(void)                        /* a new piece: the home chord, fresh patterns */
 {
-    int l, k;
-    for (l = 0; l < EN_NLOOP; l++)
-        loop_regrow(l);                          /* (the dub's loops: no pings now, but their draws keep the music's
-                                                  * dice where they were) */
+    int k;
     chord_slot = -1;
     deg = 0;
     shape = cvoice == CV_KEYS || cvoice == CV_PAD || cvoice == CV_BELL;   /* these like the 9th; the rest the open 7th */
@@ -2313,12 +2035,8 @@ static void regrow(void)                        /* a new piece: fresh loops, hom
     if (chord_slot < 0 && (prog_pos < 0 || !slot_walk(prog_pos)))
         voice_chord();
     prog_publish();
-    stabs_home();
-    hats_home();
     seq_regrow(0);
     seq_regrow(1);
-    section_set(SEC_FULL);
-    sec_next = SEC_FULL;
     chord_bars = 0;
     change_pending = 0;
 }
@@ -2383,15 +2101,14 @@ void en_init(void)
         cl_g[i].len = 0;
     cl_live = 0;
     tape_w = tape_ph = 0;
-    head2 = head2_t = 0.75f;
-    head2_v = 0.0f;
     echo_len = 0.0f;
     q_r = q_w = 0;
     for (i = 0; i < NMOD; i++) {
         mod[i].v = mod[i].tgt = 0.0f;
         mod[i].left = 0;
     }
-    arcm = arc = 0.0f;
+    for (i = 0; i < EN_NLOOP * EN_LOOP_MAX; i++)   /* (DUB-1's ping loops: none) */
+        en_loop_note[i / EN_LOOP_MAX][i % EN_LOOP_MAX] = -1;
     for (i = 0; i < P_NPARAMS; i++)
         apply(i, PARAMS[i].def);
     pool_set(EN_MODE_POOL[par[P_MODE]]);
@@ -2431,12 +2148,8 @@ static void play_start(int from_top)
             sq_bars[i] = sq_wrap[i] = 0;
             seq_hist_clear(&sq_hist[i]);
         }
-        section_set(SEC_FULL);
-        sec_next = SEC_FULL;
-        hats_publish();
         nz_drawn = 0;
         noise_pattern();
-        en_change_next = 0;
     }
     pulse_left = 0.0f;
     tick_wait = 0;
@@ -2561,8 +2274,8 @@ static void drain(void)
             if (a)
                 seq_take();
             break;
-        case C_MUTE: mutes = (uint32_t)a; lanes(); break;
-        case C_PERF: perf = (uint32_t)a; lanes(); break;
+        case C_MUTE: mutes = (uint32_t)a; break;
+        case C_PERF: perf = (uint32_t)a; break;
         case C_FX: fxm = c & 0xFFFFu; break;
         case C_REWALK: {                         /* the walk's slots walked again, all but the one playing, each from
                                                   * the slot before (yours and the gaps kept) */
@@ -2693,7 +2406,7 @@ static const struct {
     {1.0f, 0.0f, 1.2f, 0.2f, 0.2f, 0.15f, -0.2f, 0.0f, 0, 1},   /* Machine: inharmonic (1 : 1.41 : 2.76), metallic */
 };
 #define CR_ND 4                                 /* the drifts: the air's level, the tone, the clicks' density, the decay */
-static float cr_lp, cr_lp2, cr_hp, cr_cl, cr_cr, cr_fl, cr_fr, cr_cc = 0.3f, cr_gate, cr_sg = 1.0f;
+static float cr_lp, cr_lp2, cr_hp, cr_cl, cr_cr, cr_fl, cr_fr, cr_cc = 0.3f, cr_gate;
 static float cr_dv[CR_ND] = {1.0f, 1.0f, 1.0f, 1.0f}, cr_dt[CR_ND] = {1.0f, 1.0f, 1.0f, 1.0f};
 static const float CR_DRANGE[CR_ND] = {0.66f, 0.7f, 2.0f, 0.5f};   /* (octaves of each drift's span) */
 #define NZ_L 280                                /* a comb's line, at the quarter rate (E1: 269 samples) */
@@ -2726,8 +2439,6 @@ static void noise_pattern(void)
     if (nz_drawn && cr_u() > 0.35f + 0.5f * evolve + 0.3f * nctl.drift)   /* (Change: more often new) */
         return;
     nz_drawn = 1;
-    if (sec == SEC_BREAK || sec == SEC_THIN)
-        k = k * 7 / 10;
     k = k < 0 ? 0 : k > 16 ? 16 : k;
     p = en_euclid(k, 32, (int)(cr_u() * 32.0f));
     for (m = 0; m < 2; m++) {                   /* (a hit a step later or earlier, where it's free) */
@@ -2922,7 +2633,7 @@ static void render_crackle(uint32_t n)
 {
     uint32_t j, thr;
     int i;
-    float g, k, sg, nc, ng, nr, nd, gh, lpc, vg, gres, cg, lpk, bf, cont, dry;
+    float g, k, nc, ng, nr, nd, gh, lpc, vg, gres, cg, lpk, bf, cont, dry;
     const unsigned c = nz_char();
     cr_gate += ((en_playing ? 1.0f : 0.0f) - cr_gate) * fm_minf((float)n / (0.5f * EN_SR), 1.0f);
     if (cr_gate < 1e-4f)
@@ -2948,14 +2659,11 @@ static void render_crackle(uint32_t n)
     k = fm_minf((float)n * fm_exp2f(nd) / (16.0f * step_len), 1.0f);
     for (i = 0; i < CR_ND; i++)
         cr_dv[i] += (cr_dt[i] - cr_dv[i]) * k;
-    cr_sg += ((sec == SEC_BREAK || sec == SEC_THIN ? 1.0f : 0.0f) - cr_sg) * fm_minf((float)n / (2.0f * EN_SR), 1.0f);
-    sg = cr_sg;                                  /* (Break and Thin: the combs ring longer, the noise carries it) */
     {   /* Decay: the combs' gain, 0.75 .. 0.97 (-60 dB in ~70 ms .. ~1.2 s); Tone: the band-pass ~250 Hz-2 kHz, the
-         * damping with it; both moved by the drifts and Motion's arc */
-        float dec = fm_clampf((float)par[P_NTUNE] * 0.01f + 0.3f * NCHAR[c].dec + 0.15f * sg +
-                              0.3f * (cr_dv[3] - 1.0f), 0.0f, 1.0f), t;
+         * damping with it; both moved by the drifts */
+        float dec = fm_clampf((float)par[P_NTUNE] * 0.01f + 0.3f * NCHAR[c].dec + 0.3f * (cr_dv[3] - 1.0f), 0.0f, 1.0f), t;
         cg = 0.8f + 0.18f * dec;
-        t = fm_clampf(nc + 0.7f * (cr_dv[1] - 1.0f) + 0.4f * arcm + lfo_n, -1.0f, 1.0f);   /* (and its LFO) */
+        t = fm_clampf(nc + 0.7f * (cr_dv[1] - 1.0f) + lfo_n, -1.0f, 1.0f);   /* (and its LFO) */
         bf = 2.0f * fm_sinf(FM_PI * fm_minf(700.0f * fm_exp2f(1.5f * t), 2400.0f) / TAPE_SR);
         lpk = fm_clampf(0.72f + 0.22f * t, 0.3f, 0.97f);
     }
@@ -3480,11 +3188,11 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
 {
     uint32_t j;
     float epk;
-    const float rg = rev_send * rev_in_gain * (1.0f - 0.2f * arcm);
+    const float rg = rev_send * rev_in_gain;
     /* (the cloud listens as if Reverb were at 63 at least, so Cloud works with little reverb too) */
     const float cl_in = rev_send > 0.0001f ? fm_maxf(rev_send, 0.4f) / rev_send : 0.0f;
     const float push = fm_maxf(perf_echo, ar_push);   /* (and the arc's swell) */
-    float eg = (echo_send + (1.0f - echo_send) * push) * ein_gain, ca = cloud_amt * (sec == SEC_BREAK ? 1.4f : 1.0f);   /* more in a Break */
+    float eg = (echo_send + (1.0f - echo_send) * push) * ein_gain, ca = cloud_amt;
     /* PERFORM's Open and Shut on the music, the kick left out on top: Shut a low-pass down to ~230 Hz, Open a
      * resonant high-pass up to ~400 Hz (thin and bright), both swept with perf_sw */
     const float shut = fm_maxf(-perf_sw, 0.0f), open = fm_maxf(perf_sw, 0.0f);
@@ -3591,11 +3299,7 @@ static void control(uint32_t n)                 /* once a chunk: the slow things
     int i;
     mods_step(n);
     fx_ctl(n);
-    heads_step(n);
-    if (en_playing)
-        arc += (arc_tgt - arc) * fm_minf((float)n / arc_tau, 1.0f);
-    arcm = arc * motion;
-    en_arc = arcm;
+    heads_step();
     pl_decay += ((en_frozen ? 0.9995f : pl_decay_t) - pl_decay) * 0.002f;
     pl_dd2 = fm_clampf(pl_decay + 0.15f, 0.25f, 0.5f);
     rev_in_gain += ((en_frozen ? 0.0f : 1.0f) - rev_in_gain) * 0.01f;
@@ -3613,7 +3317,7 @@ static void control(uint32_t n)                 /* once a chunk: the slow things
         en_echo_ms = echo_len * (1000.0f / TAPE_SR);
     en_echo_g = en_frozen ? 1.0f : fm_minf(echo_fb + 0.12f * perf_echo, fb_cap) * 0.82f;
     en_echo_in = echo_send + (1.0f - echo_send) * perf_echo;
-    cl_dens = cloud_amt > 0.0f ? fm_clampf(0.25f + 0.5f * cloud_amt + 0.3f * arcm, 0.05f, 1.0f) : 0.0f;
+    cl_dens = cloud_amt > 0.0f ? fm_clampf(0.25f + 0.5f * cloud_amt, 0.05f, 1.0f) : 0.0f;
     if (fx_cf > 0.01f)                          /* (Freeze: the grains thick, even at Cloud 0) */
         cl_dens = fm_maxf(cl_dens, fx_cf);
     for (i = 0; i < EN_NLOOP; i++)

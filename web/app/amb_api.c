@@ -61,7 +61,7 @@ API float *app_state(void)
     st[12] = en_drift;
     st[13] = en_pad_level;
     st[14] = en_bass_level;
-    st[15] = en_arc;
+    st[15] = 0.0f;                               /* (DUB-1's arc: gone) */
     st[16] = (float)en_bars;
     for (l = 0; l < EN_NLOOP; l++) {
         st[17 + l] = en_loop_pos[l];

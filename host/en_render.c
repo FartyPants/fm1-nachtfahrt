@@ -136,7 +136,7 @@ int main(int argc, char **argv)
             for (k = 0; k < 16; k++)
                 putchar(en_stab_pat >> k & 1u ? 'x' : '.');
             printf("  chord %s (%d %d %d %d) arc %+.2f throws %u%s\n", en_chord_name(pcs, en_chord_n, nm), en_chord[0],
-                   en_chord[1], en_chord[2], en_chord[3], (double)en_arc, en_throws, en_frozen ? " HOLD" : "");
+                   en_chord[1], en_chord[2], en_chord[3], 0.0, en_throws, en_frozen ? " HOLD" : "");
             sec_was = en_section;
         }
         last16 = en_bars;

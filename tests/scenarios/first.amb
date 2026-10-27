@@ -11,7 +11,6 @@ expect sixteenths >36
 wait 30000
 shot dub30.png
 expect sixteenths >216
-expect loopnotes >0
 wavstop
 expect peak_db_max -0.5
 expect peak_db_min -30

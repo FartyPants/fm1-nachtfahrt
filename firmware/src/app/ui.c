@@ -2205,7 +2205,7 @@ static void draw_main(void)
             h = hash(h, (uint32_t)(proj.par[VIEW_KNOB[ui.view][i]] + 64));
         h = hash(h, (uint32_t)proj.par[view_voice(ui.view)] | (uint32_t)proj.par[P_DECAY] << 8 | (uint32_t)proj.par[P_SEQGRID] << 16);
     }
-    h = hash(h, (uint32_t)card_on(now) | (en_phrase_bar == 7 && en_change_next ? (now / 200u & 1u) << 1 : 0u));
+    h = hash(h, (uint32_t)card_on(now));
     if (h == ui.sig[1] && !moving && !oct_ring_on(now) && !card_on(now))
         return;
     ui.sig[1] = h;
@@ -2258,12 +2258,9 @@ static void draw_main(void)
         int b;
         caps(t, EN_SEC_NAME[en_section], sizeof t);
         cv_text(8, 2, &FONT_XS, t, en_section == EN_SEC_FLOW ? K_DIM : K_ACC);
-        for (b = 0; b < 8; b++) {                /* (1.3.0: bars 4 and 8, the B bars, whiter; the 8th blinking on its
-                                                  * bar when the next phrase brings a change) */
+        for (b = 0; b < 8; b++) {                /* (1.3.0: bars 4 and 8, the B bars, whiter) */
             const int bb = (b == 3 || b == 7) && !ui.lock, lit = en_playing && b <= en_phrase_bar;   /* (Lock: all alike) */
             uint16_t c = lit ? (bb ? K_TEXT : K_DIM) : (bb ? K_DIM : K_LINE);   /* (B bars: ahead, as bright as one played) */
-            if (b == 7 && en_playing && en_phrase_bar == 7 && en_change_next)
-                c = (now / 200u) & 1u ? K_ACC : K_LINE;
             cv_round(9 + b * 5, 22, 3, 3, 1, c);
         }
         if (!en_frozen && en_drift_bars(proj.par[P_DRIFT])) {   /* under them, the way to the next chord (Drift) */
