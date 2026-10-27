@@ -30,7 +30,7 @@ enum { V_DUB, V_CHORD, V_TEXTURE, V_BASS, V_DRUMS, V_SPACE, V_SETUP, NPAGES, V_M
 static const char *const VIEW_NAME[NVIEWS] = {"Berlin", "Drone", "Sequence", "Lead", "Sequence 2", "Space", "Setup",
                                               "Mix", "Drone sound", "Seq sound", "Lead sound", "Seq2 sound",
                                               "Drone FM", "Repeats", "Lead FM", "Chords", "Pattern", "Perform", "Key", "Atmosphere",
-                                              "Echo", "Atmos space"};
+                                              "Echo", "Atmos sound"};
 #define B_NONE 0xFFu
 static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_ENV, B_ARP, B_LFO, B_SEQ, B_FX, B_GLO, B_NONE, B_NONE, B_NONE, B_NONE,
                                          B_NONE, B_NONE, B_NONE, B_NONE, B_NONE, B_NONE, B_NONE, B_NONE, B_SAVE, B_NONE, B_NONE};
@@ -87,14 +87,14 @@ static const char *const LANE_NAME[EN_NDRUM] = {"Kick", "Shaker", "Open", "Rim",
 _Static_assert(P_NPARAMS <= K_LEDS, "the knobs' own codes must come after the parameters");
 static const uint16_t VIEW_KNOB[NVIEWS][4] = {
     {K_FILTER, P_EVOLVE, P_MOTION, P_DRIFT},
-    {P_CATT, P_DREL, P_CCOL, P_PHASER},          /* (BERLIN) the Drone */
+    {P_PEDAL, P_CRES, P_PHASER, P_CATT},          /* (BERLIN) the Drone */
     {P_DENSITY, P_SEQOCT, P_SEQLEN, P_SEQGRID},  /* the Sequence */
-    {P_LDENS, P_GLIDE, P_VIB, P_LOCT},           /* (the Lead) */
-    {P_SEQ2, P_SEQ2LEN, P_SEQ2OCT, P_SCH1},      /* (Sequence 2) */
+    {P_LDENS, P_LOCT, P_GLIDE, P_VIB},           /* (the Lead) */
+    {P_SCH1, P_SEQ2OCT, P_SEQ2LEN, P_SEQ2},      /* (Sequence 2) */
     {P_ECHO, P_ETIME, P_FEEDBACK, P_REVERB},
     {P_TUNE, P_MIDI, K_LEDS, K_SAVE},
     {P_CHORD, P_SEQ, P_LEAD, P_SEQ2},
-    {P_CRES, P_PEDAL, P_DRREV, P_DRECHO},        /* the Drone's sound */
+    {P_CCOL, P_DREL, P_DRREV, P_DRECHO},        /* the Drone's sound */
     {P_CUTOFF, P_DECAY, P_SQREV, P_SQECHO},      /* the Sequence's sound */
     {P_LTONE, P_LATT, P_LDREV, P_LDECHO},        /* the Lead's sound */
     {P_S2CUT, P_S2DEC, P_S2REV, P_S2ECHO},       /* Sequence 2's sound */
@@ -105,20 +105,20 @@ static const uint16_t VIEW_KNOB[NVIEWS][4] = {
     {K_LANE, P_SACCENT, K_LCH, P_SMODE},
     {K_FILTER, K_DUB, K_ENERGY, P_SWEEP},         /* (Wet, Energy: offsets for playing; Sweep the piece's own) */
     {P_TEMPO, P_ROOT, K_MODE, P_TRANS},
-    {P_NGRAIN, P_NCOL, P_NDRIFT, P_NROOM},       /* the Atmosphere */
+    {P_NGRAIN, P_NWIDTH, P_NDRIFT, P_NROOM},       /* the Atmosphere */
     {P_EBLUR, P_ETONE, P_EWIDTH, P_SIZE},
-    {P_NWIDTH, P_NPLATE, P_NECHO, P_NTUNE},      /* its space */
+    {P_NCOL, P_NTUNE, P_NPLATE, P_NECHO},      /* its space */
 };
 static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Filter", "Evolve", "Motion", "Drift"},
-    {"Attack", "Release", "Colour", "Phaser"},
+    {"Pedal", "Reso", "Phaser", "Attack"},
     {"Density", "Octave", "Length", "Grid"},
-    {"Phrases", "Glide", "Vibrato", "Octave"},
-    {"Level", "Length", "Octave", "Chance"},
+    {"Phrases", "Octave", "Glide", "Vibrato"},
+    {"Chance", "Octave", "Length", "Level"},
     {"Echo", "Echo time", "Feedback", "Reverb"},
     {"Tune", "MIDI out", "Lights", "Save"},
     {"Drone", "Seq", "Lead", "Seq 2"},
-    {"Reso", "Pedal", "Reverb", "Echo"},
+    {"Colour", "Release", "Reverb", "Echo"},
     {"Cutoff", "Decay", "Reverb", "Echo"},
     {"Tone", "Attack", "Reverb", "Echo"},
     {"Cutoff", "Decay", "Reverb", "Echo"},
@@ -129,9 +129,9 @@ static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Lane", "Accent", "Chance", "Play"},
     {"Filter", "Wet", "Energy", "Sweep"},
     {"Tempo", "Root", "Mode", "Transpose"},
-    {"Density", "Colour", "Drift", "Air"},
+    {"Density", "Width", "Drift", "Air"},
     {"Blur", "Tone", "Width", "Size"},
-    {"Width", "Reverb", "Echo", "Ring"},
+    {"Colour", "Ring", "Reverb", "Echo"},
 };
 /* what each knob does, a line: on the rule above the knobs while it's being turned (in capitals; each fits the
  * rule's 228 px: the host's expect helpfit) */
