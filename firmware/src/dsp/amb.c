@@ -4,8 +4,12 @@
 #include "fastmath.h"
 #include "seq.c"
 
-#define EN_DUB 0                                /* (BERLIN: the dub's drums and ping loops, silent; their code goes
-                                                 * once the arrangement no longer leans on it) */
+/* (BERLIN: DUB-1's stabs, bass, pings, drums and phrase plan are gone. What is left of the dub is what the music
+ * still leans on: its section machine (section_set, section_pick: the arc it sets, arcm, moves the echo's tone, the
+ * reverb's send and the cloud; sec moves the cloud and the Tape noise), and the draws its dead parts make on the
+ * shared dice (rng: tick's, bar_start's stabs_evolve, hats_evolve, stabs_bar and the fill, regrow's loop_regrow,
+ * heads_step's second head), which the walk, the Sequence's chances, the echo's heads and the Flute draw after.
+ * Taking them out changes the sound: the user's call) */
 
 #ifdef EN_HOST
 #define EN_POOL
@@ -164,7 +168,6 @@ void en_piece(int i, int16_t *par, uint16_t *pool)
 
 const char *const EN_CV_NAME[EN_NCV] = {"Organ", "Strings", "Choir", "Saws", "Glass"};   /* (BERLIN: the Drone's) */
 const char *const EN_BV_NAME[EN_NBV] = {"Odyssey", "Mini", "Flute", "Theremin", "Synthi"};   /* (BERLIN: the Lead's) */
-const char *const EN_KIT_NAME[EN_NKIT] = {"Tight", "Deep", "Punch", "Soft", "Dusty"};
 const char *const EN_CQ_NAME[EN_NCQ] = {"Empty", "Major", "Minor", "Sus2", "Sus4", "Dim", "Aug"};
 const char *const EN_CX_NAME[EN_NCX] = {"Triad", "6", "7", "Maj7", "9", "11", "Add9"};
 static const char *const ETIME_NAME[6] = {"1/8", "1/8.", "1/4", "1/4.", "1/2", "1 bar"};

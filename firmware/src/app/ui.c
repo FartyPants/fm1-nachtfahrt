@@ -43,7 +43,6 @@ static int parent_of(int v)
     return v == V_CSND || v == V_CFM ? V_CHORD : v == V_PSND || v == V_PFM ? V_TEXTURE : v == V_BSND || v == V_BFM ? V_BASS
          : v == V_DSND || v == V_PAT ? V_DRUMS : -1;
 }
-static int layer_of(int v) { v = parent_of(v) >= 0 ? parent_of(v) : v; return v == V_CHORD ? 0 : v == V_TEXTURE ? 1 : v == V_BASS ? 2 : 3; }
 static int page_of(int v)                        /* a sound page: its layer's; the Echo page: Space's */
 {
     return v == V_KEY ? V_DUB : v == V_ESND ? V_SPACE : v == V_NSND2 ? V_NSND : v == V_ARC ? V_SETUP

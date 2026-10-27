@@ -168,9 +168,7 @@ void en_lead_key(int degree, int on);           /* the white keys: the Lead play
 extern volatile int8_t en_lead_deg;             /* the degree the Lead sounds (played or its own): -1 none */
 void en_seq_set(int layer, const seq_t *s);   /* a pattern written into a sequence (0: the Sequence, 1:
                                                * Sequence 2): played as written, from its first step */
-#define EN_NKIT 5
-extern const char *const EN_CV_NAME[EN_NCV], *const EN_BV_NAME[EN_NBV],
-    *const EN_KIT_NAME[EN_NKIT];
+extern const char *const EN_CV_NAME[EN_NCV], *const EN_BV_NAME[EN_NBV];
 
 /* the arrangement's sections */
 enum { SEC_FULL, SEC_BREAK, SEC_GROOVE, SEC_THIN, EN_NSEC };
