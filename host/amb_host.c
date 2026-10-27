@@ -218,6 +218,7 @@ static void orph_run(int p, int v, float *e, uint32_t *mh)
     en_set(P_DRIFT, 0);
     en_set(P_SEQ2, 60);
     en_set(P_TAPB, 60);                          /* (Repeat B heard: its time can be) */
+    en_set(P_NCHAR, 1);                          /* (an Atmosphere heard: Wind; the default is None) */
     en_set(p, v);
     en_regrow();
     en_play(1);

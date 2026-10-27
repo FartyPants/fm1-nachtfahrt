@@ -120,12 +120,12 @@ said PIECE Basic, F Dorian, tempo 92
 wait 300
 # the buttons' messages, said once
 tap REC
-said DUB HOLD ON
+said HOLD ON
 # the main screen says it is held
 where
 said , dub hold. Section 
 tap REC
-said DUB HOLD OFF
+said HOLD OFF
 tap PLAY
 said RESTING
 wait 300

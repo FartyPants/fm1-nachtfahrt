@@ -18,7 +18,7 @@ expect frozen 0
 tap REC
 wait 300
 expect frozen 1
-said DUB HOLD ON
+said HOLD ON
 tap REC
 wait 300
 expect frozen 0

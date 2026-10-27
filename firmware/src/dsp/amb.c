@@ -61,7 +61,7 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Clap chance", 0, 100, 5},
     {"Accent", 0, 100, 50}, {"Seq play", 0, 1, 0},
     {"Noise tone", -50, 50, 0}, {"Noise density", -50, 50, 0}, {"Air", -50, 50, 0}, {"Noise drift", -50, 50, 0},
-    {"Noise", 0, EN_NNCHAR - 1, 1},
+    {"Noise", 0, EN_NNCHAR - 1, 0},
     {"Phaser", 0, 100, 40},   {"Cutoff 2", 0, 100, 40},  {"Phrases", 0, 100, 50},   {"Seq2 reverb", 0, 100, 50},
     {"Lead tone", 0, 100, 50}, {"Length 2", 3, 16, 7}, {"Blur", 0, 100, 50}, {"Echo tone", 0, 100, 50},
     {"Width", 0, 100, 50},    {"Ring", 0, 100, 50},
@@ -3941,13 +3941,14 @@ enum { ATM_NONE, ATM_WIND, ATM_SURF, ATM_SPACE, ATM_AIR, ATM_TAPE };
 static inline float svf_lp(const float *c, float *s, float x, float *bp);
 static float atm_gate, atm_w[2] = {0.3f, 0.6f}, atm_wt[2] = {0.5f, 0.5f}, atm_gu = 0.5f, atm_gt = 0.5f, atm_s[2][2],
              atm_c[2][4], atm_sw[2] = {0.0f, 0.4f}, atm_swr[2] = {0.11f, 0.13f}, atm_lp[2], bl_ph, bl_dt, bl_env,
-             bl_gl, bl_gr, bl_wait, atm_hl, atm_hr;
+             bl_gl, bl_gr, bl_wait, atm_hl, atm_hr, bl_dt1, bl_glk, bl_idx, bl_dk = 0.999f, bl_step;
+static int bl_burst;
 static float atm_u(void) { return (float)(seq_rand(&atm_rng) >> 8) * (1.0f / 16777216.0f); }
 static float atm_noise(void) { return (float)(int32_t)seq_rand(&atm_rng) * (1.0f / 2147483648.0f); }
 static void render_atmos(uint32_t n)
 {
     const int c = atm_char;
-    const float bl_dk = fm_expf(-6.9f / ((0.025f + 0.0023f * (float)par[P_NTUNE]) * EN_SR)),
+    const float ring = 0.025f + 0.0023f * (float)par[P_NTUNE],
                 air = (float)(par[P_NROOM] + 50) * 0.01f, wid = (float)par[P_NWIDTH] * 0.02f,
                 rv = (float)par[P_NPLATE] * 0.02f, ec = (float)par[P_NECHO] * 0.02f,
                 col = fm_exp2f(fm_clampf(nctl.colour, -1.0f, 1.0f)), busy = fm_exp2f(fm_clampf(nctl.grain, -1.0f, 1.0f)),
@@ -3995,20 +3996,35 @@ static void render_atmos(uint32_t n)
                     l = 2.2f * atm_lp[ch] * a;
             }
             break;
-        case ATM_SPACE:
-            if ((bl_wait -= 1.0f) <= 0.0f) {     /* a bleep: a note of the scale an octave or two up, here or there */
+        case ATM_SPACE:                          /* (the Synthi's sample-and-hold, twittering: no two bleeps alike) */
+            if ((bl_wait -= 1.0f) <= 0.0f) {     /* a bleep: a note of the scale an octave or two up, here or there,
+                                                  * sliding onto it from up to 7 semitones off; now and then a burst of
+                                                  * 3 .. 8 at a sample-and-hold clock (7 .. 16 a second) */
                 const int k = nsteps ? (int)(seq_rand(&atm_rng) % (uint32_t)nsteps) : 0, o = 1 + (int)(seq_rand(&atm_rng) % 2u);
-                const float p = atm_u() * (FM_PI / 2.0f);
-                bl_dt = mtof((float)(60 + par[P_ROOT] % 12 + 12 * o + (nsteps ? steps[k] : 0)) + 0.0f) * (1.0f / EN_SR);
-                bl_env = 1.0f;
+                const float p = atm_u() * (FM_PI / 2.0f), u = atm_u();
+                bl_dt1 = mtof((float)(60 + par[P_ROOT] % 12 + 12 * o + (nsteps ? steps[k] : 0))) * (1.0f / EN_SR);
+                bl_dt = bl_dt1 * fm_exp2f((atm_u() - 0.5f) * 1.2f);
+                bl_glk = 0.0004f + 0.004f * atm_u();
+                bl_idx = 1.6f * u * u;           /* (mostly round, now and then bright) */
+                bl_dk = fm_expf(-6.9f / (ring * (0.4f + 1.6f * atm_u()) * EN_SR));
+                bl_env = 0.55f + 0.45f * atm_u();
                 bl_gl = fm_cosf(p), bl_gr = fm_sinf(p);
-                bl_wait = (0.15f + 0.65f * atm_u()) * EN_SR / busy;
+                if (bl_burst > 0) {
+                    bl_burst--;
+                    bl_wait = bl_step;
+                } else if (atm_u() < 0.35f) {
+                    bl_burst = 2 + (int)(seq_rand(&atm_rng) % 6u);
+                    bl_step = EN_SR / (7.0f + 9.0f * atm_u());
+                    bl_wait = bl_step;
+                } else
+                    bl_wait = (0.25f + 1.2f * atm_u()) * EN_SR / busy;
             }
             if (bl_env > 1e-4f) {
-                const float x = 1.25f * sine(bl_ph + 2.0f + 0.3f * sine(2.0f * bl_ph)) * bl_env;
+                const float x = 1.25f * sine(bl_ph + 2.0f + bl_idx * bl_env * sine(2.0f * bl_ph)) * bl_env;
                 l = x * bl_gl, r = x * bl_gr;
-                bl_env *= bl_dk;                 /* (Ring: ~25 .. 250 ms) */
+                bl_env *= bl_dk;                 /* (Ring: the bleeps' length, each its own) */
             }
+            bl_dt += (bl_dt1 - bl_dt) * bl_glk;
             bl_ph += bl_dt;
             if (bl_ph >= 1.0f)
                 bl_ph -= 1.0f;

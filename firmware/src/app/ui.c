@@ -995,7 +995,7 @@ static void button(int b)
     case B_REC:
         if (plat_ms() - ui.down_t[B_REC] >= GRID_HOLD)
             break;                               /* held long enough for the grid: only a tap is dub hold */
-        say("DUB HOLD", en_frozen ? "OFF" : "ON");
+        say("HOLD", en_frozen ? "OFF" : "ON");
         en_freeze(!en_frozen);                   /* the engine takes it at its next block */
         break;
     case B_SAVE:                                 /* the Noise page (one page: again stays; saving: GLO held, Setup's
@@ -2423,7 +2423,7 @@ static void grid_band(int32_t oy)                 /* the whole screen, in two ba
     int r, c;
     cv_begin(240, 120, K_BG);
     text_c(120, 2 - oy, &FONT_S, "EFFECTS", K_ACC);
-    text_c(120, 20 - oy, &FONT_XS, "HOLD A WHITE KEY    TAP REC: DUB HOLD", K_DIM);
+    text_c(120, 20 - oy, &FONT_XS, "HOLD A WHITE KEY    TAP REC: HOLD", K_DIM);
     for (r = 0; r < 4; r++) {
         int32_t yr = 38 + r * 50;
         cv_text(6, yr - oy, &FONT_XS, GROUP[r], K_DIM);
@@ -3234,7 +3234,7 @@ static void speak_dump(void)
 {
     static const char *const MSG[][2] = {{"UPDATE MODE IN", "3.."}, {"UPDATE MODE", "CANCELLED"},
                                          {"NEXT CHORD", "ON THE BAR"}, {"NEXT CHORD", 0}, {"RESTING", 0},
-                                         {"PLAYING", 0}, {"DUB HOLD", "ON"}, {"DUB HOLD", "OFF"}, {"SAVED", 0},
+                                         {"PLAYING", 0}, {"HOLD", "ON"}, {"HOLD", "OFF"}, {"SAVED", 0},
                                          {"PERFORM", "ON"}, {"PERFORM", "OFF"}};
     static const char *const WARN[][2] = {{"THE ROOT STAYS", "(SETUP)"}, {"3 NOTES", "AT LEAST"},
                                           {"NOT SAVED", "FLASH ERROR"}};
@@ -3407,7 +3407,7 @@ static void splash_band(int f, int32_t oy)
     const uint16_t C[5] = {K_TEXT, K_PAD, K_BELL, K_BASS, K_PULSE};
     int32_t w[5], x[5], k;
     for (k = 0; k < 5; k++)
-        w[k] = text_w(F[k], "DUB-1");
+        w[k] = text_w(F[k], "BERLIN");
     x[0] = 120 - w[0] / 2;                        /* the name in the middle; the repeats down the screen */
     cv_begin(240, 120, K_BG);
     for (k = 0; k < 5; k++) {                    /* the rings: one a strike, in its colour */
@@ -3427,14 +3427,14 @@ static void splash_band(int f, int32_t oy)
         t = fm_minf((float)age / 3.0f, 1.0f);
         t = t * (2.0f - t);                      /* (eased) */
         y = YC + (int32_t)((float)(yt - YC) * t);
-        cv_text(120 - w[k] / 2, y - FH[k] / 2 - oy, F[k], "DUB-1", mix(K_BG, C[k], (int)(16.0f * t) - 2 * k));
+        cv_text(120 - w[k] / 2, y - FH[k] / 2 - oy, F[k], "BERLIN", mix(K_BG, C[k], (int)(16.0f * t) - 2 * k));
     }
     if (f >= 1)                                  /* the name, struck */
-        cv_text(x[0], YC - FH[0] / 2 - oy, F[0], "DUB-1", mix(K_BG, K_TEXT, f >= 3 ? 16 : 6 * f));
+        cv_text(x[0], YC - FH[0] / 2 - oy, F[0], "BERLIN", mix(K_BG, K_TEXT, f >= 3 ? 16 : 6 * f));
     if (f >= 20)
         text_c(120, 204 - oy, &FONT_S, "Dub techno for the FM-1", mix(K_BG, K_ACC, f >= 23 ? 16 : (f - 19) * 4));
     if (f >= 22)
-        text_c(120, 224 - oy, &FONT_XS, "DUB-1 " EN_VERSION, K_DIM);
+        text_c(120, 224 - oy, &FONT_XS, "BERLIN " EN_VERSION, K_DIM);
     cv_blit(0, (uint32_t)oy);
 }
 

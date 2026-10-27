@@ -123,7 +123,7 @@ static void ota_commit(const uint8_t *parm)
 }
 
 #include "app/app.h"
-#define ANN_NAME "DUB-1 " EN_VERSION
+#define ANN_NAME "BERLIN " EN_VERSION
 #include "ann_words.h"            /* the link to AMB-1's words file (tools/gen_words.py, from firmware/words.tsv) */
 #include "announce.c"             /* the screen as text for a screen reader (fm1-reader) */
 static int ann_wire_send(const uint8_t *p, uint32_t n)   /* never waits: no room (nobody reading), not sent */
