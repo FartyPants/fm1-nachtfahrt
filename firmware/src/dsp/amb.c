@@ -769,11 +769,6 @@ typedef struct {
 static stab_t stab[EN_NPAD];
 static float chord_vol, cut_base = 800.0f, st_dec = 0.9995f, st_fdec = 0.99f, st_t60 = 0.3f;
 static float st_env, st_amp, st_fenv, st_throw, throw_dec, st_cofs;
-#ifndef EN_RUMBLE
-#define EN_RUMBLE 0                              /* (the kick's rumble: off in 1.3.0, its work for 1.4.0) */
-#endif
-#define RB_SR (EN_SR / 16.0f)                    /* (the rumble's rate) */
-static float rb_amt, rb_g = 0.9f, rb_on = 1.0f;   /* (rb_on: eased off while shedding) */                /* (the kick's rumble: its level, its loop's gain) */
 static float ec_dk, ec_dd;                      /* (the classics pass) a strike ducks the echo's returns: its level,
                                                  * eased; the repeats heard in the gaps, not over the stab */
 static float st_s[4], st_c[4], st_h[2];
@@ -3064,12 +3059,6 @@ static void apply(int p, int v)
     }
     case P_CATT: dr_up = 1.0f / (0.5f * fm_exp2f((float)v * 0.0458f) * EN_SR); break;    /* a swell of 0.5 .. 12 s */
     case P_DREL: dr_down = 1.0f / (fm_exp2f((float)v * 0.039f) * EN_SR); break;         /* dying in 1 .. 15 s */
-    case P_ARC:                               /* the kick's rumble: none (0) .. a deep roar (100), longer as it rises:
-                                                  * its tail 0.8 s .. 2.5 s (rumble); (1.3.0: off, not yet to standard,
-                                                  * the user: EN_RUMBLE 1 for 1.4.0's work; the value kept, saved) */
-        rb_amt = EN_RUMBLE ? (float)v * (float)v * 0.0001f : 0.0f;
-        rb_g = fm_exp2f(-9.966f * (180.0f / RB_SR) / (0.8f + 1.7f * (float)v * 0.01f));
-        break;
     case P_EBLUR:                                /* the diffusers' gain: 0.15 (clean copies) .. 0.6 (50) .. 0.75 */
         ec_g = v <= 50 ? 0.15f + 0.009f * (float)v : 0.6f + 0.003f * (float)(v - 50);
         break;
@@ -3487,47 +3476,6 @@ static void drain(void)
 /* --------------------------------------------------------------- render --- */
 #define BLK 256
 static float mixl[BLK], mixr[BLK], rsend[BLK], esend[BLK], kickb[BLK], bassb[BLK], crl[BLK], crr[BLK];
-
-/* (the classics pass) the kick's rumble: the kick alone into a small dark reverb under ~150 Hz, ducked by each beat,
- * so it roars between them (Porter Ricks, Monolake's Cyan). Four lines mixed (a Householder matrix) at a sixteenth of
- * the rate (all of it under 150 Hz), its two sides apart over 80 Hz: some width in the lows. Rumble: its level and
- * its length */
-#define RB_N 692                                /* (157 + 173 + 179 + 183: the lines, ~57-66 ms) */
-static int16_t rb_buf[RB_N];
-static const int16_t RB_LEN[4] = {157, 173, 179, 183}, RB_OFF[4] = {0, 157, 330, 509};
-static int rb_i[4], rb_ph;
-static float rb_acc, rb_d[4], rb_pl, rb_pr, rb_cl, rb_cr, rb_ol, rb_or;
-static inline void rumble(float kick, float duck, float *l, float *r)
-{
-    float f;
-    rb_acc += kick;                               /* (the sixteen's mean: its own low-pass) */
-    if (++rb_ph >= 16) {                          /* the reverb, a sixteenth of the time */
-        float y[4], m = 0.0f, x = rb_acc * (1.0f / 16.0f);
-        int k;
-        rb_ph = 0;
-        rb_acc = 0.0f;
-        for (k = 0; k < 4; k++) {
-            y[k] = (float)rb_buf[RB_OFF[k] + rb_i[k]] * (1.0f / 12000.0f);
-            m += y[k];
-        }
-        m *= 0.5f;                                /* (Householder: y - 2/N sum) */
-        for (k = 0; k < 4; k++) {
-            float w = rb_g * (y[k] - m);
-            rb_d[k] += 0.35f * (w - rb_d[k]);     /* (each round darker) */
-            rb_buf[RB_OFF[k] + rb_i[k]] = s16(rb_d[k] + x);
-            if (++rb_i[k] >= RB_LEN[k])
-                rb_i[k] = 0;
-        }
-        rb_pl = rb_cl, rb_pr = rb_cr;
-        rb_cl = y[0] + y[2], rb_cr = y[1] + y[3];
-    }
-    f = (float)rb_ph * (1.0f / 16.0f);
-    rb_ol = rb_pl + (rb_cl - rb_pl) * f;         /* (back to the full rate: a line between) */
-    rb_or = rb_pr + (rb_cr - rb_pr) * f;
-    f = rb_amt * rb_on * 2.2f * (1.0f - 0.9f * duck);
-    *l += rb_ol * f;
-    *r += rb_or * f;
-}
 
 /* (the classics pass) the chord's and the pings' dry, wider: each side a little of the other's, 5 and 8 ms later and
  * drifting slowly (a chorus crossed), so the two sides differ without the voices panned further; Width (0 none,
@@ -4793,7 +4741,6 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
         render_fx(n);
     eg += (1.0f - eg) * fx_wash;                 /* Wash: everything into the echo */
     epk = en_echo_pk;
-    rb_on += ((SHED ? 0.0f : 1.0f) - rb_on) * 0.25f;
     for (j = 0; j < n; j++) {
         float wl, wr, l, r, el, er, xl, xr, dg, dgb, rin, cl, cr, sd, dry = 1.0f - 0.75f * fx_wash;
         duck_d += (duck_x - duck_d) * 0.08f;
@@ -4835,8 +4782,6 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
         cr *= 1.0f + 9.0f * fx_cf;
         l = mixl[j] * dry + 1.2f * el + 1.1f * wl + 1.4f * cl;   /* (1.3.0: the Echoplex's taps out) */
         r = mixr[j] * dry + 1.2f * er + 1.1f * wr + 1.4f * cr;
-        if (rb_amt > 0.0f && rb_on > 0.004f)     /* (the kick's rumble, ducked as the kick lands) */
-            rumble(kickb[j], duck_d, &l, &r);
         sd = 0.5f * (l - r);                     /* mono below ~80 Hz (the classics pass; was ~150): the side's lows
                                                   * taken out (two poles), so the
                                                   * stabs' and pings' low partials, the echo's and the plate's, sit in
