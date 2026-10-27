@@ -1019,6 +1019,64 @@ int main(void)
     run(60.0f);
     CHECK(!bad && peak < 0.95f, "test_lead_glide_bounded: peak %f", (double)peak);
 
+    /* (BERLIN) the echo ping-pongs: one note into it alone (no repeats, no plate, no cloud, the others silent), Width
+     * 100: its first repeat at least 6 dB louder on one side, its second on the other */
+    {
+        static const int8_t D[16] = {0};
+        const float step = 44100.0f * 60.0f / (96.0f * 4.0f), at = 32.0f * step, d = 3.0f * step;   /* (the dotted eighth) */
+        float e[2][2] = {{0.0f, 0.0f}, {0.0f, 0.0f}};
+        uint32_t t = 0;
+        int b, j, w;
+        fresh();
+        en_set(P_TEMPO, 96);
+        en_set(P_CHORD, 0);
+        en_set(P_LEAD, 0);
+        en_set(P_CRACKLE, 0);
+        en_set(P_REVERB, 0);
+        en_set(P_CLOUD, 0);
+        en_set(P_TAPA, 0);
+        en_set(P_TAPB, 0);
+        en_set(P_ECHO, 100);
+        en_set(P_ETIME, 1);
+        en_set(P_FEEDBACK, 50);
+        en_set(P_EWIDTH, 100);
+        seq_write(16, 0x0001u, D);               /* (a note every two bars: the one at sixteenth 32 measured) */
+        en_play(1);
+        for (b = 0; b < (int)((at + 3.0f * d) / 256.0f) + 2; b++) {
+            en_render(buf, 256, 2048);
+            for (j = 0; j < 256; j++, t++)
+                for (w = 0; w < 2; w++) {        /* (a window a sixteenth long from a quarter before each repeat) */
+                    const float t0 = at + (float)(w + 1) * d - 0.25f * step;
+                    if ((float)t >= t0 && (float)t < t0 + step) {
+                        const float l = (float)buf[2 * j] / 8388608.0f, r = (float)buf[2 * j + 1] / 8388608.0f;
+                        e[w][0] += l * l, e[w][1] += r * r;
+                    }
+                }
+        }
+        printf("  ping-pong: first repeat L/R %.1f dB, second %.1f dB\n", (double)(10.0f * log10f((e[0][0] + 1e-12f) / (e[0][1] + 1e-12f))),
+               (double)(10.0f * log10f((e[1][0] + 1e-12f) / (e[1][1] + 1e-12f))));
+        CHECK((e[0][0] > 4.0f * e[0][1] && e[1][1] > 4.0f * e[1][0]) || (e[0][1] > 4.0f * e[0][0] && e[1][0] > 4.0f * e[1][1]),
+              "test_echo_pingpong: the repeats not side to side");
+        en_set(P_EWIDTH, en_param_info(P_EWIDTH)->def);
+    }
+
+    /* (BERLIN) the Atmosphere: each character half a minute alone, sound, no NaN, bounded */
+    {
+        int c;
+        for (c = 0; c < EN_NNCHAR; c++) {
+            fresh();
+            en_set(P_SEQ, 0);
+            en_set(P_CHORD, 0);
+            en_set(P_LEAD, 0);
+            en_set(P_CRACKLE, 60);
+            en_set(P_NCHAR, c);
+            en_play(1);
+            peak = 0.0f;
+            run(30.0f);
+            CHECK(!bad && peak > 0.01f && peak < 0.8f, "test_atmos_chars: %s: peak %f", EN_NCHAR_NAME[c], (double)peak);
+        }
+    }
+
     /* (BERLIN) every note-on has its note-off: two minutes of piece changes, tempo changes, freeze, mutes, PANIC and
      * stops with repeats pending, then stop and let it ring out */
     {
