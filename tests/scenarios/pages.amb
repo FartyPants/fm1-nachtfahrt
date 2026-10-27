@@ -18,6 +18,11 @@ tap ENV
 wait 300
 expect view 8
 said Drone sound page, voice Organ: Colour 0, Release 50, Reverb 50, Echo 50
+# (the filter motion) the layer's button once more: its Move page (Width, Time, Rate, Intro)
+tap ENV
+wait 300
+expect view 12
+said Drone move page, voice Organ: Width
 tap ARP
 wait 300
 expect view 2
@@ -32,6 +37,10 @@ expect view 13
 said Repeats page, voice 2600: Repeat A 100, A time 1/8., Repeat B 50, B time 1/4
 tap ARP
 wait 300
+expect view 23
+said Seq move page, voice 2600: Width
+tap ARP
+wait 300
 expect view 2
 tap LFO
 wait 300
@@ -41,6 +50,10 @@ tap LFO
 wait 300
 expect view 10
 said Lead sound page, voice Odyssey: Tone 50, Attack 10, Reverb 90, Echo 90
+tap LFO
+wait 300
+expect view 14
+said Lead move page, voice Odyssey: Width
 tap SEQ
 wait 300
 expect view 4
@@ -49,6 +62,13 @@ tap SEQ
 wait 300
 expect view 11
 said Seq2 sound page, voice Moog: Cutoff 40, Decay 35, Reverb 50, Echo 50
+tap SEQ
+wait 300
+expect view 16
+tap SEQ
+wait 300
+expect view 24
+said Seq2 move page, voice Moog: Width
 tap SAVE
 wait 300
 expect view 19
@@ -57,6 +77,10 @@ tap SAVE
 wait 300
 expect view 21
 said Atmos sound page, character Wind: Colour 0, Ring 50, Reverb 50, Echo 50
+tap SAVE
+wait 300
+expect view 25
+said Atmos move page, character Wind: Width
 tap FX
 wait 300
 expect view 5

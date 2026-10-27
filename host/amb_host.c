@@ -548,6 +548,9 @@ static int expect(const char *what, const char *val)
         got = last_note[(atoi(what + 11) + 15) % 16];
     else if (!strncmp(what, "act", 3) && what[3] >= '0' && what[3] <= '4')   /* (BERLIN) actN: layer N's activity x100 */
         got = (int)(en_layer_act[what[3] - '0'] * 100.0f);
+    else if (!strcmp(what, "fodot"))              /* (BERLIN) the page's brightness knob: where its filter is now, in the
+                                                  * knob's own units (-999: none on this page) */
+        got = knob_dot(ui.view);
     else if (!strcmp(what, "seqapart"))           /* blocks the two sequences were at different steps (peakreset) */
         got = (int)seq_apart;
     else if (!strncmp(what, "notes_ch", 8))       /* notes_chN: note-ons on MIDI channel N since the last peakreset */
@@ -837,7 +840,7 @@ int main(int argc, char **argv)
                                                   * scenario: it leaves the engine reset) */
             static const uint8_t REACH[] = {V_DUB, V_KEY, V_CHORD, V_CSND, V_TEXTURE, V_PSND, V_PFM, V_BASS, V_BSND,
                                             V_DRUMS, V_DSND, V_PAT, V_SPACE, V_ESND, V_SETUP, V_MIX, V_PERF, V_NSND,
-                                            V_NSND2, V_ARC};
+                                            V_NSND2, V_ARC, V_CFM, V_BFM, V_SMOVE, V_S2MOVE, V_AMOVE};
             float e0[16], e1[16];
             uint32_t m0, m1;
             unsigned k;

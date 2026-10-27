@@ -24,28 +24,43 @@
 /* (past NPAGES, on no button of their own: V_MIX, PERFORM's knobs, the four layers' levels; the layers' sound
  * pages, the layer's button pressed again) */
 enum { V_DUB, V_CHORD, V_TEXTURE, V_BASS, V_DRUMS, V_SPACE, V_SETUP, NPAGES, V_MIX = NPAGES, V_CSND, V_PSND, V_BSND,
-       V_DSND, V_CFM, V_PFM, V_BFM, V_CHORDS, V_PAT, V_PERF, V_KEY, V_NSND, V_ESND, V_NSND2, V_ARC, NVIEWS };
+       V_DSND, V_CFM, V_PFM, V_BFM, V_CHORDS, V_PAT, V_PERF, V_KEY, V_NSND, V_ESND, V_NSND2, V_ARC, V_SMOVE, V_S2MOVE, V_AMOVE, NVIEWS };
 /* (V_PERF: PERFORM's knobs, the master actions; V_MIX while white 6 is held. V_KEY: HOME again, the key and the
  * tempo, the Dub page's second) */
 static const char *const VIEW_NAME[NVIEWS] = {"Berlin", "Drone", "Sequence", "Lead", "Sequence 2", "Space", "Setup",
                                               "Mix", "Drone sound", "Seq sound", "Lead sound", "Seq2 sound",
-                                              "Drone FM", "Repeats", "Lead FM", "Chords", "Pattern", "Perform", "Key", "Atmosphere",
-                                              "Echo", "Atmos sound", "Arc"};
+                                              "Drone move", "Repeats", "Lead move", "Chords", "Pattern", "Perform", "Key",
+                                              "Atmosphere", "Echo", "Atmos sound", "Arc", "Seq move", "Seq2 move",
+                                              "Atmos move"};
 #define B_NONE 0xFFu
 static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_ENV, B_ARP, B_LFO, B_SEQ, B_FX, B_GLO, B_NONE, B_NONE, B_NONE, B_NONE,
                                          B_NONE, B_NONE, B_NONE, B_NONE, B_NONE, B_NONE, B_NONE, B_NONE, B_SAVE, B_NONE, B_NONE,
-                                         B_NONE};
+                                         B_NONE, B_NONE, B_NONE, B_NONE};
 static int sound_of(int v) { return v == V_CHORD ? V_CSND : v == V_TEXTURE ? V_PSND : v == V_BASS ? V_BSND : v == V_DRUMS ? V_DSND : -1; }
 static int fm_of(int v) { return v == V_TEXTURE ? V_PFM : -1; }   /* (BERLIN: no FM pages; the Sequence's third, its
                                                                    * Repeats, in the Ping FM page's place) */
 static int parent_of(int v)
 {
-    return v == V_CSND || v == V_CFM ? V_CHORD : v == V_PSND || v == V_PFM ? V_TEXTURE : v == V_BSND || v == V_BFM ? V_BASS
-         : v == V_DSND || v == V_PAT ? V_DRUMS : -1;
+    return v == V_CSND || v == V_CFM ? V_CHORD : v == V_PSND || v == V_PFM || v == V_SMOVE ? V_TEXTURE
+         : v == V_BSND || v == V_BFM ? V_BASS : v == V_DSND || v == V_PAT || v == V_S2MOVE ? V_DRUMS : -1;
 }
+static int next_page(int v)                      /* (BERLIN) a layer's button again: its next page, the last back to the
+                                                  * first (the Move page, the filter motion's, last) */
+{
+    switch (v) {
+    case V_CSND: return V_CFM;
+    case V_PSND: return V_PFM;
+    case V_PFM: return V_SMOVE;
+    case V_BSND: return V_BFM;
+    case V_DSND: return V_PAT;
+    case V_PAT: return V_S2MOVE;
+    default: return parent_of(v);
+    }
+}
+static int atm_view(int v) { return v == V_NSND || v == V_NSND2 || v == V_AMOVE; }   /* (the Atmosphere's pages) */
 static int page_of(int v)                        /* a sound page: its layer's; the Echo page: Space's */
 {
-    return v == V_KEY ? V_DUB : v == V_ESND ? V_SPACE : v == V_NSND2 ? V_NSND : v == V_ARC ? V_SETUP
+    return v == V_KEY ? V_DUB : v == V_ESND ? V_SPACE : v == V_NSND2 || v == V_AMOVE ? V_NSND : v == V_ARC ? V_SETUP
          : parent_of(v) >= 0 ? parent_of(v) : v;
 }
 /* SELECT's round and the dots, as the buttons sit on the panel: FX ENV LFO GLO, then HOME SAVE ARP SEQ */
@@ -65,7 +80,7 @@ static int round_pos(int v)                      /* a page's place in the round 
 static int oct_layer(int v)
 {
     v = parent_of(v) >= 0 ? parent_of(v) : v;
-    return v == V_CHORD ? 0 : v == V_TEXTURE ? 1 : v == V_BASS ? 2 : v == V_DRUMS ? 3 : v == V_NSND || v == V_NSND2 ? 4 : -1;
+    return v == V_CHORD ? 0 : v == V_TEXTURE ? 1 : v == V_BASS ? 2 : v == V_DRUMS ? 3 : atm_view(v) ? 4 : -1;
 }
 /* the four knobs of each page: a parameter, or one of these; and what the knob is called there */
 enum { K_LEDS = 200, K_CPU, K_NONE, K_SLOT, K_CQ, K_CX,    /* (the Chords page: the slot, and its kind and type) */
@@ -91,9 +106,9 @@ static const uint16_t VIEW_KNOB[NVIEWS][4] = {
     {P_CUTOFF, P_DECAY, P_SQREV, P_SQECHO},      /* the Sequence's sound */
     {P_LTONE, P_LATT, P_LDREV, P_LDECHO},        /* the Lead's sound */
     {P_S2CUT, P_S2DEC, P_S2REV, P_S2ECHO},       /* Sequence 2's sound */
-    {P_MW0, P_MT0, P_MR0, P_MI0},                /* (V_CFM, unreachable: the Drone's Move, Task 4's) */
+    {P_MW0, P_MT0, P_MR0, P_MI0},                /* the Drone's Move (ENV, a third time) */
     {P_TAPA, P_TAPAT, P_TAPB, P_TAPBT},          /* the Sequence's repeats (its third page) */
-    {P_MW2, P_MT2, P_MR2, P_MI2},                /* (V_BFM, unreachable: the Lead's Move, Task 4's) */
+    {P_MW2, P_MT2, P_MR2, P_MI2},                /* the Lead's Move (LFO, a third time) */
     {K_SLOT, K_CQ, K_CX, K_PLAY},
     {K_LANE, P_SACCENT, K_LCH, P_SMODE},
     {K_FILTER, K_DUB, K_ENERGY, P_SWEEP},         /* (Wet, Energy: offsets for playing; Sweep the piece's own) */
@@ -103,6 +118,9 @@ static const uint16_t VIEW_KNOB[NVIEWS][4] = {
     {P_NCOL, P_NTUNE, P_NPLATE, P_NECHO},      /* its space */
     {P_LDIN, P_BRIDGE, P_ARC, K_NONE},         /* the Arc (GLO again): how the piece builds (the intros are each
                                                   * layer's, on its Move page) */
+    {P_MW1, P_MT1, P_MR1, P_MI1},                /* the Sequence's Move (ARP, a fourth time; its Width is Sweep) */
+    {P_MW3, P_MT3, P_MR3, P_MI3},                /* Sequence 2's Move (SEQ, a fourth time) */
+    {P_MW4, P_MT4, P_MR4, P_MI4},                /* the Atmosphere's Move (SAVE, a third time) */
 };
 static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Filter", "Evolve", "Motion", "Drift"},
@@ -128,10 +146,13 @@ static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Blur", "Tone", "Width", "Size"},
     {"Colour", "Ring", "Reverb", "Echo"},
     {"Lead in", "Bridge", "Arc", ""},
+    {"Width", "Time", "Rate", "Intro"},
+    {"Width", "Time", "Rate", "Intro"},
+    {"Width", "Time", "Rate", "Intro"},
 };
 /* what each knob does, a line: on the rule above the knobs while it's being turned (in capitals; each fits the
  * rule's 228 px, and every view has its row: the host's expect helpfit) */
-_Static_assert(NVIEWS == 23, "a view added: its KNOB_HELP row too");
+_Static_assert(NVIEWS == 26, "a view added: its KNOB_HELP row too");
 static const char *const KNOB_HELP[NVIEWS][4] = {   /* (BERLIN's, a row a view, V_DUB .. V_ARC) */
     {"Down shuts, up opens; Off mid", "How often a step changes", "How much, and the sections' pace", "Bars before the chord moves on"},
     {"The root an octave under", "The filter's resonance", "The slow phaser's depth", "How slowly the chord swells in"},
@@ -145,9 +166,9 @@ static const char *const KNOB_HELP[NVIEWS][4] = {   /* (BERLIN's, a row a view, 
     {"The filter: dark to bright", "How long each note rings", "How much goes into the plate", "How much goes into the echo"},
     {"Dark and soft, or bright", "How slowly a note swells in", "How much goes into the plate", "How much goes into the echo"},
     {"The filter: dark to bright", "How long each note rings", "How much goes into the plate", "How much goes into the echo"},
-    {"", "", "", ""},                                    /* (V_CFM: no page now) */
+    {"How far its filter wanders", "How long one move takes", "How often a new move starts", "Bars its filter takes to open"},
     {"Each note again, as loud: 100", "When: a dotted eighth, classic", "A second repeat, into rests", "When the second comes"},
-    {"", "", "", ""},                                    /* (V_BFM: no page now) */
+    {"How far its tone wanders: gently", "How long one move takes", "How often a new move starts", "Bars its tone takes to open"},
     {"The slot you're writing", "Its kind (Empty: a gap)", "Triad, 6, 7, Maj7, 9, 11, Add9", "Endless, or the slots in a loop"},
     {"The lane you're writing", "How much quieter off the root", "How likely the lane's steps play", "Auto patterns, or your own"},
     {"Down shuts, up opens; Off mid", "The whole music dry, or drowned", "Sparser, or busier", "How far the filter wanders"},
@@ -156,6 +177,9 @@ static const char *const KNOB_HELP[NVIEWS][4] = {   /* (BERLIN's, a row a view, 
     {"Clean repeats, to a dissolving wash", "The repeats darker, or brighter", "The echo mono, to wide", "How long the plate rings"},
     {"Darker, or brighter", "How much it rings", "How much goes into the plate", "How much goes into the echo"},
     {"Bars before the Lead may start", "How far the bridge moves filters", "The Sequence's long rise: 0 none", ""},
+    {"How far its filter wanders", "How long one move takes", "How often a new move starts", "Bars its filter takes to open"},
+    {"How far its filter wanders", "How long one move takes", "How often a new move starts", "Bars its filter takes to open"},
+    {"How far its filter wanders", "How long one move takes", "How often a new move starts", "Bars its filter takes to open"},
 };
 
 /* (BERLIN) the screen's colours: Cosmic, on black (spec 15): lavender text, a cyan accent; the layers in their own
@@ -625,6 +649,33 @@ static void set_mode(int m)
 }
 
 /* the voices: ALGORITHM on a layer's page steps through that layer's (round: after the last, the first) */
+/* (BERLIN) the page's brightness knob (the filter motion's): its knob index, its layer, its units an octave; -1: none */
+static int bright_of(int v, int *layer, float *per_oct)
+{
+    switch (v) {
+    case V_CSND: *layer = 0, *per_oct = 25.0f; return 0;   /* the Drone's Colour (2 octaves a 50) */
+    case V_PSND: *layer = 1, *per_oct = 18.18f; return 0;  /* the Sequence's Cutoff (0.055 an octave a unit) */
+    case V_BSND: *layer = 2, *per_oct = 25.0f; return 0;   /* the Lead's Tone */
+    case V_DSND: *layer = 3, *per_oct = 18.18f; return 0;  /* Sequence 2's Cutoff */
+    case V_NSND2: *layer = 4, *per_oct = 50.0f; return 0;  /* the Atmosphere's Colour */
+    default: return -1;
+    }
+}
+static int knob_dot(int v)                       /* the knob's value where its filter is now (-999: no such knob) */
+{
+    int layer, p, lo, hi;
+    float per;
+    const int k = bright_of(v, &layer, &per);
+    if (k < 0)
+        return -999;
+    p = VIEW_KNOB[v][k];
+    lo = en_param_info(p)->lo, hi = en_param_info(p)->hi;
+    {
+        const float x = (float)proj.par[p] + en_fo[layer] * per;
+        return x < (float)lo ? lo : x > (float)hi ? hi : (int)(x + (x >= 0.0f ? 0.5f : -0.5f));
+    }
+}
+
 static int view_voice(int v)
 {
     v = page_of(v);
@@ -929,14 +980,9 @@ static void button(int b)
         set_view(sound_of(ui.view));
         return;
     }
-    if (parent_of(ui.view) >= 0 && b == VIEW_BTN[parent_of(ui.view)]) {   /* again: an FM voice's FM page; then back */
-        int pv = parent_of(ui.view);
-        if (ui.view == sound_of(pv) && fm_of(pv) >= 0)   /* (on a voice that isn't FM, the page says so) */
-            set_view(fm_of(pv));
-        else if (ui.view == sound_of(pv) && pv == V_DRUMS)
-            set_view(V_PAT);                     /* the drums: their pattern */
-        else
-            set_view(pv);
+    if (parent_of(ui.view) >= 0 && b == VIEW_BTN[parent_of(ui.view)]) {   /* again: the layer's next page; the last,
+                                                                           * back to its first */
+        set_view(next_page(ui.view));
         return;
     }
     if (b == B_FX && (ui.view == V_SPACE || ui.view == V_ESND)) {   /* FX again: the Echo page; again: back */
@@ -987,8 +1033,8 @@ static void button(int b)
         break;
     case B_SAVE:                                 /* the Noise page (one page: again stays; saving: GLO held, Setup's
                                                   * KNOB 4) */
-        if (ui.view == V_NSND || ui.view == V_NSND2) {   /* (1.3.0: two pages now: SAVE again steps through) */
-            set_view(ui.view == V_NSND ? V_NSND2 : V_NSND);
+        if (atm_view(ui.view)) {                 /* (SAVE again steps through: its sound, its Move page, back) */
+            set_view(ui.view == V_NSND ? V_NSND2 : ui.view == V_NSND2 ? V_AMOVE : V_NSND);
         } else {
             ui.noise_from = (uint8_t)ui.view;
             ui.noise_round = 0;
@@ -1397,7 +1443,7 @@ static void input(void)
     }
     if ((e = plat_enc(EN_ALGO)) != 0) {         /* a layer's page: its voice; the Chords page: the walk */
         int vp = view_voice(ui.view);
-        if (ui.view == V_NSND || ui.view == V_NSND2) {   /* the Noise pages: its character */
+        if (atm_view(ui.view)) {   /* the Noise pages: its character */
             int c = ((proj.par[P_NCHAR] + (int)(e % EN_NNCHAR)) % EN_NNCHAR + EN_NNCHAR) % EN_NNCHAR;
             knob_set(P_NCHAR, c);
             say("NOISE", EN_NCHAR_NAME[c]);
@@ -1752,7 +1798,7 @@ static struct {
 static uint8_t epk_w;
 static int scr_layer(int v)                      /* a layer's own page (and the Noise page): the screen that layer's */
 {
-    return v == V_CHORD || v == V_TEXTURE || v == V_BASS || v == V_DRUMS || v == V_NSND || v == V_NSND2 || (v >= V_CSND && v <= V_DSND)
+    return v == V_CHORD || v == V_TEXTURE || v == V_BASS || v == V_DRUMS || atm_view(v) || (v >= V_CSND && v <= V_DSND) || v == V_CFM || v == V_BFM || v == V_SMOVE || v == V_S2MOVE
          ? oct_layer(v) : -1;                    /* (1.3.0: the sound pages too, live, not the envelope) */
 }
 
@@ -1774,22 +1820,6 @@ static void echo_take(uint32_t now)
     epk[epk_w].pk = en_echo_pk;
     en_echo_pk = 0.0f;
     epk_w = (uint8_t)((epk_w + 1u) % EPK_N);
-}
-
-static void circle(int32_t cx, int32_t cy, int32_t r, uint16_t c)   /* an outline, one pixel (midpoint) */
-{
-    int32_t x = r, y = 0, e = 1 - r;
-    while (x >= y) {
-        cv_pset(cx + x, cy + y, c), cv_pset(cx - x, cy + y, c), cv_pset(cx + x, cy - y, c), cv_pset(cx - x, cy - y, c);
-        cv_pset(cx + y, cy + x, c), cv_pset(cx - y, cy + x, c), cv_pset(cx + y, cy - x, c), cv_pset(cx - y, cy - x, c);
-        y++;
-        if (e < 0) {
-            e += 2 * y + 1;
-        } else {
-            x--;
-            e += 2 * (y - x) + 1;
-        }
-    }
 }
 
 static void line(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint16_t c);
@@ -1912,6 +1942,10 @@ static void draw_meters(void)                    /* (BERLIN) left: the five laye
         cv_round(x, 32, 6, 56, 2, T[i]);
         if (h > 0)
             cv_round(x, 32 + 56 - h - 2, 6, h + 2, 2, C[i]);
+        {   /* the filter: a tick, 6 px an octave from the middle (up: brighter) */
+            const int32_t o = (int32_t)(fm_clampf(en_fo[i], -4.5f, 4.5f) * 6.0f);
+            cv_rect(x - 1, 59 - o, 8, 1, K_TEXT);
+        }
     }
 }
 
@@ -2122,18 +2156,7 @@ static void draw_card(uint32_t now)
     text_c(CX, y + 28, &FONT_XS, ui.card_text, tc);
 }
 
-/* (BERLIN) the chord's glow: nested pills, w x h the brightest, each wider one darker; a new chord flares it */
-static void glow(int32_t w, int32_t h, uint32_t age)
-{
-    static const uint8_t LV[4] = {2, 4, 7, 14};
-    const uint16_t core = en_frozen ? K_FROST : age < 900u ? mix(K_ACC, K_TEXT, (int)(age * 16u / 900u)) : K_TEXT;
-    int k;
-    for (k = 0; k < 4; k++) {
-        const int32_t g = (3 - k) * 5, ww = w + 2 * g, hh = h + 2 * g;
-        cv_round(CX - ww / 2, CY - hh / 2, ww, hh, hh / 2, mix(K_BG, k == 3 ? core : K_PAD, LV[k]));
-    }
-}
-
+#define BERLIN_BY "CRANKY MANS"                  /* (the user's name, on the main screen and the launch screen) */
 static void draw_main(void)
 {
     uint32_t now = plat_ms(), h = hash(2166136261u, (uint32_t)en_frozen << 16 | proj.piece << 24 | (uint32_t)en_playing << 17), i;
@@ -2225,22 +2248,17 @@ static void draw_main(void)
         memcpy(ch_last, nm, sizeof ch_last);
     }
     ch_age = ch_t ? now - ch_t : 1000u;
-    ch_c = en_frozen ? K_FROST : RGB(30, 12, 54);   /* (dark on the glow; a new chord: the glow flares, below) */
+    ch_c = en_frozen ? K_FROST : ch_age < 900u ? mix(K_ACC, K_TEXT, (int)(ch_age * 16u / 900u)) : K_TEXT;   /* (white over
+                                                  * the orbits, the user; a new chord: cyan, settling) */
     if (ch_age < 900u)
         moving = 1;
     if (named) {                                 /* the chord, in the middle */
         if ((ch_age < 200u || (ch_age >= 400u && ch_age < 600u)) && text_w(&FONT_L, nm) <= 96) {   /* (big, small, big,
                                                                                          * small: a ping-pong) */
-            int32_t w = text_w(&FONT_L, nm);
-            glow(w + 8, 30, ch_age);
             text_c(CX, CY - 16, &FONT_L, nm, ch_c);
         } else if (text_w(&FONT_C, nm) <= 66) {  /* (the bigger face, the rings behind it; a long name, smaller) */
-            int32_t w = text_w(&FONT_C, nm);
-            glow(w + 6, 19, ch_age);
             text_c(CX, CY - 11, &FONT_C, nm, ch_c);
         } else if (text_w(&FONT_B, nm) <= 72) {
-            int32_t w = text_w(&FONT_B, nm);
-            glow(w + 6, 15, ch_age);
             text_c(CX, CY - 8, &FONT_B, nm, ch_c);
         }
         else
@@ -2283,19 +2301,39 @@ static void draw_main(void)
             cv_text(x, 14, &FONT_XS, "SOLO", K_CLAP);
         }
     }
-    {   /* above the page's name: dub hold ("hold") and Lock ("lock"), alike, in red */
-        int32_t x = 232;
+    cv_text(232 - text_w(&FONT_XS, BERLIN_BY), -2, &FONT_XS, BERLIN_BY, K_DIM);   /* (the user's: over the page) */
+    {   /* hold and Lock, in red, after the section's name (top left) */
+        char t[12];
+        int32_t x;
+        caps(t, EN_SEC_NAME[en_section], sizeof t);
+        x = 8 + text_w(&FONT_XS, t) + 6;
         if (en_frozen) {
-            x -= text_w(&FONT_XS, "hold");
-            cv_text(x, -2, &FONT_XS, "hold", K_FROST);
-            x -= 6;
+            cv_text(x, 2, &FONT_XS, "hold", K_FROST);
+            x += text_w(&FONT_XS, "hold") + 6;
         }
         if (ui.lock)
-            cv_text(x - text_w(&FONT_XS, "lock"), -2, &FONT_XS, "lock", K_FROST);
+            cv_text(x, 2, &FONT_XS, "lock", K_FROST);
     }
     draw_meters();
     draw_duck();
     draw_lanes();
+    {   /* (BERLIN) a sound page: its brightness knob's filter, moved by the filter motion, said under the lanes */
+        int layer;
+        float per;
+        if (bright_of(ui.view, &layer, &per) >= 0 && fm_fabsf(en_fo[layer]) >= 0.1f) {
+            char t[32], *q = t;
+            const char *w = en_fo[layer] < 0.0f ? "MOVING DARKER, -" : "MOVING BRIGHTER, +";
+            const int tenths = (int)(fm_fabsf(en_fo[layer]) * 10.0f + 0.5f);
+            while (*w)
+                *q++ = *w++;
+            *q++ = (char)('0' + tenths / 10 % 10), *q++ = '.', *q++ = (char)('0' + tenths % 10);
+            w = " OCT";
+            while (*w)
+                *q++ = *w++;
+            *q = 0;
+            text_c(120, 130, &FONT_XS, t, K_ACC);
+        }
+    }
     draw_oct(now);
     draw_card(now);
     cv_blit(0, MAIN_Y);
@@ -2312,14 +2350,14 @@ static void draw_knobs(void)
         h = hash(h, (uint32_t)proj.par[view_voice(ui.view)]);
     if (ui.view == V_CHORDS)
         h = hash(h, (uint32_t)proj.par[P_PMODE]);
-    if (ui.view == V_NSND || ui.view == V_NSND2)
+    if (atm_view(ui.view))
         h = hash(h, (uint32_t)proj.par[P_NCHAR]);
     if (ui.view == V_MIX)
         h = hash(h, ui.mutes);
     int now_touch = plat_ms() < ui.touch_until;
     for (i = 0; i < 4; i++)
         h = hash(h, (uint32_t)knob_get(VIEW_KNOB[ui.view][i]));
-    h = hash(h, (uint32_t)now_touch);
+    h = hash(h, (uint32_t)now_touch | (uint32_t)(knob_dot(ui.view) + 1000) << 1);   /* (the filter's dot moving) */
     if (h == ui.sig[2])
         return;
     ui.sig[2] = h;
@@ -2329,10 +2367,10 @@ static void draw_knobs(void)
         int k;
         int32_t xd = 237 - NROUND * 6, xt;
         int32_t x0 = 4;
-        if (view_voice(ui.view) >= 0 || ui.view == V_CHORDS || ui.view == V_NSND || ui.view == V_NSND2) {   /* a layer's page: its voice, at the rule's start;
+        if (view_voice(ui.view) >= 0 || ui.view == V_CHORDS || atm_view(ui.view)) {   /* a layer's page: its voice, at the rule's start;
                                                                    * the Chords page: the walk's; Noise: its character */
             char vn[12];
-            if (ui.view == V_CHORDS || ui.view == V_NSND || ui.view == V_NSND2) {
+            if (ui.view == V_CHORDS || atm_view(ui.view)) {
                 const char *w = ui.view != V_CHORDS ? EN_NCHAR_NAME[proj.par[P_NCHAR] % EN_NNCHAR]
                                                   : EN_WALK_NAME[(proj.par[P_PMODE] & 3) % EN_NWALK];
                 int j;
@@ -2385,6 +2423,11 @@ static void draw_knobs(void)
                 cv_round(cx - w0 / 2 + j * (pw + gap), 33, pw, 8, 2, j == v - lo ? fill : K_LINE);
         } else if (k != K_CPU) {
             arc(cx, 37, 12, hi > lo ? (float)(v - lo) / (float)(hi - lo) : 0.0f, K_LINE, fill, bg, lo < 0);
+            if (knob_dot(ui.view) > -999 && (int)i == bright_of(ui.view, &(int){0}, &(float){0.0f}) && hi > lo) {
+                /* (BERLIN) the filter motion: where the filter is now, a cyan dot on the ring */
+                const float a = (0.375f + 0.75f * (float)(knob_dot(ui.view) - lo) / (float)(hi - lo)) * FM_TWO_PI;
+                cv_disc(cx + (int32_t)(fm_cosf(a) * 12.0f + 0.5f), 37 + (int32_t)(fm_sinf(a) * 12.0f + 0.5f), 2, K_ACC);
+            }
             if (k == P_MOTION) {                 /* (Motion's three regions: the loop held, variations, Breaks) */
                 arc_mark(cx, 37, 12, 0.4f, K_TEXT);
                 arc_mark(cx, 37, 12, 0.7f, K_TEXT);
@@ -2399,7 +2442,7 @@ static void draw_knobs(void)
 static void leds(void)
 {
     uint32_t b = 0, k = 0, i, ap = pool_abs();
-    if (VIEW_BTN[page_of(ui.view)] != B_NONE && ((parent_of(ui.view) < 0 && ui.view != V_KEY && ui.view != V_ESND && ui.view != V_NSND2) || (plat_ms() / 300u) & 1u))
+    if (VIEW_BTN[page_of(ui.view)] != B_NONE && ((parent_of(ui.view) < 0 && ui.view != V_KEY && ui.view != V_ESND && ui.view != V_NSND2 && ui.view != V_AMOVE) || (plat_ms() / 300u) & 1u))
         b |= 1u << VIEW_BTN[page_of(ui.view)];   /* (a sound page, or Key: its button blinks) */
     if (en_playing)
         b |= 1u << B_PLAY;
@@ -2548,7 +2591,7 @@ static void sp_page(int all)
     sp_buf[0] = 0;
     sp_cat(VIEW_NAME[ui.view]);
     sp_cat(" page");
-    if (ui.view == V_NSND || ui.view == V_NSND2) {
+    if (atm_view(ui.view)) {
         sp_cat(", character ");
         sp_cat(EN_NCHAR_NAME[proj.par[P_NCHAR] % EN_NNCHAR]);
     } else if (view_voice(ui.view) >= 0) {
@@ -2626,6 +2669,24 @@ static void sp_garden(void)
     }
     sp_cat(". Section ");
     sp_cat(EN_SEC_NAME[en_section]);
+    {   /* (BERLIN) on a sound page: where its brightness knob's filter is moved ("Cutoff moving darker, about -1 octave") */
+        int layer;
+        float per;
+        const int k = bright_of(ui.view, &layer, &per);
+        if (k >= 0 && fm_fabsf(en_fo[layer]) >= 0.25f) {
+            const int oct = (int)(fm_fabsf(en_fo[layer]) + 0.5f);
+            sp_cat(". ");
+            sp_cat(KNOB_LABEL[ui.view][k]);
+            sp_cat(en_fo[layer] < 0.0f ? " moving darker, about " : " moving brighter, about ");
+            if (oct) {
+                sp_cat(en_fo[layer] < 0.0f ? "-" : "+");
+                sp_int((uint32_t)oct);
+                sp_cat(oct == 1 ? " octave" : " octaves");
+            } else {
+                sp_cat("half an octave");
+            }
+        }
+    }
     sp_cat(". Scale");
     for (i = 0; i < 12; i++) {
         int pc = (proj.par[P_ROOT] + i) % 12;
@@ -2915,46 +2976,22 @@ void ui_frame(void)
 
 void ui_input_only(void) { input(); }
 
-/* the launch screen, while the FM-1 starts, as a delay throw: the name struck (a ring spreads from it),
- * then, every four frames as an echo's time, a repeat thrown out of it to its place along the line, each
- * smaller and fainter, in the layers' colours (the chord's teal, the pings' blue, the bass's brass, the
- * drums' amber), each with its own ring; then the line under it and the version. Frame f of UI_SPLASH_N,
- * drawn whole (two bands of 240 x 120) */
+/* (BERLIN) the launch screen, the user's: BERLIN large, "by CRANKY MANS" under it, on black among a few stars,
+ * fading in; the version small at the foot. Frame f of UI_SPLASH_N, drawn whole (two bands of 240 x 120) */
 static void splash_band(int f, int32_t oy)
 {
-    static const felucca_font_t *const F[5] = {&FONT_L, &FONT_L, &FONT_M, &FONT_B, &FONT_S};
-    static const int32_t FH[5] = {32, 32, 24, 16, 16}, YC = 70;
-    const uint16_t C[5] = {K_TEXT, K_PAD, K_BELL, K_BASS, K_PULSE};
-    int32_t w[5], x[5], k;
-    for (k = 0; k < 5; k++)
-        w[k] = text_w(F[k], "BERLIN");
-    x[0] = 120 - w[0] / 2;                        /* the name in the middle; the repeats down the screen */
+    static const uint8_t SX[14] = {18, 51, 77, 103, 139, 171, 205, 226, 33, 66, 121, 158, 190, 214},
+                         SY[14] = {22, 61, 15, 190, 31, 205, 48, 120, 150, 218, 230, 92, 168, 9};
+    int k;
     cv_begin(240, 120, K_BG);
-    for (k = 0; k < 5; k++) {                    /* the rings: one a strike, in its colour */
-        int born = 1 + k * 4, age = f - born;
-        int32_t r = 12 + age * 8;
-        float a = 1.0f - (float)r / 140.0f;
-        if (age < 0 || a <= 0.0f)
-            continue;
-        circle(120, YC - oy, r, mix(K_BG, k ? C[k] : K_PAD, q16(a * (k ? 0.8f : 0.6f))));
-    }
-    for (k = 4; k >= 1; k--) {                   /* the repeats: thrown out of the name, falling to their places */
-        int born = 1 + k * 4, age = f - born;
-        int32_t yt = YC + 14 + k * 26, y;
-        float t;
-        if (age < 0)
-            continue;
-        t = fm_minf((float)age / 3.0f, 1.0f);
-        t = t * (2.0f - t);                      /* (eased) */
-        y = YC + (int32_t)((float)(yt - YC) * t);
-        cv_text(120 - w[k] / 2, y - FH[k] / 2 - oy, F[k], "BERLIN", mix(K_BG, C[k], (int)(16.0f * t) - 2 * k));
-    }
-    if (f >= 1)                                  /* the name, struck */
-        cv_text(x[0], YC - FH[0] / 2 - oy, F[0], "BERLIN", mix(K_BG, K_TEXT, f >= 3 ? 16 : 6 * f));
-    if (f >= 20)
-        text_c(120, 204 - oy, &FONT_S, "Berlin School for the FM-1", mix(K_BG, K_ACC, f >= 23 ? 16 : (f - 19) * 4));
-    if (f >= 22)
-        text_c(120, 224 - oy, &FONT_XS, "BERLIN " EN_VERSION, K_DIM);
+    for (k = 0; k < 14; k++)
+        cv_rect(SX[k], SY[k] - oy, 1, 1, mix(K_BG, K_DIM, 3 + (k & 3)));
+    if (f >= 1)
+        text_c(120, 92 - oy, &FONT_L, "BERLIN", mix(K_BG, K_TEXT, f >= 8 ? 16 : 2 * f));
+    if (f >= 8)
+        text_c(120, 132 - oy, &FONT_S, "by " BERLIN_BY, mix(K_BG, K_BELL, f >= 16 ? 16 : 2 * (f - 7)));
+    if (f >= 16)
+        text_c(120, 224 - oy, &FONT_XS, EN_VERSION, K_DIM);
     cv_blit(0, (uint32_t)oy);
 }
 
