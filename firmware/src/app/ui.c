@@ -44,16 +44,6 @@ static int parent_of(int v)
          : v == V_DSND || v == V_PAT ? V_DRUMS : -1;
 }
 static int layer_of(int v) { v = parent_of(v) >= 0 ? parent_of(v) : v; return v == V_CHORD ? 0 : v == V_TEXTURE ? 1 : v == V_BASS ? 2 : 3; }
-static int fm_off(int v) { return (v == V_CFM || v == V_BFM) && !en_voice_fm(v - V_CFM); }   /* an FM page, not FM */
-static int fm_knob_off(int v, int i)             /* a knob there doing nothing: the voice not FM (but the LFO), or Ratio
-                                                  * (operators 3 and 4) on a two-operator algorithm */
-{
-    if ((v != V_CFM && v != V_BFM))
-        return 0;
-    if (!en_voice_fm(v - V_CFM))
-        return i != 3;
-    return i == 1 && en_fm_alg(v - V_CFM) == 8;
-}
 static int page_of(int v)                        /* a sound page: its layer's; the Echo page: Space's */
 {
     return v == V_KEY ? V_DUB : v == V_ESND ? V_SPACE : v == V_NSND2 ? V_NSND : v == V_ARC ? V_SETUP
@@ -156,9 +146,9 @@ static const char *const KNOB_HELP[NVIEWS][4] = {   /* (BERLIN's, a row a view, 
     {"The filter: dark to bright", "How long each note rings", "How much goes into the plate", "How much goes into the echo"},
     {"Dark and soft, or bright", "How slowly a note swells in", "How much goes into the plate", "How much goes into the echo"},
     {"The filter: dark to bright", "How long each note rings", "How much goes into the plate", "How much goes into the echo"},
-    {"Which operators modulate which", "Operators 3 and 4's pitch", "Op 4 on itself: pure to gritty", "The filter swept, over two bars"},
+    {"", "", "", ""},                                    /* (V_CFM: no page now) */
     {"Each note again, as loud: 100", "When: a dotted eighth, classic", "A second repeat, into rests", "When the second comes"},
-    {"Which operators modulate which", "Operators 3 and 4's pitch", "Op 4 on itself: pure to gritty", "The tone swept, over four bars"},
+    {"", "", "", ""},                                    /* (V_BFM: no page now) */
     {"The slot you're writing", "Its kind (Empty: a gap)", "Triad, 6, 7, Maj7, 9, 11, Add9", "Endless, or the slots in a loop"},
     {"The lane you're writing", "How much quieter off the root", "How likely the lane's steps play", "Auto patterns, or your own"},
     {"Down shuts, up opens; Off mid", "The whole music dry, or drowned", "Sparser, or busier", "How far the filter wanders"},
@@ -1124,15 +1114,14 @@ static void midi_in(void)
 #define NNUDGE 6
 static const uint8_t NUDGE_BTN[NNUDGE] = {B_ENV, B_ARP, B_LFO, B_SEQ, B_FX, B_SAVE};
 static const char *const NUDGE_NAME[NNUDGE] = {"DRONE", "SEQ", "LEAD", "SEQ 2", "SPACE", "ATMOS"};
-static const uint8_t NUDGE_PAR[NNUDGE][8] = {   /* (the FM ones, the last two of the first three, on an FM voice only)
-                                                  * (BERLIN) each layer its own sound, never its sends, octave or the
+static const uint8_t NUDGE_PAR[NNUDGE][6] = {   /* (BERLIN) each layer its own sound, never its sends, octave or the
                                                   * piece's frame (the Lead's reverb and echo stay where set: the user) */
-    {P_CATT, P_CCOL, P_CRES, P_DREL, P_PHASER, P_PEDAL, P_CCOL, P_CRES},   /* the Drone */
-    {P_CUTOFF, P_DECAY, P_SACCENT, P_CUTOFF, P_DECAY, P_SACCENT, P_CUTOFF, P_DECAY},   /* the Sequence */
-    {P_LTONE, P_LATT, P_VIB, P_GLIDE, P_LTONE, P_VIB, P_LTONE, P_LATT},   /* the Lead */
-    {P_S2CUT, P_S2DEC, P_S2CUT, P_S2DEC, P_S2CUT, P_S2DEC, P_S2CUT, P_S2DEC},   /* Sequence 2 */
-    {P_ECHO, P_FEEDBACK, P_REVERB, P_SIZE, P_CLOUD, P_ECHO, P_ECHO, P_ECHO},   /* (the space: FX; its shake, a new echo time) */
-    {P_NCOL, P_NGRAIN, P_NTUNE, P_NROOM, P_NCOL, P_NGRAIN, P_NTUNE, P_NCOL},   /* (the noise: SAVE; its shake, a new character) */
+    {P_CATT, P_CCOL, P_CRES, P_DREL, P_PHASER, P_PEDAL},   /* the Drone */
+    {P_CUTOFF, P_DECAY, P_SACCENT, P_CUTOFF, P_DECAY, P_SACCENT},   /* the Sequence */
+    {P_LTONE, P_LATT, P_VIB, P_GLIDE, P_LTONE, P_VIB},   /* the Lead */
+    {P_S2CUT, P_S2DEC, P_S2CUT, P_S2DEC, P_S2CUT, P_S2DEC},   /* Sequence 2 */
+    {P_ECHO, P_FEEDBACK, P_REVERB, P_SIZE, P_CLOUD, P_ECHO},   /* (the space: FX; its shake, a new echo time) */
+    {P_NCOL, P_NGRAIN, P_NTUNE, P_NROOM, P_NCOL, P_NGRAIN},   /* (the noise: SAVE; its shake, a new character) */
 };
 static uint32_t nudge_seed = 0x9E3779B9u;
 static int nrand(int n)
@@ -1152,7 +1141,7 @@ static void nudge(int layer, int how)
     static const uint8_t VOICE[NNUDGE] = {P_CVOICE, P_SVOICE, P_LVOICE, P_S2VOICE, P_ETIME, P_NCHAR};
     int16_t rec[P_NPARAMS];
     uint16_t pool;
-    int j, best = -1, bd = 0, fm, n, np = 0;
+    int j, best = -1, bd = 0, n, np = 0;
     uint8_t pick[8];
     char vn[24] = "";
     if (how == NUDGE_SHAKE && layer == 4) {      /* the space's: another echo time */
@@ -1169,9 +1158,8 @@ static void nudge(int layer, int how)
         set_voice(VOICE[layer], v);
         en_param_text(VOICE[layer], proj.par[VOICE[layer]], vn);
     }
-    fm = layer < 3 && en_voice_fm(layer);
     en_piece(proj.piece, rec, &pool);
-    for (j = 0; j < (fm ? 8 : 6); j++) {         /* (the values to choose from, each once) */
+    for (j = 0; j < 6; j++) {                    /* (the values to choose from, each once) */
         int q, dup = 0;
         for (q = 0; q < np; q++)
             dup |= pick[q] == NUDGE_PAR[layer][j];
@@ -1447,9 +1435,6 @@ static void input(void)
         if ((e = plat_enc(EN_K1 + (int)i)) != 0) {
             if (grid_up())
                 continue;                        /* (the grid on the screen: the knobs rest) */
-            if (fm_knob_off(ui.view, (int)i))
-                continue;                        /* (an FM page on a voice that isn't FM: the knobs rest, greyed; the
-                                                  * LFO, the fourth, works on every voice) */
             turn(EN_K1 + (int)i, VIEW_KNOB[ui.view][i], e);
             ui.touched = (int8_t)i;
             ui.touch_until = plat_ms() + 1200u;
@@ -2024,20 +2009,6 @@ static int draw_specks(uint32_t now)              /* 1: one still shows */
 }
 
 
-/* an FM page: the voice's algorithm, as the FM synths draw it: the operators as boxes, each modulator above
- * the one it modulates, the carriers on the bottom line (they're heard), op 4's feedback a loop */
-static const int8_t ALG_XY[EN_FM_NALG][4][2] = {   /* each op's place (x in half steps from the middle, y up) */
-    {{0, 0}, {0, 1}, {0, 2}, {0, 3}},   {{0, 0}, {0, 1}, {-1, 2}, {1, 2}}, {{0, 0}, {-1, 1}, {-1, 2}, {1, 1}},
-    {{0, 0}, {-1, 1}, {1, 1}, {1, 2}},  {{-1, 0}, {-1, 1}, {1, 0}, {1, 1}}, {{-2, 0}, {0, 0}, {2, 0}, {0, 1}},
-    {{-2, 0}, {0, 0}, {2, 0}, {2, 1}},  {{-3, 0}, {-1, 0}, {1, 0}, {3, 0}}, {{0, 0}, {0, 1}, {0, -9}, {0, -9}},
-};
-static const uint16_t ALG_EDGE[EN_FM_NALG] = {   /* bit 4 * from + to (ops 0..3): from modulates to */
-    1u << (4 * 1 + 0) | 1u << (4 * 2 + 1) | 1u << (4 * 3 + 2), 1u << (4 * 1 + 0) | 1u << (4 * 2 + 1) | 1u << (4 * 3 + 1),
-    1u << (4 * 1 + 0) | 1u << (4 * 2 + 1) | 1u << (4 * 3 + 0), 1u << (4 * 1 + 0) | 1u << (4 * 2 + 0) | 1u << (4 * 3 + 2),
-    1u << (4 * 1 + 0) | 1u << (4 * 3 + 2),                     1u << (4 * 3 + 0) | 1u << (4 * 3 + 1) | 1u << (4 * 3 + 2),
-    1u << (4 * 3 + 2),                                         0u,
-    1u << (4 * 1 + 0),
-};
 static void line(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint16_t c)   /* Bresenham */
 {
     int32_t dx = x1 > x0 ? x1 - x0 : x0 - x1, dy = y1 > y0 ? y0 - y1 : y1 - y0, sx = x0 < x1 ? 1 : -1,
@@ -2056,53 +2027,6 @@ static void line(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint16_t c)   /
             y0 += sy;
         }
     }
-}
-static void draw_alg(int layer)
-{
-    static const char *const D[4] = {"1", "2", "3", "4"};
-    int alg = en_fm_alg(layer), k, f, t;
-    int32_t px[4], py[4];
-    char tt[12];
-    if (!en_voice_fm(layer)) {                   /* the FM voices, to choose with ALGORITHM */
-        char vn[12], t[24];
-        en_param_text(view_voice(ui.view), proj.par[view_voice(ui.view)], vn);
-        caps(t, vn, 12);
-        text_c(120, 28, &FONT_B, t, K_TEXT);
-        text_c(120, 48, &FONT_XS, "IS NOT AN FM VOICE", K_DIM);
-        text_c(120, 66, &FONT_XS, "ALGORITHM, FOR ONE:", K_DIM);
-        text_c(120, 80, &FONT_XS, layer == 0 ? "KEYS, BELL" : "PUNCH, RUBBER, PLUCK, GROWL", K_ACC);
-        return;
-    }
-    for (k = 0; k < 4; k++) {
-        px[k] = 120 + ALG_XY[alg][k][0] * 17;
-        py[k] = 80 - ALG_XY[alg][k][1] * 18;
-    }
-    for (f = 0; f < 4; f++)                      /* the connections, under the boxes */
-        for (t = 0; t < 4; t++)
-            if (ALG_EDGE[alg] >> (4 * f + t) & 1u)
-                line(px[f], py[f] + 7, px[t], py[t] - 7, K_DIM);
-    for (k = 0; k < 4; k++) {
-        int carrier = ALG_XY[alg][k][1] == 0;
-        if (ALG_XY[alg][k][1] < 0)
-            continue;                            /* (two operators: 3 and 4 unused) */
-        if (carrier)
-            line(px[k], py[k] + 7, px[k], 91, K_PAD);
-        cv_round(px[k] - 7, py[k] - 7, 15, 15, 3, carrier ? K_PAD : K_BELL);
-        text_c(px[k] + 1, py[k] - 7, &FONT_XS, D[k], K_BG);
-    }
-    if (alg != 8) {                              /* op 4's feedback */
-        line(px[3] + 7, py[3] - 3, px[3] + 11, py[3] - 3, K_DIM);
-        line(px[3] + 11, py[3] - 3, px[3] + 11, py[3] - 10, K_DIM);
-        line(px[3] + 11, py[3] - 10, px[3], py[3] - 10, K_DIM);
-        line(px[3], py[3] - 10, px[3], py[3] - 7, K_DIM);
-    }
-    cv_rect(62, 91, 117, 1, K_PAD);
-    tt[0] = 'A', tt[1] = 'L', tt[2] = 'G', tt[3] = 'O', tt[4] = ' ';
-    itoa_u((uint32_t)(alg + 1), tt + 5);
-    if (alg == 8) {
-        tt[5] = '2', tt[6] = '-', tt[7] = 'O', tt[8] = 'P', tt[9] = 0;
-    }
-    text_c(120, -1, &FONT_XS, tt, K_DIM);
 }
 
 static void draw_meters(void)                    /* left: the four layers */
@@ -2459,14 +2383,9 @@ static void draw_main(void)
         return;
     ui.sig[1] = h;
     cv_begin(240, MAIN_H, K_BG);
-    if (ui.view == V_CFM || ui.view == V_BFM) {  /* an FM page: the algorithm */
-        draw_alg(layer_of(ui.view));
-        moving = 0;
-    } else {
-        specks_take(now);
-        moving = rip_src < 0 ? (uint8_t)draw_specks(now) : 0;   /* (the noise, under the rings: on the whole only) */
-        moving |= (uint8_t)draw_ripples(now);
-    }
+    specks_take(now);
+    moving = rip_src < 0 ? (uint8_t)draw_specks(now) : 0;   /* (the noise, under the rings: on the whole only) */
+    moving |= (uint8_t)draw_ripples(now);
     const int named = parent_of(ui.view) < 0 || scr_layer(ui.view) >= 0;   /* (a sound page: as its layer's) */
     static char ch_last[16];
     static uint32_t ch_t;
@@ -2605,7 +2524,7 @@ static void draw_knobs(void)
             caps(t, vn, sizeof t);
             x0 = cv_text(6, -1, &FONT_XS, t, K_DIM) + 5;
         }
-        if (now_touch && ui.touched >= 0 && ui.touched < 4 && !fm_knob_off(ui.view, ui.touched)) {   /* a knob turning: what it does, the rule's
+        if (now_touch && ui.touched >= 0 && ui.touched < 4) {   /* a knob turning: what it does, the rule's
                                                                           * whole width */
             char hp[48];
             caps(hp, KNOB_HELP[ui.view][ui.touched], sizeof hp);
@@ -2620,14 +2539,13 @@ static void draw_knobs(void)
         }
     }
     for (i = 0; i < 4; i++) {
-        const int off = fm_knob_off(ui.view, (int)i);   /* (the LFO, the fourth, on every voice; Ratio on two ops) */
         const int moff = ui.view == V_MIX && (ui.mutes & LAYER_MUTE[i]) == LAYER_MUTE[i];   /* (the mix: a muted
                                                                                        * layer grey, its level kept) */
-        int k = VIEW_KNOB[ui.view][i], lo, hi, v, hot = now_touch && ui.touched == (int)i && !off;
+        int k = VIEW_KNOB[ui.view][i], lo, hi, v, hot = now_touch && ui.touched == (int)i;
         int32_t x = (int32_t)i * 60, cx = x + 30;
         char t[16];
         static const uint16_t MIXC[4] = {K_PAD, K_BELL, K_BASS, K_PULSE};   /* (the Mix page: the layers' colours) */
-        uint16_t bg = hot ? K_PANEL : K_BG, fill = off || moff ? K_LINE : ui.view == V_MIX ? MIXC[i] : hot ? K_ACC : K_PAD;
+        uint16_t bg = hot ? K_PANEL : K_BG, fill = moff ? K_LINE : ui.view == V_MIX ? MIXC[i] : hot ? K_ACC : K_PAD;
         if (k == K_NONE)
             continue;
         if (i)
@@ -2635,7 +2553,7 @@ static void draw_knobs(void)
         if (hot)
             cv_round(x + 3, 11, 54, 57, 6, K_PANEL);
         knob_range(k, &lo, &hi);
-        v = off ? 0 : knob_get(k);
+        v = knob_get(k);
         caps(t, KNOB_LABEL[ui.view][i], sizeof t);
         text_c(cx, 12, &FONT_XS, t, hot ? K_TEXT : K_DIM);
         if (k == K_SAVE) {                       /* (Save: a dot, lit while there's something to save) */
@@ -2651,11 +2569,8 @@ static void draw_knobs(void)
                 arc_mark(cx, 37, 12, 0.7f, K_TEXT);
             }
         }
-        if (off && k < P_NPARAMS)
-            en_param_text(k, 0, t);
-        else
-            knob_text(k, t);
-        text_c(cx, 50, &FONT_B, t, off || moff ? K_DIM : hot ? K_ACC : K_TEXT);
+        knob_text(k, t);
+        text_c(cx, 50, &FONT_B, t, moff ? K_DIM : hot ? K_ACC : K_TEXT);
     }
     cv_blit(0, KNB_Y);
 }

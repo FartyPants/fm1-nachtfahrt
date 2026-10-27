@@ -239,8 +239,6 @@ int en_chord_tones(uint32_t pool, int root, int deg, int *pcs);
 void en_voicing(uint32_t pool, int deg, int shape, int *iv);
 const char *en_chord_name(const int *pcs, int n, char *buf);   /* "Em7", "Dsus4", "C" ... */
 int en_drift_bars(int v);                      /* Drift's value in bars; 0: the chord holds */
-/* the FM pages: is the layer's voice FM now (0 chord, 1 pings, 2 bass), and its algorithm as it plays (0..8) */
-int en_voice_fm(int layer);
 #define EN_NPROG 8
 enum { EN_CQ_EMPTY, EN_CQ_MAJOR, EN_CQ_MINOR, EN_CQ_SUS2, EN_CQ_SUS4, EN_CQ_DIM, EN_CQ_AUG, EN_NCQ };
 enum { EN_CX_TRIAD, EN_CX_6, EN_CX_7, EN_CX_MAJ7, EN_CX_9, EN_CX_11, EN_CX_ADD9, EN_NCX };
@@ -263,8 +261,6 @@ extern volatile int8_t en_chord_slot;          /* the slot whose chord sounds, -
 int en_deg_of(uint32_t pool, int rel);         /* the scale degree for a note above the root (nearest in the pool) */
 void en_chord_iv(int kind, int type, int *iv); /* a slot's voicing: four intervals above its root, ascending */
 const char *en_chord_label(int root, int kind, int type, char *buf);   /* "Fm7", "Bbsus4", "Eb6" ("-": empty) */
-int en_fm_alg(int layer);
-#define EN_FM_NALG 9
 
 /* the pieces: recipes for every parameter (Tune and MIDI out included, but they are the player's) */
 #define EN_NPIECES 8

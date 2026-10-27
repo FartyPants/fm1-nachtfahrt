@@ -262,16 +262,6 @@ void en_param_text(int i, int v, char *b)
         *b = 0;
         return;
     }
-    if ((i == P_CALG || i == P_BALG)) {
-        if (!v) {
-            b[0] = 'V', b[1] = 'o', b[2] = 'i', b[3] = 'c', b[4] = 'e', b[5] = 0;   /* the voice's own */
-        } else if (v == 9) {
-            b[0] = '2', b[1] = '-', b[2] = 'o', b[3] = 'p', b[4] = 0;
-        } else {
-            itoa_s(v, b);
-        }
-        return;
-    }
     if (PARAMS[i].lo < 0 && v > 0)               /* (a signed value, above its zero) */
         *b++ = '+';
     itoa_s(v, b);
@@ -600,43 +590,6 @@ static void svf_coefs(float *c, float f, float k)   /* TPT SVF (Zavalishin): a1,
     c[3] = k;
 }
 
-/* ---------------------------------------------------------- the FM core --- */
-/* Four sine operators, as the 4-op FM synths have them (the DX21 / TX81Z family's eight algorithms; op 4 can
- * feed back on itself), and a ninth "algorithm", two operators only (2 into 1), for the light voices. Each
- * operator: a ratio to the note, a level (a modulator's: its index, in turns; a carrier's: its share of the
- * sound) and a decay to a sustain (a share of its level). The levels are worked out at the control rate
- * (every 32 samples), the operators every sample. The algorithms, 4 -> 3 meaning 4 modulates 3:
- *   1: 4 -> 3 -> 2 -> 1            2: (3 + 4) -> 2 -> 1         3: (3 -> 2) + 4 -> 1
- *   4: (4 -> 3) + 2 -> 1           5: 4 -> 3, 2 -> 1 (two pairs) 6: 4 -> 1, 2 and 3
- *   7: 4 -> 3, and 2 and 1         8: all four, side by side     9: 2 -> 1 (two operators) */
-#define FM_NALG 9
-#define FM_ALG2 8                                /* the two-operator one */
-typedef struct {
-    float ratio, level, dec, sus;               /* the ratio, the level, the decay (s) to the sustain (0..1 of the level) */
-} fmop_t;
-typedef struct {
-    uint8_t alg;                                /* 0..8 */
-    float fb;                                   /* op 4's feedback (turns) */
-    fmop_t op[4];
-} fmpatch_t;
-
-/* the FM voices' patches: the chord's Keys (an electric piano: a body pair, and a tine pair at 14) and Bell
- * (3.5 against 1, 7 against 2); the basses: Punch (a stack, a thump in the first 90 ms), Rubber (two pairs, an
- * octave under, op 4 feeding back), Pluck (2 ops at 3, gone in 50 ms), Growl (2 ops at 1, a bite) */
-static const fmpatch_t FM_KEYS = {4, 0.0f, {{1.0f, 1.0f, 0.0f, 1.0f}, {1.0f, 0.3f, 0.35f, 0.15f}, {1.0f, 0.4f, 0.0f, 1.0f},
-                                            {14.0f, 0.13f, 0.05f, 0.0f}}};
-static const fmpatch_t FM_BELL = {4, 0.0f, {{1.0f, 1.0f, 0.0f, 1.0f}, {3.5f, 0.38f, 0.5f, 0.12f}, {2.0f, 0.45f, 0.0f, 1.0f},
-                                            {7.07f, 0.16f, 0.18f, 0.0f}}};
-static const fmpatch_t FM_PUNCH = {0, 0.12f, {{1.0f, 1.0f, 0.0f, 1.0f}, {1.0f, 0.5f, 0.06f, 0.08f}, {2.0f, 0.22f, 0.12f, 0.1f},
-                                             {1.0f, 0.12f, 0.2f, 0.25f}}};
-static const fmpatch_t FM_RUBBER = {4, 0.3f, {{1.0f, 1.0f, 0.0f, 1.0f}, {1.0f, 0.3f, 0.25f, 0.3f}, {0.5f, 0.6f, 0.0f, 1.0f},
-                                              {1.0f, 0.18f, 0.3f, 0.4f}}};
-static const fmpatch_t FM_PLUCK = {FM_ALG2, 0.0f, {{1.0f, 1.0f, 0.0f, 1.0f}, {3.0f, 0.55f, 0.035f, 0.0f}, {2.0f, 0.2f, 0.05f, 0.0f},
-                                                   {1.0f, 0.1f, 0.1f, 0.0f}}};
-static const fmpatch_t FM_GROWL = {FM_ALG2, 0.0f, {{1.0f, 1.0f, 0.0f, 1.0f}, {1.0f, 0.44f, 0.07f, 0.09f}, {2.0f, 0.2f, 0.1f, 0.1f},
-                                                   {1.0f, 0.1f, 0.1f, 0.0f}}};
-static int fm_alg_of(int p, const fmpatch_t *pt) { return par[p] ? par[p] - 1 : pt->alg; }
-
 /* ------------------------------------------------- slow random motion --- */
 #define NMOD 9                                  /* 0..4 the stab's, 5..8 the echo's */
 static struct {
@@ -673,10 +626,6 @@ static int shape, root_note = 55;               /* the voicing's shape, the chor
 /* (the dub's chord voices, by number: a regrow's voicing still follows them, regrow; the Drone's own are EN_CV_NAME) */
 enum { CV_SAWS, CV_KEYS, CV_ORGAN, CV_PAD, CV_BELL };
 static int cvoice;                              /* the chord's voice now */
-static const fmpatch_t *cv_patch(int cv) { return cv == 1 ? &FM_KEYS : cv == 4 ? &FM_BELL : 0; }
-
-/* ------------------------------------------------------------------ bass --- */
-static const fmpatch_t *const BV_PATCH[EN_NBV] = {0, &FM_PUNCH, &FM_RUBBER, &FM_PLUCK, &FM_GROWL};
 
 /* ----------------------------------------------------------------- pings --- */
 /* (the dub's ping loops: their pings gone, their notes still grown at a regrow, the music's dice drawn as they were) */
@@ -2160,31 +2109,14 @@ static inline void cloud(float in, float *ol, float *or_)
     }
 }
 
-int en_voice_fm(int layer)
-{
-    if (layer == 0)
-        return cv_patch(cvoice) != 0;
-    if (layer == 2)
-        return BV_PATCH[(unsigned)par[P_LVOICE] < EN_NBV ? par[P_LVOICE] : 0] != 0;
-    return layer == 1;
-}
-int en_fm_alg(int layer)
-{
-    if (layer == 0)
-        return cv_patch(cvoice) ? fm_alg_of(P_CALG, cv_patch(cvoice)) : 0;
-    if (layer == 2) {
-        const fmpatch_t *p = BV_PATCH[(unsigned)par[P_LVOICE] < EN_NBV ? par[P_LVOICE] : 0];
-        return p ? fm_alg_of(P_BALG, p) : 0;
-    }
-    return FM_ALG2;
-}
-
 /* ------------------------------------------------------------ parameters --- */
 static int pulse;
-/* (1.3.0) the FM pages' fourth knob, an LFO synced to the bar: the chord's filter over two bars (+-1.5 octaves at
- * 100), the pings' FM brightness over one, the bass's bite over four; a sine from the grid's place, eased */
-static float lfo_c, lfo_n;      /* (lfo_n: the noise's, its rings' tone over a bar, +-1 octave at 100;
-                                                 * its crest on beat 2, the chord's on beat 3: they move apart) */
+/* (1.3.0) an LFO synced to the bar, a sine from the grid's place, eased: the noise's (lfo_n), its rings' tone over a
+ * bar, +-1 octave at 100. (lfo_c, the stabs' filter's, over two bars: its reader went with the stabs, but this
+ * declaration is the plate's lfo_c too (reverb(), declared above with "lfo_s, lfo_c = 1.0f": in C one file-scope
+ * object), so its line in lfo_step pulls the plate's modulation towards 0 every chunk, and taking it out changes the
+ * sound: kept, for the user to decide) */
+static float lfo_c, lfo_n;
 static void lfo_step(void)
 {
     const float pos = (float)(sixteenth & 63u) + (float)pulse * (1.0f / 6.0f);   /* (four bars of sixteenths) */
