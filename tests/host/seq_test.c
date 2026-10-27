@@ -78,6 +78,107 @@ static void test_next_pos_beyond_len(void)
     CHECK(seq_cycle(&s) == 4, "cycle ignores skips above len");
 }
 
+static int pop16(unsigned v)
+{
+    int n = 0;
+    for (; v; v >>= 1)
+        n += (int)(v & 1u);
+    return n;
+}
+
+static void test_grow_root_first(void)
+{
+    uint32_t seed;
+    for (seed = 1; seed <= 50; seed++) {
+        uint32_t rng = seed;
+        seq_t s;
+        memset(&s, 0, sizeof s);
+        seq_grow(&s, &rng, 7, 50, 8);
+        CHECK(s.gate & 1u, "seed %u: step 0 plays", (unsigned)seed);
+        CHECK(s.deg[0] == 0, "seed %u: step 0 is the root", (unsigned)seed);
+        CHECK(s.acc & 1u, "seed %u: step 0 accented", (unsigned)seed);
+        CHECK(s.len == 8 && s.base_len == 8 && s.skip == 0, "seed %u: len/skip", (unsigned)seed);
+    }
+}
+
+static void test_grow_density(void)
+{
+    uint32_t rng = 5;
+    seq_t s;
+    memset(&s, 0, sizeof s);
+    seq_grow(&s, &rng, 7, 0, 8);
+    CHECK(pop16(s.gate & 0xFFu) == 2, "density 0: 2 gates, got %d", pop16(s.gate & 0xFFu));
+    CHECK((s.gate & 0xFF00u) == 0, "no gates past len");
+    seq_grow(&s, &rng, 7, 100, 8);
+    CHECK(pop16(s.gate & 0xFFu) == 8, "density 100: 8 gates, got %d", pop16(s.gate & 0xFFu));
+}
+
+static void test_grow_in_scale(void)
+{
+    static const int ns[4] = {3, 5, 7, 12};
+    int k, i;
+    uint32_t seed;
+    for (k = 0; k < 4; k++)
+        for (seed = 1; seed <= 100; seed++) {
+            uint32_t rng = seed;
+            seq_t s;
+            memset(&s, 0, sizeof s);
+            seq_grow(&s, &rng, ns[k], 60, SEQ_MAX);
+            for (i = 0; i < SEQ_MAX; i++)
+                if ((s.gate >> i) & 1u)
+                    CHECK(s.deg[i] >= 0 && s.deg[i] <= 2 * ns[k], "nscale %d: deg %d out of range", ns[k], s.deg[i]);
+        }
+}
+
+static void test_grow_core_cell(void)
+{
+    int core = 0, total = 0, i;
+    uint32_t seed;
+    for (seed = 1; seed <= 200; seed++) {
+        uint32_t rng = seed * 2654435761u;
+        seq_t s;
+        memset(&s, 0, sizeof s);
+        seq_grow(&s, &rng, 7, 60, 16);
+        for (i = 0; i < 16; i++)
+            if ((s.gate >> i) & 1u) {
+                total++;
+                core += (s.deg[i] == 0 || s.deg[i] == 4 || s.deg[i] == 7);
+            }
+    }
+    CHECK(core * 10 >= total * 6, "core cell %d of %d gated steps", core, total);
+}
+
+static void test_grow_deterministic(void)
+{
+    uint32_t r1 = 1234, r2 = 1234;
+    seq_t a, b;
+    memset(&a, 0, sizeof a);
+    memset(&b, 0, sizeof b);
+    seq_grow(&a, &r1, 7, 70, 12);
+    seq_grow(&b, &r2, 7, 70, 12);
+    CHECK(memcmp(&a, &b, sizeof a) == 0, "same seed, same pattern");
+    CHECK(r1 == r2, "same seed, same rng after");
+    CHECK(seq_rand(&r1) != 0, "rand never 0");
+}
+
+static void test_grow_tiny_pool(void)
+{
+    int nscale, density, i;
+    uint32_t seed;
+    for (nscale = 1; nscale <= 2; nscale++)
+        for (density = 0; density <= 100; density += 25)
+            for (seed = 0; seed < 20; seed++) {
+                uint32_t rng = seed;
+                seq_t s;
+                memset(&s, 0, sizeof s);
+                seq_grow(&s, &rng, nscale, density, 8);
+                CHECK(pop16(s.gate) >= 1, "tiny pool: a gate");
+                for (i = 0; i < 8; i++)
+                    if ((s.gate >> i) & 1u)
+                        CHECK(s.deg[i] % nscale == 0, "nscale %d: deg %d", nscale, s.deg[i]);
+            }
+}
+
 int main(void)
 {
     test_next_wraps();
@@ -85,6 +186,12 @@ int main(void)
     test_next_skips();
     test_next_all_skipped();
     test_next_pos_beyond_len();
+    test_grow_root_first();
+    test_grow_density();
+    test_grow_in_scale();
+    test_grow_core_cell();
+    test_grow_deterministic();
+    test_grow_tiny_pool();
     printf("seq: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;
 }

@@ -18,4 +18,8 @@ typedef struct {
 
 int seq_next(const seq_t *s, int pos);   /* the next playing position after pos */
 int seq_cycle(const seq_t *s);           /* positions in one pass (len minus the skipped steps below len) */
+
+uint32_t seq_rand(uint32_t *rng);   /* xorshift32; a zero state is seeded first, so it never sticks at 0 */
+/* grow a pattern from the root: nscale notes in the scale (1..12), density 0..100 of the len steps play, len 1..SEQ_MAX */
+void seq_grow(seq_t *s, uint32_t *rng, int nscale, int density, int len);
 #endif
