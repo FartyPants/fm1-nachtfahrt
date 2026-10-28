@@ -1,7 +1,7 @@
-# BERLIN
+# NACHTFAHRT
 
-BERLIN (a working name) turns the M-VAVE FM-1 into a generative Berlin School machine, after the 1970s
-music of Tangerine Dream, Klaus Schulze and Ashra: long, hypnotic pieces built on repeating synthesizer
+NACHTFAHRT (called BERLIN while it was built) turns the M-VAVE FM-1 into a generative Berlin School
+machine, after the 1970s music of Tangerine Dream, Klaus Schulze and Ashra: long, hypnotic pieces built on repeating synthesizer
 sequences, slowly evolving textures and a lot of space. It plays itself from the moment it's switched on.
 A sequence of plucked notes runs over a drone, its notes repeated by the echo; a second sequence, often a
 step shorter, drifts against it; a lead sings long phrases far back in the reverb; wind, surf or the sounds
@@ -9,12 +9,12 @@ of space pass behind. Each piece opens from the drone, flows, gives the lead its
 every layer's filter moves slowly on its own. You don't play it, you steer it: pick a piece and a key, thin or fill the sequences, open the
 filter, push the echo, mute and solo the layers, or play the lead yourself on the white keys.
 
-BERLIN is a fork of DUB-1, itself a fork of AMB-1, Charles Vestal's generative ambient firmware for the FM-1.
+NACHTFAHRT is a fork of DUB-1, itself a fork of AMB-1, Charles Vestal's generative ambient firmware for the FM-1.
 
 **This is 0.1, in development.** It runs in the browser emulator and the host simulator; it has not yet been
 built for or run on an FM-1.
 
-![A drawing of the FM-1 running BERLIN, each control labelled with what it does: the Controls section below says the same in words](img/fm1-panel.svg "The FM-1 (a drawing), running BERLIN, each control labelled")
+![A drawing of the FM-1 running NACHTFAHRT, each control labelled with what it does: the Controls section below says the same in words](img/fm1-panel.svg "The FM-1 (a drawing), running NACHTFAHRT, each control labelled")
 
 ---
 
@@ -50,7 +50,7 @@ python3 tools/fm1_install.py build/amb.fwsc
 ```
 
 (Python 3 with `pip3 install mido python-rtmidi`, the FM-1 connected by a USB data cable and switched on.)
-Don't unplug it while it's writing; when it finishes, the FM-1 restarts into BERLIN. M-VAVE's own
+Don't unplug it while it's writing; when it finishes, the FM-1 restarts into NACHTFAHRT. M-VAVE's own
 updater, M-UPGRADE, puts the stock firmware back.
 
 > Installing other firmware is at your own risk. If the FM-1 ever won't start, see
@@ -60,7 +60,7 @@ updater, M-UPGRADE, puts the stock firmware back.
 
 ## 2. Getting started
 
-BERLIN starts playing as soon as it's on. A few minutes with it:
+NACHTFAHRT starts playing as soon as it's on. A few minutes with it:
 
 1. **Listen.** The first piece, Timewind (D minor, 96), begins with its drone, an organ through a
    phaser, and the wind. Its sequence is there from the start, behind a closed filter that opens over the
@@ -87,7 +87,7 @@ BERLIN starts playing as soon as it's on. A few minutes with it:
 8. **Rest.** Press PLAY: the music stops and the echo and reverb ring away. PLAY again and the piece opens
    again from the top.
 
-What you change is kept with the piece. BERLIN saves it by itself while resting; or hold GLO for half a
+What you change is kept with the piece. NACHTFAHRT saves it by itself while resting; or hold GLO for half a
 second.
 
 ---
@@ -108,7 +108,7 @@ second.
 | REC | A tap: hold (the echo and the cloud repeat what they hold). Held: the effects grid |
 | EDIT | A tap: the Chords page. Held: the next chord, on the next bar. Held on (1.5 s): new chords |
 | SEL | A tap: PERFORM. Held: **Lock** (the sequences stop varying, each pass as the last, until SEL is held again; not saved) |
-| HOME | The Berlin page; again, the Key page |
+| HOME | The Nachtfahrt page; again, the Key page |
 | ENV | The Drone; again, its sound page; again, its Move page |
 | ARP | The Sequence; again, its sound page; again, its Repeats; again, its Move page |
 | LFO | The Lead; again, its sound page; again, its Move page |
@@ -121,7 +121,7 @@ second.
 somewhere new (its filter, envelope, tone or vibrato, never its sends or octave). Hold it on for 1.5 s: a
 shake, a new voice and bigger steps. HOME held on shakes every layer at once. Each step is pulled back
 towards the piece's recipe, so nudges explore around the piece's sound rather than wander off. With Evolve
-over 40, BERLIN nudges a layer by itself now and then.
+over 40, NACHTFAHRT nudges a layer by itself now and then.
 
 A long press says what it did on a card in the middle of the screen.
 
@@ -129,7 +129,7 @@ A long press says what it did on a card in the middle of the screen.
 
 ## 4. The screen
 
-![Stratosfear playing: the piece, its key and tempo at the top, FLOW and its bars on the left over five level meters, the chord Em7 in white in the middle with the sequences' notes circling it, CRANKY MANS and the page's name at the top right, the echo's level on the right, two lanes of steps below, the Berlin page's four knobs at the bottom](img/screen-main.png "The main screen, Stratosfear")
+![Stratosfear playing: the piece, its key and tempo at the top, FLOW and its bars on the left over five level meters, the chord Em7 in white in the middle with the sequences' notes circling it, CRANKY MANS and the page's name at the top right, the echo's level on the right, two lanes of steps below, the Nachtfahrt page's four knobs at the bottom](img/screen-main.png "The main screen, Stratosfear")
 
 The screen is black, with a few dim stars drifting slowly left while the music plays.
 
@@ -160,10 +160,10 @@ moving darker, about -1 octave").
 
 ![The Sequence's sound page: Cutoff, Decay, Reverb and Echo, with MOVING DARKER, -0.5 OCT under the lanes](img/screen-seqsound.png "A sound page: the cyan dot on Cutoff's ring, and the words under the lanes")
 
-**The launch screen.** Every time the FM-1 starts, BERLIN comes up large on black among a few stars, with
+**The launch screen.** Every time the FM-1 starts, NACHTFAHRT comes up large on black among a few stars, with
 "by CRANKY MANS" under it and the version at the foot, for a moment. The music starts as always, under it.
 
-![The launch screen: BERLIN, by CRANKY MANS, and the version](img/screen-launch.png "The launch screen")
+![The launch screen: NACHTFAHRT, by CRANKY MANS, and the version](img/screen-launch.png "The launch screen")
 
 ---
 
@@ -192,7 +192,7 @@ it comes out of the drone after the Sequence.
 **The Drone** (ENV; channel 1) holds the chord on two banks of five voices: the chord's four notes and the
 root an octave under (the **Pedal**). Voices: **Organ**, **Strings** (through an ensemble), **Choir**, **Saws**,
 **Glass**. A phaser sweeps it slowly (**Phaser**). The chord walks from degree to degree every **Drift** bars
-(the Berlin page), or follows the eight slots of the Chords page.
+(the Nachtfahrt page), or follows the eight slots of the Chords page.
 
 **The Lead** (LFO; channel 3) is one voice, gliding: **Odyssey**, **Mini**, **Flute**, **Theremin**, **Synthi**. It plays
 phrases, long notes or a slow run ending long, starting on a chord tone, with a breath of bars between
@@ -213,10 +213,10 @@ opened, it goes on through flow, solo and bridge for ever, until you stop it or 
 
 ### The filter motion
 
-Nothing in BERLIN fades behind your back. A layer whose level is up and which isn't muted always plays at its
+Nothing in NACHTFAHRT fades behind your back. A layer whose level is up and which isn't muted always plays at its
 level (your mutes, your solos and PERFORM's Drop are the only ways a layer goes quiet, and they are shown).
 What moves is each layer's **brightness**: the Drone's Colour, the Sequence's and Sequence 2's Cutoff, the
-Lead's Tone and the Atmosphere's Colour. BERLIN moves each one's filter by an **offset in octaves from the
+Lead's Tone and the Atmosphere's Colour. NACHTFAHRT moves each one's filter by an **offset in octaves from the
 knob**, never to a value of its own. The knob keeps the value you gave it; turn it and the whole movement
 moves with it at once.
 
@@ -255,7 +255,7 @@ dot sits at the bottom, and the section reads EMERGE.
   come together again at the end. Bridge 0: no extra move, and the section is like Flow. A swell of echo in
   the two bars before Flow returns.
 
-Sections last 16 to 64 bars; **Motion** (the Berlin page) makes them shorter, and at 0 the piece stays in
+Sections last 16 to 64 bars; **Motion** (the Nachtfahrt page) makes them shorter, and at 0 the piece stays in
 Flow.
 
 ### The Arc page
@@ -289,7 +289,7 @@ filter's usable range.
 In every piece the Lead's Width is low: it stays gentle. The names are working titles. The keys and tempos are
 starting points from music analysis sites, to be tuned by ear; fast readings such as Phaedra's 149 and
 Rubycon's 144 may be double the felt tempo (they run in eighths, which feel like sixteenths at half the speed).
-BERLIN is not connected with any of these artists.
+NACHTFAHRT is not connected with any of these artists.
 
 ---
 
@@ -301,7 +301,7 @@ Each layer's pages share a layout: its main page has how much (K1), its octave (
 sound page has brightness, envelope, Reverb and Echo (the layer's sends); its **Move** page has Width, Time,
 Rate and Intro (see [The arc and the filter motion](#6-the-arc-and-the-filter-motion)).
 
-**HOME: Berlin:** Filter (on everything, Off in the middle: turned down it shuts, a low-pass; turned up it
+**HOME: Nachtfahrt:** Filter (on everything, Off in the middle: turned down it shuts, a low-pass; turned up it
 opens, a resonant high-pass), Evolve (how often the sequences change
 a step), Motion (how much they change, and how quickly the sections move; 0: Flow for ever), Drift (bars
 per chord: 2–64, or Hold).
@@ -392,7 +392,7 @@ reader names the effect as each key goes down.
 
 ![PERFORM: the knobs Filter, Wet, Energy and Sweep](img/screen-perform.png)
 
-Tap SEL. The knobs become the master actions: **Filter** (as on the Berlin page), **Wet** (the whole music dry, or drowned in the
+Tap SEL. The knobs become the master actions: **Filter** (as on the Nachtfahrt page), **Wet** (the whole music dry, or drowned in the
 echo: every layer's echo send, the Drone's, both Sequences', the Lead's and the Atmosphere's), **Energy**
 (sparser or busier: the Sequence's Density, levels, Sweep, note length, Cutoff, and Repeat B, the second
 repeat), and **Sweep** (how far the Sequence's cutoff wanders on its own: the same as its Width on the
@@ -419,13 +419,13 @@ MIDI comes in over USB and the TRS jack, and goes out over USB.
 - **Out** (on by default; a muted layer sends nothing): the Drone on channel 1, the Sequence (and its repeats) on 2, the Lead on 3,
   Sequence 2 on 4, and, on its own tempo, clock with start and stop.
 - **In, clock:** the sequences follow MIDI clock, and start, continue and stop start, continue and stop
-  the music. The screen shows EXT for the tempo; when the clock stops, BERLIN goes back to its own.
+  the music. The screen shows EXT for the tempo; when the clock stops, NACHTFAHRT goes back to its own.
 - **In, channel 1:** a note adds or removes its note from the scale ("ADDED", "REMOVED"; the root stays,
   three notes at least). The keys no longer do this; they play the Lead.
 
 ### Screen reader
 
-BERLIN can tell the [FM-1 Screen Reader](https://charlesvestal.github.io/fm1-reader/) what its screen
+NACHTFAHRT can tell the [FM-1 Screen Reader](https://charlesvestal.github.io/fm1-reader/) what its screen
 shows, over USB: the page and its knobs, a knob's value as it turns, the piece, its key and tempo, the
 chord as it moves, the effects as they're held, and every message. Press W in the reader to hear the whole
 screen again, with the section of the arc and its bar, and how far a filter has moved. The FM-1 says nothing until the page connects.
@@ -434,7 +434,7 @@ screen again, with the section of the arc and its bar, and how far a filter has 
 
 ## 12. Saving
 
-BERLIN keeps all eight pieces in the FM-1's memory, each as you left it, with Tune, MIDI out and Lights.
+NACHTFAHRT keeps all eight pieces in the FM-1's memory, each as you left it, with Tune, MIDI out and Lights.
 
 - **By itself:** a few seconds after a change, while resting (writing to the memory interrupts the sound
   for a moment, so it never happens while the music plays). A dot at the top means unsaved changes.
@@ -443,8 +443,8 @@ BERLIN keeps all eight pieces in the FM-1's memory, each as you left it, with Tu
   saves.
 - **GLO held on** (1.5 s): the piece back to its recipe ("RESET"); not saved until the next save.
 
-Lock and PERFORM's Filter, Wet and Energy aren't saved. Projects saved by DUB-1, AMB-1 or an earlier BERLIN
-build aren't read: BERLIN starts with its eight recipes.
+Lock and PERFORM's Filter, Wet and Energy aren't saved. Projects saved by DUB-1, AMB-1 or an earlier NACHTFAHRT
+build aren't read: NACHTFAHRT starts with its eight recipes.
 
 ---
 
@@ -456,13 +456,13 @@ cancel.
 **Calibration:** if a button or knob does the wrong thing, hold OCT− and OCT+ while you switch the FM-1 on.
 The screen asks you to press each button and turn each knob in turn.
 
-**After a crash:** BERLIN shows a red CRASH screen and restarts by itself. The next start shows RESTARTED
+**After a crash:** NACHTFAHRT shows a red CRASH screen and restarts by itself. The next start shows RESTARTED
 AFTER A CRASH and an address (PC ...) for a moment; if you report the problem, include it and what you were
 doing.
 
-**Safe mode:** if BERLIN crashes twice in a row while starting, it starts in SAFE MODE: no sound, but USB
+**Safe mode:** if NACHTFAHRT crashes twice in a row while starting, it starts in SAFE MODE: no sound, but USB
 works, so you can reinstall with `tools/fm1_install.py` or put the stock firmware back with M-UPGRADE. Press
-PLAY to try starting BERLIN normally. If even safe mode fails twice, the FM-1 drops into the chip's own
+PLAY to try starting NACHTFAHRT normally. If even safe mode fails twice, the FM-1 drops into the chip's own
 update mode, and only the rescue below can reach it.
 
 ### Recovering an FM-1 that won't start
@@ -487,10 +487,10 @@ settings. If the FM-1 never shows up at all, Felucca's
 
 ## 14. Credits
 
-BERLIN is free software under the GNU General Public License, version 3. If you share the firmware, you
+NACHTFAHRT is free software under the GNU General Public License, version 3. If you share the firmware, you
 must also share its source code.
 
-- BERLIN is a fork of [DUB-1](https://github.com/sbegueria/fm1-dub), a fork of
+- NACHTFAHRT is a fork of [DUB-1](https://github.com/sbegueria/fm1-dub), a fork of
   [AMB-1](https://github.com/charlesvestal/fm1-amb) by Charles Vestal (GPL-3.0-only), whose echo chain,
   plate, pieces system, chord walk, UI and platform it keeps.
 - The music is Tangerine Dream's, Klaus Schulze's and Ashra's of the 1970s, as heard; nothing of theirs is
@@ -510,4 +510,4 @@ must also share its source code.
 - The idea of running FM-1 firmware in the browser comes from [Groove OS](https://www.groove-os.com/).
 - The fonts are Barlow Semi Condensed and Terminus (SIL Open Font License).
 
-M-VAVE and FM-1 are trademarks of their owners. BERLIN is not connected with M-VAVE or Hügelton Instruments.
+M-VAVE and FM-1 are trademarks of their owners. NACHTFAHRT is not connected with M-VAVE or Hügelton Instruments.

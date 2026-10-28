@@ -1,9 +1,9 @@
-# the screen reader (fm1-reader, announce.c): BERLIN by name, the main screen (the chord, the scale), a page and a
+# the screen reader (fm1-reader, announce.c): NACHTFAHRT by name, the main screen (the chord, the scale), a page and a
 # knob said once they settle, a button's message
 wait 200
 listen
 wait 300
-said Berlin page: Filter Off, Evolve 40, Motion 45, Drift 16 bars. Piece
+said Nachtfahrt page: Filter Off, Evolve 40, Motion 45, Drift 16 bars. Piece
 listen
 where
 said Scale D, E, F, G, A, Bb, C

@@ -1,8 +1,9 @@
-# BERLIN for the M-VAVE FM-1
+# NACHTFAHRT for the M-VAVE FM-1
 
-BERLIN turns the M-VAVE FM-1 into a generative Berlin School machine, after the 1970s music of
+NACHTFAHRT turns the M-VAVE FM-1 into a generative Berlin School machine, after the 1970s music of
 Tangerine Dream, Klaus Schulze and Ashra: long, hypnotic pieces, repeating synthesizer sequences,
 slowly evolving textures, a strong sense of space. It plays itself from the moment it's switched on.
+(It was called BERLIN while it was being built; the repository and the code keep that name.)
 
 - a **Sequence** of up to 16 steps on a plucked analog-style voice (2600, Moog, Synthi, Pulse, Glass),
   its filter wandering slowly, its notes **repeated** at the echo's times (a dotted eighth by default, the
@@ -22,7 +23,7 @@ slowly evolving textures, a strong sense of space. It plays itself from the mome
 You don't play it, you steer it: pick a piece, change its key and tempo, thin or fill the sequences, push the
 echo, mute and solo the layers, play the Lead.
 
-BERLIN is a fork of [DUB-1](https://github.com/sbegueria/fm1-dub), itself a fork of
+NACHTFAHRT is a fork of [DUB-1](https://github.com/sbegueria/fm1-dub), itself a fork of
 [AMB-1](https://github.com/charlesvestal/fm1-amb), Charles Vestal's generative ambient firmware for the FM-1. It
 keeps their platform, panel, echo, plate and much of the engine.
 
@@ -43,7 +44,7 @@ built for or run on an FM-1 yet (see [PLAN.md](PLAN.md)).
 | 8 | Cyborg | Schulze, *Cyborg* | C Phrygian, beatless | Early and raw: deep organ drones beating, no sequence; the Drone's filter moves widely |
 
 The names are working titles and the keys and tempos are starting points (from analysis sites, to tune by ear).
-BERLIN is not connected with any of these artists.
+NACHTFAHRT is not connected with any of these artists.
 
 ## In short
 
@@ -53,7 +54,7 @@ BERLIN is not connected with any of these artists.
 | Black keys | Eleven effects, each while held (lit; dark while held): Take-off, Supernova, Twitter, Repeat, Swell, Freeze, Octave, Return, then Rise, Close, Transpose (in PERFORM: the solos) |
 | PLAY · REC · EDIT | Play / rest · a tap: hold (the echo repeats what it holds), held: the effects grid (16 effects on the white keys) · a tap: the Chords page, held: the next chord |
 | SEL | PERFORM: the knobs Filter, Wet, Energy, Sweep; white 1–5 mute the Drone, Sequence, Lead, Sequence 2, Atmosphere; black 1–5 solo them; white 6 held: the levels; white 7–11 held: Sweep, Open, Shut, Drop (both sequences out), Echo. Held: Lock |
-| HOME | The Berlin page (Filter, Evolve, Motion, Drift); again, the Key page (Tempo, Root, Mode, Transpose) |
+| HOME | The Nachtfahrt page (Filter, Evolve, Motion, Drift); again, the Key page (Tempo, Root, Mode, Transpose) |
 | ENV | The Drone (Pedal, Reso, Phaser, Attack); again, its sound (Colour, Release, Reverb, Echo); again, its Move page (Width, Time, Rate, Intro) |
 | ARP | The Sequence (Density, Octave, Length, Grid); again, its sound (Cutoff, Decay, Reverb, Echo); again, its Repeats (Repeat A, A time, Repeat B, B time); again, its Move page |
 | LFO | The Lead (Phrases, Octave, Glide, Vibrato); again, its sound (Tone, Attack, Reverb, Echo); again, its Move page |
@@ -84,7 +85,7 @@ renders the engine alone.
 
 ## Credits
 
-BERLIN is a fork of [DUB-1](https://github.com/sbegueria/fm1-dub), a fork of
+NACHTFAHRT is a fork of [DUB-1](https://github.com/sbegueria/fm1-dub), a fork of
 [AMB-1](https://github.com/charlesvestal/fm1-amb) by Charles Vestal (GPL-3.0-only): the echo chain, the plate,
 the pieces system, the chord walk, the UI and the platform come from there. The reverb is Jon Dattorro's plate
 ("Effect Design, Part 1", JAES 1997), as in [FoMni-1](https://github.com/charlesvestal/fm1-fomni); the granular
@@ -96,4 +97,4 @@ installer) is [Felucca](https://github.com/hugelton/Felucca)'s by Leo Kuroshita 
 of [X0X](https://github.com/charlesvestal/fm1-x0x), FoMni-1, AMB-1 and DUB-1. The idea of running FM-1 firmware
 in the browser comes from [Groove OS](https://www.groove-os.com/). GPL-3.0-only; see [LICENSING.md](LICENSING.md).
 
-M-VAVE and FM-1 are trademarks of their owners. BERLIN is not affiliated with M-VAVE or Hügelton Instruments.
+M-VAVE and FM-1 are trademarks of their owners. NACHTFAHRT is not affiliated with M-VAVE or Hügelton Instruments.

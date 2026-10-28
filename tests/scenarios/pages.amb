@@ -1,11 +1,11 @@
-# BERLIN's pages: every button and its presses, each page's knobs as the reader says them (one layout: a layer's main
+# NACHTFAHRT's pages: every button and its presses, each page's knobs as the reader says them (one layout: a layer's main
 # page K1 how much, K2 octave (the Drone: Reso; the Atmosphere: Width), K3 and K4 its own; its sound page brightness,
 # envelope, Reverb, Echo), the voices on ALGORITHM, a knob turned, a layer's level on OCT+
 wait 200
 listen
 wait 300
 expect view 0
-said Berlin page: Filter Off, Evolve 40, Motion 45, Drift
+said Nachtfahrt page: Filter Off, Evolve 40, Motion 45, Drift
 tap HOME
 wait 300
 expect view 18
@@ -127,5 +127,5 @@ expect par1 70
 tap OCT+
 wait 300
 expect par1 75
-# every page's knobs have a help line, BERLIN's, and each fits the rule
+# every page's knobs have a help line, NACHTFAHRT's, and each fits the rule
 expect helpfit 0

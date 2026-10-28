@@ -27,7 +27,7 @@ enum { V_DUB, V_CHORD, V_TEXTURE, V_BASS, V_DRUMS, V_SPACE, V_SETUP, NPAGES, V_M
        V_DSND, V_CFM, V_PFM, V_BFM, V_CHORDS, V_PAT, V_PERF, V_KEY, V_NSND, V_ESND, V_NSND2, V_ARC, V_SMOVE, V_S2MOVE, V_AMOVE, NVIEWS };
 /* (V_PERF: PERFORM's knobs, the master actions; V_MIX while white 6 is held. V_KEY: HOME again, the key and the
  * tempo, the Dub page's second) */
-static const char *const VIEW_NAME[NVIEWS] = {"Berlin", "Drone", "Sequence", "Lead", "Sequence 2", "Space", "Setup",
+static const char *const VIEW_NAME[NVIEWS] = {"Nachtfahrt", "Drone", "Sequence", "Lead", "Sequence 2", "Space", "Setup",
                                               "Mix", "Drone sound", "Seq sound", "Lead sound", "Seq2 sound",
                                               "Drone move", "Repeats", "Lead move", "Chords", "Pattern", "Perform", "Key",
                                               "Atmosphere", "Echo", "Atmos sound", "Arc", "Seq move", "Seq2 move",
@@ -3021,8 +3021,9 @@ void ui_frame(void)
 
 void ui_input_only(void) { input(); }
 
-/* (BERLIN) the launch screen, the user's: BERLIN large, "by CRANKY MANS" under it, on black among a few stars,
- * fading in; the version small at the foot. Frame f of UI_SPLASH_N, drawn whole (two bands of 240 x 120) */
+/* (BERLIN) the launch screen, the user's: NACHTFAHRT large (BERLIN's new name, the user's), "by CRANKY MANS" under
+ * it, on black among a few stars, fading in; the version small at the foot. Frame f of UI_SPLASH_N, drawn whole (two
+ * bands of 240 x 120) */
 static void splash_band(int f, int32_t oy)
 {
     static const uint8_t SX[14] = {18, 51, 77, 103, 139, 171, 205, 226, 33, 66, 121, 158, 190, 214},
@@ -3032,7 +3033,7 @@ static void splash_band(int f, int32_t oy)
     for (k = 0; k < 14; k++)
         cv_rect(SX[k], SY[k] - oy, 1, 1, mix(K_BG, K_DIM, 3 + (k & 3)));
     if (f >= 1)
-        text_c(120, 92 - oy, &FONT_L, "BERLIN", mix(K_BG, K_TEXT, f >= 8 ? 16 : 2 * f));
+        text_c(120, 92 - oy, &FONT_L, "NACHTFAHRT", mix(K_BG, K_TEXT, f >= 8 ? 16 : 2 * f));
     if (f >= 8)
         text_c(120, 132 - oy, &FONT_S, "by " BERLIN_BY, mix(K_BG, K_BELL, f >= 16 ? 16 : 2 * (f - 7)));
     if (f >= 16)

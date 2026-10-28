@@ -1,6 +1,8 @@
-# BERLIN: plan and status
+# NACHTFAHRT: plan and status
 
-BERLIN is a generative Berlin School firmware for the M-VAVE FM-1, forked from DUB-1 (itself from AMB-1).
+NACHTFAHRT is a generative Berlin School firmware for the M-VAVE FM-1, forked from DUB-1 (itself from AMB-1).
+(Called BERLIN while it was built, too close to Berlinan's name; the repository, the branch, the code and the
+specs keep BERLIN.)
 The design is [docs/superpowers/specs/2026-10-27-berlin-design.md](docs/superpowers/specs/2026-10-27-berlin-design.md);
 the implementation plan is [docs/superpowers/plans/2026-10-27-berlin.md](docs/superpowers/plans/2026-10-27-berlin.md).
 Research: `I:\FM1\reports\Berlin School synth techniques.md` (outside the repository).
@@ -28,16 +30,16 @@ Done, with the whole suite passing (`tests/run_tests.sh`, gate `tools/suite_gate
 - **PERFORM finished**: a muted Lead and a muted Drone are silent (MIDI too); Energy drives Repeat B; Wet moves
   every layer's echo send.
 - **The screen**: Cosmic on black (starfield, orbits round the chord, five meters, two sequence lanes, "CRANKY
-  MANS"), the launch screen "BERLIN / by CRANKY MANS"; DUB-1's leftovers (drum and rhythm pages, the scrolling
+  MANS"), the launch screen "NACHTFAHRT / by CRANKY MANS"; DUB-1's leftovers (drum and rhythm pages, the scrolling
   display, the spectrum and wave displays) and its dead engine code are gone.
 - **The echo**: its default time is 1/4. (a dotted quarter), Repeat A stays 1/8.; the Sequences' echo sends are
   louder.
-- **The pages** unified across the layers; PERFORM for BERLIN; the effects grid re-themed (Repeat … Supernova);
+- **The pages** unified across the layers; PERFORM for NACHTFAHRT; the effects grid re-themed (Repeat … Supernova);
   the screen reader's words; the right meter shows the echo.
 - **The eight pieces**: Timewind, Wahnfried, Phaedra, Rubycon, Stratosfear, Sunrain, Mirage, Cyborg, each with its
   moves (Timewind's Sequence opens over 32 bars, Rubycon's Sequence 2 after its Sequence, Stratosfear and Sunrain
   straight in, Wahnfried and Cyborg moving on the Drone).
-- **Storage**: one project, magic "BRL1", format 7; other firmwares' saves and older BERLIN formats are not read.
+- **Storage**: one project, magic "BRL1", format 7; other firmwares' saves and older NACHTFAHRT formats are not read.
 - **Docs**: README, MANUAL, this file; the manual's screenshots (`tests/listen/docshots.amb`) and panel drawing,
   brought up to date with the filter motion.
 
@@ -83,7 +85,7 @@ the Arc page's fourth knob (not built yet: the knob is empty until then).
 - **MIDI in still edits the scale** (channel 1 notes in/out); keep it, or let MIDI in play the Lead like the keys.
 - **A clean minor triad at the arc's peak** (spec §5) is not built; the peak is the Sequence's filter
   rise (the Arc knob), nothing more.
-- **Phaedra's tuning drift**: the record's sequences drift out of tune; BERLIN has no pitch wobble yet (the Moog
+- **Phaedra's tuning drift**: the record's sequences drift out of tune; NACHTFAHRT has no pitch wobble yet (the Moog
   voice's two oscillators only).
 - **Mirage's occasional lift to major** and **Wahnfried's six layers**: not built as such (the Drone's two banks,
   the pedal and the Lead stand in).
