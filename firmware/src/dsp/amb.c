@@ -110,13 +110,14 @@ static const int16_t PC_PHAEDRA[] = {         /* Tangerine Dream, Phaedra: a Moo
     P_MW0, 25, P_MW3, 30, P_MR3, 40, P_MW4, 25,
     P_MI1, 16, P_ARC, 30, P_MOTION, 55, -1};
 static const int16_t PC_RUBYCON[] = {         /* Tangerine Dream, Rubycon: dark, two sequences out of the drone (the
-                                                * octaves the user's ear: the Sequence -2, Sequence 2 0) */
+                                                * octaves and voices the user's ear: the Sequence -2 on the 2600, Sequence 2 0,
+                                                * the Lead the Synthi) */
     P_TEMPO, 144, P_ROOT, 5, P_MODE, MODE_AEOLIAN,
-    P_SVOICE, 2, P_SEQOCT, -2, P_SEQLEN, 8, P_CUTOFF, 32, P_SWEEP, 60,
+    P_SVOICE, 0, P_SEQOCT, -2, P_SEQLEN, 8, P_CUTOFF, 32, P_SWEEP, 60,
     P_SEQ2, 55, P_S2VOICE, 5, P_SEQ2OCT, 0, P_SEQ2LEN, 7, P_MI3, 32,
     P_TAPB, 40, P_TAPBT, 4,
     P_CHORD, 65, P_CVOICE, 0, P_CCOL, -20, P_PEDAL, 85, P_DRIFT, 4,
-    P_LVOICE, 1, P_LDIN, 32,
+    P_LVOICE, 4, P_LDIN, 32,
     P_MW0, 35, P_MR0, 25, P_MW3, 30, P_BRIDGE, 50,
     P_MI1, 16, P_ARC, 40, P_MOTION, 65, -1};
 static const int16_t PC_STRATOSFEAR[] = {     /* Tangerine Dream, Stratosfear: brighter, driving, the Lead forward */

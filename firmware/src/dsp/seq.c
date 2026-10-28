@@ -2,7 +2,11 @@
 /* The sequencer's pattern order (seq.h). Included by amb.c, so one compilation unit; also builds alone. */
 #include "seq.h"
 #include <stdint.h>
+#if defined(__has_include) && __has_include(<string.h>)
 #include <string.h>
+#else                                            /* (the device: freestanding, firmware/src/libc.c's own) */
+void *memset(void *d, int c, unsigned n);
+#endif
 
 /* the next playing position after pos: on to the return point and round, past the skipped steps.
  * a pos past the return point (it was just shortened) goes back to the top; all skipped: stay put */

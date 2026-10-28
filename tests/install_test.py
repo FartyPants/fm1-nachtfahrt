@@ -275,7 +275,9 @@ def against_js():
         return
     js = ("import { logicalImage, productOf } from %r; import { readFileSync } from 'node:fs';"
           "const p = readFileSync(process.argv[1]); process.stderr.write(productOf(p));"
-          "process.stdout.write(logicalImage(p));") % str(ROOT / "web/fm1pkg.js")
+          "process.stdout.write(logicalImage(p));") % str(TMP / "fm1pkg.mjs")
+    # (an .mjs copy: Node before 22 reads a plain .js with no package.json as CommonJS, and its named exports fail)
+    shutil.copyfile(ROOT / "web/fm1pkg.js", TMP / "fm1pkg.mjs")
     r = subprocess.run(["node", "--input-type=module", "-e", js, str(clean)], capture_output=True, check=True)
     raw = clean.read_bytes()
     ok(I.logical_image(raw) == r.stdout and I.product_of(raw) == r.stderr.decode(),

@@ -2580,6 +2580,8 @@ int main(void)
               pa[6][P_SEQ2LEN]);
         CHECK(pa[3][P_SEQOCT] == -2 && pa[3][P_SEQ2OCT] == 0, "test_pieces_octaves: Rubycon %d/%d", pa[3][P_SEQOCT],
               pa[3][P_SEQ2OCT]);
+        CHECK(pa[3][P_SVOICE] == 0 && pa[3][P_LVOICE] == 4, "test_pieces_voices: Rubycon Sequence %d (2600: 0), Lead %d "
+              "(Synthi: 4) (the user's ear)", pa[3][P_SVOICE], pa[3][P_LVOICE]);
         CHECK(pa[7][P_SEQ] == 20 && pa[7][P_SEQ2] == 0, "test_pieces_cyborg: Sequence %d, Sequence 2 %d", pa[7][P_SEQ],
               pa[7][P_SEQ2]);
         for (a = 1; a < EN_NPIECES; a += 6)
