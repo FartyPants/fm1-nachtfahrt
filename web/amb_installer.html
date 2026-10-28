@@ -1,16 +1,16 @@
 <!doctype html>
 <!-- SPDX-License-Identifier: GPL-3.0-only
      Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
-     DUB-1: Felucca's installer page (web/index_pkg.html, by way of X0X), branded for DUB-1, English first.
+     NACHTFAHRT: Felucca's installer page (web/index_pkg.html, by way of X0X), branded for NACHTFAHRT, English first.
      tools/make_pages.py inlines fm1pkg.js and fm1ota.js and the package's metadata. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Install · DUB-1</title>
+<title>Install · NACHTFAHRT</title>
 <style>
   /* the colours of Ambient 1: Music for Airports (1978), as the site */
-  /* DUB-1's colours, as its screen, the emulator and the manual: a dark room, a cold teal */
+  /* NACHTFAHRT's colours, as its screen, the emulator and the manual: a dark room, a cold teal */
   :root { --bg: #10141a; --fg: #dee4e8; --dim: #9aa8b6; --accent: #2b6e72; --sheet: #1e252f; --river-2: #5cc4cc; color-scheme: dark; }
   body { margin: 0; background: var(--bg); color: var(--fg);
          font: 16px/1.6 "Helvetica Neue", Helvetica, Arial, sans-serif; }
@@ -45,9 +45,9 @@
 </head>
 <body>
 <main>
-  <header class="site"><a class="home" href="../">DUB-1</a><nav aria-label="DUB-1"><a href="../emu/">Emulator</a><a href="../install/" aria-current="page">Install</a><a href="../manual/">Manual</a><a href="https://github.com/sbegueria/fm1-dub">Source</a></nav></header>
+  <header class="site"><a class="home" href="../">NACHTFAHRT</a><nav aria-label="NACHTFAHRT"><a href="../emu/">Emulator</a><a href="../install/" aria-current="page">Install</a><a href="../manual/">Manual</a><a href="https://github.com/FartyPants/fm1-nachtfahrt">Source</a></nav></header>
   <button class="lang" id="lang" type="button"></button>
-  <h1>Install DUB-1</h1>
+  <h1>Install NACHTFAHRT</h1>
   <p data-t="intro"></p>
   <p class="small" data-t="perm"></p>
   <p data-t="warn"></p>
@@ -72,10 +72,10 @@
   </ol>
   <p><button id="stockgo" disabled data-t="stockinstall"></button></p>
   <p><a href="../" style="color:inherit" data-t="manual"></a></p>
-  <p class="small">DUB-1 is built on Felucca by Leo Kuroshita (@kurogedelic), <a href="https://hugelton.com" target="_blank" rel="noopener" style="color:inherit">Hügelton Instruments<span class="sr" data-t="newtab"></span></a>,
+  <p class="small">NACHTFAHRT is built on Felucca by Leo Kuroshita (@kurogedelic), <a href="https://hugelton.com" target="_blank" rel="noopener" style="color:inherit">Hügelton Instruments<span class="sr" data-t="newtab"></span></a>,
     by way of X0X and FoMni.<br>
     Fonts: Barlow Semi Condensed (SIL OFL 1.1). M-VAVE and FM-1 are trademarks of their respective owners.<br>
-    <span data-t="license"></span> <a href="https://github.com/sbegueria/fm1-dub" target="_blank" rel="noopener" style="color:inherit">github.com/sbegueria/fm1-dub<span class="sr" data-t="newtab"></span></a></p>
+    <span data-t="license"></span> <a href="https://github.com/FartyPants/fm1-nachtfahrt" target="_blank" rel="noopener" style="color:inherit">github.com/FartyPants/fm1-nachtfahrt<span class="sr" data-t="newtab"></span></a></p>
 </main>
 <script type="module">
 /*LIB*/
@@ -84,18 +84,18 @@ const TEXT = {
   ja: {
     intro: "FM-1 を USB で接続してください。（Chrome か Edge で使えます）",
     perm: "インストールを押すと、ブラウザが MIDI の使用許可を求めます。許可してください。",
-    newtab: "（新しいタブで開きます）", progress: "進み具合", ready: "インストールできます: DUB-1 ",
+    newtab: "（新しいタブで開きます）", progress: "進み具合", ready: "インストールできます: NACHTFAHRT ",
     percent: "%",
     warn: "書き込み中は USB を抜かないでください。",
     install: "インストール", other: "English",
-    manual: "DUB-1 のページへ",
+    manual: "NACHTFAHRT のページへ",
     direct: "USB ケーブルはパソコンに直接つないでください。Probe や Transporter などの機材は不要です。",
     brick: "万一 FM-1 が起動しなくなった場合は、Mac から標準ファームウェアに戻せます:",
     bricklink: "起動しない FM-1 の復旧（英語）",
     beta: "このカスタムファームウェアを使ったことで FM-1 が壊れたり不具合が起きたりしても、作者は一切の責任を負いません。自己責任でお使いください。",
     back: "公式ファームウェアに戻すには、このページ下の「純正ファームウェアに戻す」か、M-VAVE 公式のアップデーター M-UPGRADE（Downloads → PC Software → M-UPGRADE）を使います。",
     stockh: "純正ファームウェアに戻す",
-    stockwhy: "M-VAVE の FM-1 V15 を、DUB-1（またはそのセーフモード）から同じ USB ケーブルで書き込みます。DUB-1 で保存した曲の設定は消えることがあります。",
+    stockwhy: "M-VAVE の FM-1 V15 を、NACHTFAHRT（またはそのセーフモード）から同じ USB ケーブルで書き込みます。NACHTFAHRT で保存した曲の設定は消えることがあります。",
     stock1: "M-VAVE の FM-1 V15 をダウンロード:",
     stock2: "ダウンロードしたファイルを選ぶ:",
     stock3: "FM-1 を USB で接続し、下のボタンを押す。",
@@ -121,18 +121,18 @@ const TEXT = {
   en: {
     intro: "Connect the FM-1 by USB. (Works in Chrome or Edge.)",
     perm: "When you press Install, the browser asks to let this page use MIDI devices: allow it.",
-    newtab: " (opens in a new tab)", progress: "Progress", ready: "Ready to install DUB-1 ",
+    newtab: " (opens in a new tab)", progress: "Progress", ready: "Ready to install NACHTFAHRT ",
     percent: " percent",
     warn: "Do not unplug the USB cable while writing.",
     install: "Install", other: "日本語",
-    manual: "Back to DUB-1",
+    manual: "Back to NACHTFAHRT",
     direct: "Connect the USB cable directly to the computer. No probe or Transporter is needed.",
     brick: "If the FM-1 no longer starts, a Mac can put the stock firmware back:",
     bricklink: "recovering an FM-1 that won't start",
     beta: "The author accepts no responsibility if your FM-1 is damaged or misbehaves because of this custom firmware. Use it at your own risk.",
     back: "To go back to the official firmware, use \"Back to the stock firmware\" below, or M-VAVE's own updater, M-UPGRADE (Downloads → PC Software → M-UPGRADE).",
     stockh: "Back to the stock firmware",
-    stockwhy: "This writes M-VAVE's own FM-1 V15 back, from DUB-1 (or its safe mode, X0X or Felucca) over the same USB cable. The pieces saved in DUB-1 may be lost.",
+    stockwhy: "This writes M-VAVE's own FM-1 V15 back, from NACHTFAHRT (or its safe mode, X0X or Felucca) over the same USB cable. The pieces saved in NACHTFAHRT may be lost.",
     stock1: "Download M-VAVE's FM-1 V15:",
     stock2: "Choose the file you downloaded:",
     stock3: "Connect the FM-1 by USB and press the button below.",

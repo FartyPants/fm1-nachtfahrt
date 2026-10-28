@@ -129,7 +129,7 @@ def main(pkg, version, out):
         raise SystemExit(f"{pkg}: identity {product!r}: make a release build (./build.sh --release X.Y)")
     if b"FELUCCA-LOADER-1" not in raw:
         raise SystemExit(f"{pkg}: no update loader in it")
-    name = f"dub-{re.sub(r'[^A-Za-z0-9.-]', '-', version)}.fwsc"
+    name = f"nachtfahrt-{re.sub(r'[^A-Za-z0-9.-]', '-', version)}.fwsc"
     if out.exists():
         shutil.rmtree(out)
     for d in ("install", "manual", "firmware"):
