@@ -37,13 +37,13 @@ spin SELECT 2
 wait 200
 expect par3 62
 expect view 16
-# the Atmosphere (SAVE): its level, Atmosphere (30 in Timewind)
+# the Atmosphere (SAVE): its level, Atmosphere (7 in Timewind)
 tap SAVE
 wait 300
-expect par29 30
+expect par29 7
 spin SELECT -1
 wait 200
-expect par29 29
+expect par29 6
 # (the user: one knob, one job) elsewhere SELECT does nothing: the Nachtfahrt and Key pages (no tempo), HOME held
 # (no tempo any more), Space, PERFORM (it stays)
 tap HOME
@@ -82,7 +82,7 @@ expect view 17
 expect par18 96
 expect par1 65
 expect par3 62
-expect par29 29
+expect par29 6
 expect par0 60
 expect par2 40
 tap HOME

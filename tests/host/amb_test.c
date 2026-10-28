@@ -626,7 +626,8 @@ int main(void)
      * Arc 0, Motion 0, Evolve 0 (build/tmp/fmzero_old.c on fd1d378: the first render of a process, as this one;
      * af050088 then, re-recorded for the echo's x2 send and 1/4. time, which alone moved it: checked by reverting them;
      * 1d4f1422 then, re-recorded for Timewind's own recipe: Sequence 2 at 60, Reverb 50, the user's; f09ec04f then,
-     * re-recorded for Timewind's Length 2 at 15, the user's 16/15, the recipe alone) */
+     * re-recorded for Timewind's Length 2 at 15, the user's 16/15, the recipe alone; 1cd60c54 then, re-recorded for
+     * its Atmosphere 30 -> 7, the user's: the FM-1 sounds bright) */
     {   /* (in a child: this process stays as it started, for the render's tests below) */
         int k, fd[2];
         pid_t pid;
@@ -660,7 +661,7 @@ int main(void)
             close(fd[0]);
             waitpid(pid, 0, 0);
         }
-        CHECK(r.h == 0x1cd60c54u, "test_fm_zero: Timewind's first minute %08x, not 1cd60c54 (the engine before)", r.h);
+        CHECK(r.h == 0x4bd3f4dcu, "test_fm_zero: Timewind's first minute %08x, not 4bd3f4dc (the engine before)", r.h);
         for (k = 0; k < 5; k++)
             CHECK(r.fo[k] == 0.0f, "test_fm_zero: layer %d's offset %f", k, (double)r.fo[k]);
     }
@@ -2209,8 +2210,12 @@ int main(void)
      * minutes at 160 (Sequence 2 heard, Repeat B off): every Sequence and Sequence 2 note-on's velocity is the accent
      * rule's (120, or 120 - 86 Accent / 100: no arc factor), notes in every section; the Atmosphere's gain its level's */
     {
-        int k, atm_bad = 0;
+        int k, atm_bad = 0, tw_atm;
         float atm_worst = 0.0f;
+        int16_t tw[P_NPARAMS];
+        uint16_t twp;
+        en_piece(0, tw, &twp);
+        tw_atm = tw[P_CRACKLE];
         fresh();
         piece(0);
         fo_all(-1, -1, -1, 16);
@@ -2225,8 +2230,8 @@ int main(void)
         en_play(1);
         for (k = 0; k < 1200; k++) {
             run(1.0f);
-            if (k >= 5) {                         /* (once its gate has opened: Timewind's Atmosphere 30) */
-                const float want = 30.0f * 0.0035f, dif = fabsf(en_atm_gain - want);
+            if (k >= 5) {                         /* (once its gate has opened: Timewind's own Atmosphere level) */
+                const float want = (float)tw_atm * 0.0035f, dif = fabsf(en_atm_gain - want);
                 atm_worst = fmaxf(atm_worst, dif);
                 atm_bad += dif > 1e-3f * want;
             }
@@ -2543,6 +2548,15 @@ int main(void)
               worst);
         CHECK(none >= 3, "test_pieces_atmos_none: %d pieces without an Atmosphere", none);
         CHECK(dreamy, "test_pieces_lead_dreamy: a piece's Lead reverb or echo not 90");
+        /* (the user, 2026-10-28: the FM-1's speaker and headphones bright, the noise far too loud) the Atmosphere's
+         * level by its type: Surf 5, Wind 7, Tape and Space 10; none: the default kept */
+        for (a = 0; a < EN_NPIECES; a++) {
+            static const int LV[EN_NNCHAR] = {25, 7, 5, 10, -1, 10};   /* (None Wind Surf Space Air Tape; Air: unused) */
+            const int c = pa[a][P_NCHAR];
+            CHECK(c >= 0 && c < EN_NNCHAR && LV[c] >= 0 && pa[a][P_CRACKLE] == LV[c],
+                  "test_pieces_atmos_levels: %s: %s at %d", en_piece_name(a), c >= 0 && c < EN_NNCHAR ? EN_NCHAR_NAME[c] : "?",
+                  pa[a][P_CRACKLE]);
+        }
     }
 
     /* (BERLIN, filter motion spec 9) the pieces' moves: every piece moves some layer (a Width and a Rate above 0);

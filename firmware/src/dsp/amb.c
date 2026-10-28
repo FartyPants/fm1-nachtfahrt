@@ -89,7 +89,7 @@ static const int16_t PC_TIMEWIND[] = {        /* Schulze, Bayreuth Return: an or
     P_TAPB, 50, P_TAPBT, 2,
     P_CVOICE, 0, P_PHASER, 60, P_DRIFT, 3, P_PMODE, EN_WALK_HOME,
     P_LVOICE, 0, P_LDIN, 32,
-    P_NCHAR, 1, P_CRACKLE, 30,
+    P_NCHAR, 1, P_CRACKLE, 7,
     P_MW0, 30, P_MR0, 25, P_MW2, 15, P_MW4, 30, P_BRIDGE, 45,
     P_MI1, 32, P_ARC, 25, P_MOTION, 45, -1};
 static const int16_t PC_WAHNFRIED[] = {       /* Schulze, Wahnfried 1883: beatless, roots walking with no home */
@@ -106,7 +106,7 @@ static const int16_t PC_PHAEDRA[] = {         /* Tangerine Dream, Phaedra: a Moo
     P_SEQ2, 40, P_S2VOICE, 1, P_SEQ2OCT, 0, P_SEQ2LEN, 15, P_MI3, 0,
     P_CVOICE, 2, P_DRIFT, 4,
     P_LVOICE, 2, P_LDIN, 24,
-    P_NCHAR, 5, P_CRACKLE, 25,
+    P_NCHAR, 5, P_CRACKLE, 10,
     P_MW0, 25, P_MW3, 30, P_MR3, 40, P_MW4, 25,
     P_MI1, 16, P_ARC, 30, P_MOTION, 55, -1};
 static const int16_t PC_RUBYCON[] = {         /* Tangerine Dream, Rubycon: dark, two sequences out of the drone (the
@@ -136,7 +136,7 @@ static const int16_t PC_SUNRAIN[] = {         /* Ashra, New Age of Earth: major,
     P_TAPA, 100, P_TAPB, 100, P_TAPBT, 3, P_ECHO, 65, P_FEEDBACK, 65,
     P_CVOICE, 1, P_DRIFT, 3,
     P_LVOICE, 0, P_LDIN, 16,
-    P_NCHAR, 2, P_CRACKLE, 25,
+    P_NCHAR, 2, P_CRACKLE, 5,
     P_MW3, 25, P_MW4, 25, P_BRIDGE, 35,
     P_ARC, 25, P_MOTION, 45, -1};
 static const int16_t PC_MIRAGE[] = {          /* Schulze, Mirage: icy, a glass sequence, sparse, a long reverb; the
@@ -148,7 +148,7 @@ static const int16_t PC_MIRAGE[] = {          /* Schulze, Mirage: icy, a glass s
     P_CVOICE, 4, P_PHASER, 85, P_DRIFT, 4,
     P_LVOICE, 3, P_LDIN, 24,
     P_REVERB, 55, P_SIZE, 90,
-    P_NCHAR, 3, P_CRACKLE, 25,
+    P_NCHAR, 3, P_CRACKLE, 10,
     P_MW0, 25, P_MR0, 20, P_MW4, 35, P_MR4, 20,
     P_MI1, 16, P_ARC, 20, P_MOTION, 40, -1};
 static const int16_t PC_CYBORG[] = {          /* Schulze, Cyborg: early, raw, deep organ drones beating; a quiet
