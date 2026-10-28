@@ -6,7 +6,7 @@
 set -e
 cd "$(dirname "$0")/.."
 V="${1:?usage: tools/publish_pages.sh VERSION}"
-PKG="build/dub-$V.fwsc"
+PKG="build/nachtfahrt-$V.fwsc"
 [ -f "$PKG" ] || { echo "no $PKG: run ./build.sh --release $V first"; exit 1; }
 EN_VERSION="$V" sh web/emu/build.sh
 python3 tools/make_pages.py "$PKG" "$V" build/pages
@@ -17,7 +17,7 @@ rm -rf .git
 git init -q
 git checkout -q -b gh-pages               # (not init -b: older gits lack it)
 git add -A
-git commit -q -m "Site for DUB-1 $V (from $SHA)"
+git commit -q -m "Site for NACHTFAHRT $V (from $SHA)"
 git push -q -f "$REMOTE" gh-pages
 rm -rf .git
 # ask GitHub Pages to build it now: a push alone has left the first deploy stuck on "building"
