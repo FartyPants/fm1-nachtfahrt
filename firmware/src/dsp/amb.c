@@ -1623,6 +1623,8 @@ static uint8_t cp_du[8], cp_n, cp_q, ld_cap;     /* (their lengths; entries; six
 #define CP_HELD 2u
 static uint8_t ld_kin = 255;                     /* (bars since the keys' theme was taken: its offspring's clock,
                                                   * ld_kinship; 255: none, or their time over) */
+static uint8_t ld_iband;                         /* (the kind of offspring the line's idea was made as, ld_band: a
+                                                  * block's reason for a fresh one when the kinship has moved on) */
 volatile uint8_t en_lead_role, en_lead_phr;
 #ifdef EN_HOST
 volatile uint8_t en_lead_slot, en_lead_blk, en_lead_int;   /* (test readouts: host builds only) */
@@ -1648,6 +1650,7 @@ static void ld_reseed(void)                      /* a new piece, or FORGET: new 
                                                   * Emerge stays silent) */
     cp_n = cp_q = ld_cap = 0;                    /* (a figure on the keys let go, a theme of theirs not answered) */
     ld_kin = 255;                                /* (no offspring of it) */
+    ld_iband = 0;
 }
 static uint32_t ld_cmask(void);
 #ifdef EN_HOST
@@ -2031,12 +2034,12 @@ static int ld_offspring(ld_motif_t *m, float in, int kin)
         for (i = 0; i < e && n < cap; i++, n++)
             m->dur[n] = t->dur[i], m->off[n] = g[n] = t->off[i];
         if (kind == LK_SEQ) {                    /* (again from another chord tone: the next above or below) */
-            int up = t->off[0] + 1, dn = t->off[0] - 1;
+            int up = t->off[nt[0]] + 1, dn = t->off[nt[0]] - 1;
             while (!ld_on(up, cm))
                 up++;
             while (!ld_on(dn, cm))
                 dn--;
-            k = (seq_rand(&ld_rng) & 1u ? up : dn) - t->off[0];
+            k = (seq_rand(&ld_rng) & 1u ? up : dn) - t->off[nt[0]];
             for (i = 0; i < e; i++, n++) {
                 m->dur[n] = t->dur[i], m->off[n] = t->off[i];
                 g[n] = (int8_t)(t->off[i] == LD_REST ? LD_REST : t->off[i] + k);
@@ -2378,8 +2381,10 @@ static void ld_cadence(ld_motif_t *m)
 /* a new block (spec 7.1): Memory taken as it is now, for the whole block; its motif (the slot asked for; the theme
  * when it's due, at a piece's first, or after 6 blocks without it at Memory 20 or more: a return of it one pair; else
  * the line's own idea, one of slots 1..3, as it was: kept, Memory's chance, or varied once, or a fresh one, the one
- * thought of ahead (ld_think); the theme's returns come and go, the idea they broke into goes on after them), its
- * pairs, a sentence or not, its values doubled or not. Intensity isn't latched: lead_plan reads it at every phrase.
+ * thought of ahead (ld_think); a fresh one too, at any Memory, when the keys' theme's kinship has moved on to another
+ * kind of offspring or to none: ld_iband; the theme's returns come and go, the idea they broke into goes on after
+ * them), its pairs, a sentence or not, its values doubled or not. Intensity isn't latched: lead_plan reads it at every
+ * phrase.
  * Returns 1 if the motif is as it was (kept, or the theme back: this pass may still vary it) */
 static int ld_block(void)
 {
@@ -2400,20 +2405,27 @@ static int ld_block(void)
         if (first)
             ld_prep = 0;                         /* (the theme heard: thinking ahead goes on to the oldest slot) */
     } else {
+        const int kb = ld_band(), moved = ld_idea && ld_iband != kb;   /* (the keys' theme's kinship moved on to
+                                                  * another kind of offspring, or to none, since the line's idea was
+                                                  * made: a fresh one, at any Memory, each further from it, then the
+                                                  * Lead's own; never without the keys, and before the dice: the same
+                                                  * draws as ever) */
         ld_slot = ld_idea;
-        if (!ld_idea || seq_rand(&ld_rng) % 100u >= (uint32_t)ld_mem) {
+        if (!ld_idea || moved || seq_rand(&ld_rng) % 100u >= (uint32_t)ld_mem) {
             same = 0;
-            if (ld_idea && ld_bank[ld_idea].heard >= 2 && seq_rand(&ld_rng) & 1u) {
+            if (!moved && ld_idea && ld_bank[ld_idea].heard >= 2 && seq_rand(&ld_rng) & 1u) {
                 ld_vary(&ld_bank[ld_idea]);
-            } else if (ld_prep || !ld_idea) {    /* (a fresh one, the one thought of ahead: and before it's been heard
-                                                  * twice, never varied) */
+            } else if (ld_prep || !ld_idea || moved) {   /* (a fresh one, the one thought of ahead: and before it's
+                                                  * been heard twice, never varied) */
                 ld_slot = ld_fresh;
                 ld_fresh = (uint8_t)(ld_fresh % 3 + 1);
-                if (!ld_prep) {                  /* (none thought of yet: the line's first idea drawn now; after the
-                                                  * keys' theme, as its first offspring: ld_idea still 0) */
+                if (!ld_prep || (ld_pint >> 5) != kb) {   /* (none thought of yet: the line's first idea drawn now;
+                                                  * after the keys' theme, as its first offspring: ld_idea still 0;
+                                                  * or the one thought of is of a kind gone by) */
                     ld_idea_new(&ld_bank[ld_slot], ld_int);
                     LD_KD(ld_slot);
                 }
+                ld_iband = (uint8_t)kb;
                 ld_idea = ld_slot;
                 ld_prep = 0;
 #ifdef EN_HOST
@@ -3683,6 +3695,8 @@ static void drain(void)
                 lead_off();
             ld_reseed();
             ld_rest = ld_gap = 0;
+            ld_cb = 1;                           /* (its first block, the new theme, at the bar line after its draws,
+                                                  * not on the roll: the Lead back within a few bars) */
             break;
         case C_REWALK: {                         /* the walk's slots walked again, all but the one playing, each from
                                                   * the slot before (yours and the gaps kept) */

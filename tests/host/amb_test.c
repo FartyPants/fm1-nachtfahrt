@@ -3040,29 +3040,65 @@ int main(void)
         en_set(P_LMEM, en_param_info(P_LMEM)->def);
     }
 
+    /* (BERLIN, the Lead's offspring, review 1: at high Memory the line keeps its idea, so the offspring stray further
+     * only if the kinship's move is a reason for a fresh one) off_setup at Memory 100, a figure: over its pace (150 s)
+     * and 30 s on, 3 fresh ideas or more, each made a kind further from it (close, further, its rhythm, the Lead's
+     * own),
+     * the last the generator's own; then 60 s more and no fresh idea (Memory 100 keeps it) */
+    {
+        static const int FG[5] = {7, 11, 10, 8, 9}, FD[5] = {3, 3, 2, 6, 10};
+        static const int BAND[7] = {0, 3, 3, 3, 2, 2, 1};   /* (LK_* by how close: as ld_offspring's bands) */
+        int8_t to[5];
+        uint8_t td[5];
+        uint32_t at[64], k0;
+        int kv[64], kd[64], c, k, km, down = 1;
+        uint8_t id0;
+        for (k = 0; k < 5; k++)
+            to[k] = (int8_t)FG[k], td[k] = (uint8_t)FD[k];
+        off_setup(100);
+        run(12.0f);
+        keys_play(FG, FD, 5);
+        c = ideas_log(180.0f, to, td, 5, at, kv, kd, 64, &k0, &km);
+        for (k = 0; k < c; k++) {
+            printf("  test_offspring_memory: Memory 100, idea %d at bar %u: kinship %d, made %d\n", k, at[k] / 16u,
+                   kv[k], kd[k]);
+            down &= !k || BAND[kd[k]] < BAND[kd[k - 1]];
+        }
+        id0 = en_lead_ideas;
+        run(60.0f);
+        CHECK(c >= 3 && down && kd[c - 1] == LK_PLAIN && en_lead_ideas == id0,
+              "test_offspring_memory: Memory 100: %d fresh ideas in the pace and 30 s (>= 3), each further %d, the "
+              "last "
+              "made %d (0: the Lead's own); %d more in the 60 s after (0)", c, down, c ? kd[c - 1] : -1,
+              (int)(uint8_t)(en_lead_ideas - id0));
+        en_set(P_LMEM, en_param_info(P_LMEM)->def);
+    }
+
     /* (BERLIN, the Lead's FORGET: the user's design, PERFORM's top key) en_lead_forget(): the Lead forgets everything it
      * remembers. off_setup at Memory 50, a figure taken (its offspring due), forgotten in the middle of its call: the
      * note let go at once, the theme gone (no entries, not the keys'), no kinship, the keys' buffer empty; then new
-     * ideas as at a piece's start: a theme thought of within a bar or two (not the figure), the Lead's next call on it
-     * (slot 0), the line's first idea the generator's own. 2 keys of a figure, forgotten, then 2 more: 2 in the buffer,
+     * ideas as at a piece's start: a theme thought of within a bar or two (not the figure), the Lead's next phrase on
+     * it (slot 0) within 6 bars (its 4 draws, a bar each, then the theme due at once: review 1), three times over;
+     * the line's first idea the generator's own. 2 keys of a figure, forgotten, then 2 more: 2 in the buffer,
      * nothing taken. At most one draw a tick throughout */
     {
         static const int FG[5] = {7, 11, 10, 8, 9}, FD[5] = {3, 3, 2, 6, 10};
         int8_t off[32];
         uint8_t dur[32];
-        int got = 0, b, nt, n0, pl, kn, cp, left, same, call, idea, kind = -1, at = -1;
+        int got = 0, b, nt, n0, pl, kn, cp, left, same, call, idea, kind = -1, at = -1, back, k, worst = 0;
         uint8_t p0, id0;
-        uint32_t f;
+        uint32_t f, s;
         off_setup(50);
         en_lead_dmax = 0;
         run(12.0f);
         memset(sounding[2], 0, sizeof sounding[2]);
         ld_on_now = 0;
+        s = keys_play(FG, FD, 5) + 8u;          /* (taken two beats after the last let go) */
+        run_to(s + 1u);
         p0 = en_lead_phr;
-        keys_play(FG, FD, 5);
-        for (b = 0; b < 2000 && !got; b++) {
+        for (b = 0; b < 2000 && !got; b++) {     /* (a phrase on it begun, whatever its role) */
             run(256.0f / 44100.0f + 1e-6f);
-            got = en_lead_phr != p0 && en_lead_slot == 0 && en_lead_role == LR_CALL;
+            got = en_lead_phr != p0 && en_lead_slot == 0 && en_lead_played();
         }
         run(0.2f);
         en_lead_forget();
@@ -3071,7 +3107,8 @@ int main(void)
         left = ld_left_on();
         nt = en_lead_theme(off, dur), pl = en_lead_played(), kn = en_lead_kin(), cp = en_lead_cap();
         CHECK(got && !left && !nt && !pl && !kn && !cp,
-              "test_lead_forget: forgotten in the keys' call (begun %d): %d left sounding; the theme %d entries, the "
+              "test_lead_forget: forgotten in a phrase on the keys' theme (begun %d): %d left sounding; the theme %d "
+              "entries, the "
               "keys' %d, kinship %d, %d in the buffer (all 0)", got, left, nt, pl, kn, cp);
         while (at < 0 && en_bars < f + 8u * 16u) {   /* (the theme thought of again: its first draw, at a bar line) */
             run(256.0f / 44100.0f + 1e-6f);
@@ -3079,8 +3116,12 @@ int main(void)
                 at = (int)((en_bars - f) / 16u);
         }
         id0 = en_lead_ideas;
-        lg_n = 0, lg_open = -1;
-        call = lg_wait(LR_CALL, 40.0f) && en_lead_slot == 0;
+        for (p0 = en_lead_phr, back = -1; back < 0 && en_bars < f + 24u * 16u;) {   /* (its next phrase, any role) */
+            run(256.0f / 44100.0f + 1e-6f);
+            if (en_lead_phr != p0)
+                back = (int)((en_bars - f) / 16u);
+        }
+        call = back >= 0 && en_lead_slot == 0;
         nt = en_lead_theme(off, dur);
         for (b = 0, same = nt == 5; b < 5 && same; b++)
             same = dur[b] == FD[b];
@@ -3089,11 +3130,13 @@ int main(void)
             if (en_lead_ideas != id0)
                 idea = 1, kind = en_lead_kind;
         }
-        printf("  test_lead_forget: a theme thought of %d bars after, %d entries; its call %d; the next idea made %d\n",
-               at, nt, call, kind);
-        CHECK(at >= 0 && at <= 2 && !same && call && idea && kind == LK_PLAIN && !en_lead_played(),
-              "test_lead_forget: after it: a theme thought of %d bars on (<= 2), the figure %d (0); a call on it %d; the "
-              "next idea %d, made %d (plain: 0); the keys' theme %d (0)", at, same, call, idea, kind, en_lead_played());
+        printf("  test_lead_forget: a theme thought of %d bars after, %d entries; a phrase on it %d bars after; the "
+               "next "
+               "idea made %d\n", at, nt, back, kind);
+        CHECK(at >= 0 && at <= 2 && !same && call && back <= 6 && idea && kind == LK_PLAIN && !en_lead_played(),
+              "test_lead_forget: after it: a theme thought of %d bars on (<= 2), the figure %d (0); a phrase on it "
+              "%d, %d bars on (<= 6); the next idea %d, made %d (plain: 0); the keys' theme %d (0)", at, same, call,
+              back, idea, kind, en_lead_played());
         keys_play(FG, FD, 2);                    /* (a figure in the middle of being played) */
         en_lead_forget();
         run(256.0f / 44100.0f + 1e-6f);
@@ -3104,6 +3147,19 @@ int main(void)
         CHECK(!cp && n0 == 2 && !en_lead_played(),
               "test_lead_forget: 2 keys, FORGET, 2 keys: %d in the buffer after it (0), %d after them (2); the keys' "
               "theme %d (0: nothing taken)", cp, n0, en_lead_played());
+        for (k = 0; k < 3; k++) {                /* (again, three times: its next phrase within 6 bars each time) */
+            run(7.0f);
+            en_lead_forget();
+            run(256.0f / 44100.0f + 1e-6f);
+            for (f = en_bars, p0 = en_lead_phr, back = -1; back < 0 && en_bars < f + 24u * 16u;) {
+                run(256.0f / 44100.0f + 1e-6f);
+                if (en_lead_phr != p0)
+                    back = (int)((en_bars - f) / 16u);
+            }
+            worst = back < 0 || back > worst ? (back < 0 ? 99 : back) : worst;
+        }
+        CHECK(worst <= 6, "test_lead_forget: forgotten three times more: its next phrase at most %d bars after (<= 6)",
+              worst);
         CHECK(en_lead_dmax == 1, "test_lead_forget: the most motifs drawn in one tick %u (1)", en_lead_dmax);
         en_set(P_LMEM, en_param_info(P_LMEM)->def);
     }
