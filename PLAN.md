@@ -1,11 +1,7 @@
 # NACHTFAHRT: plan and status
 
 NACHTFAHRT is a generative Berlin School firmware for the M-VAVE FM-1, forked from DUB-1 (itself from AMB-1).
-(Called BERLIN while it was built, too close to Berlinan's name; the repository, the branch, the code and the
-specs keep BERLIN.)
-The design is [docs/superpowers/specs/2026-10-27-berlin-design.md](docs/superpowers/specs/2026-10-27-berlin-design.md);
-the implementation plan is [docs/superpowers/plans/2026-10-27-berlin.md](docs/superpowers/plans/2026-10-27-berlin.md).
-Research: `I:\FM1\reports\Berlin School synth techniques.md` (outside the repository).
+(Called BERLIN while it was built, too close to Berlinan's name; the code keeps BERLIN.)
 
 ## Status: 0.1, in the emulator
 
@@ -20,7 +16,7 @@ Done, with the whole suite passing (`tests/run_tests.sh`, gate `tools/suite_gate
 - **The Atmosphere**: None, Wind, Surf, Space, Air, Tape.
 - **The arc**: Emerge (only while the Intros open), Flow, Solo, Bridge; the swell into Flow; no endings (a piece
   repeats for ever); a piece changed starts its own arc.
-- **Filter motion** ([spec](docs/superpowers/specs/2026-10-27-berlin-filter-motion-design.md), [plan](docs/superpowers/plans/2026-10-27-berlin-filter-motion.md)):
+- **Filter motion**:
   no hidden levels (Emerge, Seq2 in, Ending and the level fades are gone); each layer's filter wanders, opens
   (Intro) and takes the Bridge's move as an offset from its knob; a Move page (Width, Time, Rate, Intro) for each
   layer, the Sequence's Width being Sweep; the Arc page (Lead in, Bridge, Arc, the fourth knob empty); the motion
@@ -59,8 +55,7 @@ budget, so nothing was cut.
 
 ## Next
 
-**A Lead that remembers** ([spec](docs/superpowers/specs/2026-10-27-berlin-lead-memory-design.md),
-[plan](docs/superpowers/plans/2026-10-27-berlin-lead-memory.md), six tasks): a small motif memory for the Lead,
+**A Lead that remembers** (six steps, three done): a small motif memory for the Lead,
 call-and-answer phrasing, callbacks, intensity from the arc, white-key theme capture, and a **Memory** knob on
 the Arc page's fourth knob (not built yet: the knob is empty until then).
 
@@ -82,12 +77,12 @@ the Arc page's fourth knob (not built yet: the knob is empty until then).
    | Mirage | | |
    | Cyborg | | |
 
-2. **Tuning the pieces by ear** (the user): tempos, keys, levels, each piece's Moves (the Intros, Widths and Bridge) and Arc lengths. Renders of three minutes
-   each are in `I:\FM1\berlin_t13_pieces\`, with Phaedra at 75 and Rubycon at 72 to compare with their readings.
+2. **Tuning the pieces by ear** (the user): tempos, keys, levels, each piece's Moves (the Intros, Widths and Bridge) and Arc lengths. Three-minute renders
+   of each: `tests/listen/pieces.amb`.
 
 ## Open proposals (to decide with the user)
 
-- **SELECT as the selected layer's volume** (spec §9b), freeing it from paging.
+- **SELECT as the selected layer's volume** — done: SELECT is the shown layer's level, OCT- / OCT+ its octave.
 - **MIDI in still edits the scale** (channel 1 notes in/out); keep it, or let MIDI in play the Lead like the keys.
 - **A clean minor triad at the arc's peak** (spec §5) is not built; the peak is the Sequence's filter
   rise (the Arc knob), nothing more.

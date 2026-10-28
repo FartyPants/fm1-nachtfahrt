@@ -5,3 +5,6 @@ __pycache__/
 .serena/
 .superpowers/
 .venv/
+
+# design notes and plans: kept locally, not published (the user, 2026-10-28)
+docs/superpowers/
