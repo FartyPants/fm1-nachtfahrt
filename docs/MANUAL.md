@@ -9,6 +9,9 @@ of space pass behind. Each piece opens from the drone, flows, gives the lead its
 every layer's filter moves slowly on its own. You don't play it, you steer it: pick a piece and a key, thin or fill the sequences, open the
 filter, push the echo, mute and solo the layers, or play the lead yourself on the white keys.
 
+Source, releases and the web installer: [github.com/FartyPants/fm1-nachtfahrt](https://github.com/FartyPants/fm1-nachtfahrt)
+and [fartypants.github.io/fm1-nachtfahrt](https://fartypants.github.io/fm1-nachtfahrt/).
+
 NACHTFAHRT is a fork of DUB-1, itself a fork of AMB-1, Charles Vestal's generative ambient firmware for the FM-1.
 
 **This is 0.1, in development.** It runs in the browser emulator and the host simulator; it has not yet been
@@ -494,6 +497,9 @@ settings. If the FM-1 never shows up at all, Felucca's
 ---
 
 ## 14. Credits
+
+Source, releases and the web installer: [github.com/FartyPants/fm1-nachtfahrt](https://github.com/FartyPants/fm1-nachtfahrt)
+and [fartypants.github.io/fm1-nachtfahrt](https://fartypants.github.io/fm1-nachtfahrt/).
 
 NACHTFAHRT is free software under the GNU General Public License, version 3. If you share the firmware, you
 must also share its source code.
