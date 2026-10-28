@@ -565,6 +565,8 @@ static int expect(const char *what, const char *val)
         got = proj.screen;
     else if (!strncmp(what, "litkey", 6))         /* litkeyN: key N (0..26) lit */
         got = (int)(lit_keys >> (atoi(what + 6) % 27) & 1u);
+    else if (!strncmp(what, "litbtn", 6))         /* litbtnN: button N (B_*, the order of "press": OCT- 12, OCT+ 13) lit */
+        got = (int)(lit_btn >> (atoi(what + 6) % NB) & 1u);
     else if (!strcmp(what, "mutes"))              /* the layers muted (EN_M_*: 1 chord .. 16 hats, 32 noise) */
         got = (int)ui.mutes;
     else if (!strcmp(what, "scopepk")) {          /* the scope buffer (the ripples' outlines), its peak */

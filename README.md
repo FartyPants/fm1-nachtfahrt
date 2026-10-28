@@ -64,7 +64,8 @@ NACHTFAHRT is not connected with any of these artists.
 | GLO | Setup (Tune, MIDI out, Lights, Save); again, the Arc (Lead in, Bridge, Arc). Held: save; held on: the piece back to its recipe |
 | ALGORITHM | On a layer's page, its voice (the Atmosphere: its character) |
 | PRESETS | The piece |
-| OCT− / OCT+ | On a layer's page, its level; both together, quickly: mute it |
+| SELECT | On a layer's pages, its level (elsewhere nothing) |
+| OCT− / OCT+ | On the Sequence's, the Lead's and Sequence 2's pages, its octave (lit while it's above or below where the piece was loaded) |
 
 The [manual](docs/MANUAL.md) has the rest. [PLAN.md](PLAN.md) has what's done and what's still to do.
 

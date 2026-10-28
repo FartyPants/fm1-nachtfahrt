@@ -1,6 +1,6 @@
 # NACHTFAHRT's pages: every button and its presses, each page's knobs as the reader says them (one layout: a layer's main
 # page K1 how much, K2 octave (the Drone: Reso; the Atmosphere: Width), K3 and K4 its own; its sound page brightness,
-# envelope, Reverb, Echo), the voices on ALGORITHM, a knob turned, a layer's level on OCT+
+# envelope, Reverb, Echo), the voices on ALGORITHM, a knob turned, a layer's level on SELECT
 wait 200
 listen
 wait 300
@@ -122,9 +122,9 @@ spin K3 -4
 wait 300
 said Length 12
 expect par28 12
-# a layer's level: OCT+ (5 a press)
+# a layer's level: SELECT (1 a detent; octsel.amb has the rest)
 expect par1 70
-tap OCT+
+spin SELECT 5
 wait 300
 expect par1 75
 # every page's knobs have a help line, NACHTFAHRT's, and each fits the rule

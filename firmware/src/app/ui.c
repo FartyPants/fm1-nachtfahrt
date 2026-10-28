@@ -7,11 +7,11 @@
  *                  keys its root, KNOB 2 its kind, KNOB 3 its type, KNOB 4 Play: Endless or Loop); held: the next chord
  *   REC            tapped: DUB HOLD (the echo repeats what it holds, the chord holds); held: the EFFECTS grid, played
  *                  on the white keys while they're held
- *   OCT- / OCT+    on a layer's page (Chord, Pings, Bass, Drums, Noise, and their sound pages): its level -5 / +5
- *                  (held: on); both together, quickly: the layer muted or back (held 5 s: the update mode)
+ *   OCT- / OCT+    on the Sequence's, the Lead's and Sequence 2's pages: its octave, a step a press (both held 5 s:
+ *                  the update mode)
  *   SEL            PERFORM: the keys mute (white 1-5) and solo (black 1-5) the layers and, held, make the dub moves
  *                  (white 7-11); the knobs the master actions (Filter, Dub, Energy, Space), with white 6 held the mix
- *   SELECT         the pages, in the panel's order (with HOME held: the tempo)   ALGORITHM the voice, the walk
+ *   SELECT         a layer's pages: its level (elsewhere nothing)   ALGORITHM the voice, the walk
  *                  (Chords), the noise's character                    PRESETS the piece
  *   FX ENV LFO GLO / HOME SAVE ARP SEQ   the pages: SPACE, CHORD, BASS, SETUP / DUB, NOISE, PINGS, DRUMS
  *   KNOB 1-4       the page's four values
@@ -19,7 +19,7 @@
  *                  held on 1.5 s: the piece back to its recipe */
 #include "../dsp/fastmath.h"
 
-/* the pages, one a layer (a button each, NPAGES; the Noise page, V_NSND, SAVE's); SELECT steps through them in the
+/* the pages, one a layer (a button each, NPAGES; the Noise page, V_NSND, SAVE's); the header's dots show them in the
  * panel's order, PAGE_ORDER below (the view numbers stay as they were: the tests use them) */
 /* (past NPAGES, on no button of their own: V_MIX, PERFORM's knobs, the four layers' levels; the layers' sound
  * pages, the layer's button pressed again) */
@@ -63,19 +63,11 @@ static int page_of(int v)                        /* a sound page: its layer's; t
     return v == V_KEY ? V_DUB : v == V_ESND ? V_SPACE : v == V_NSND2 || v == V_AMOVE ? V_NSND : v == V_ARC ? V_SETUP
          : parent_of(v) >= 0 ? parent_of(v) : v;
 }
-/* SELECT's round and the dots, as the buttons sit on the panel: FX ENV LFO GLO, then HOME SAVE ARP SEQ */
+/* the header's dots, as the buttons sit on the panel: FX ENV LFO GLO, then HOME SAVE ARP SEQ (SELECT's round once) */
 #define NROUND 8
 static const uint8_t PAGE_ORDER[NROUND] = {V_SPACE, V_CHORD, V_BASS, V_SETUP, V_DUB, V_NSND, V_TEXTURE, V_DRUMS};
-static int round_pos(int v)                      /* a page's place in the round (-1: none) */
-{
-    int i;
-    for (i = 0; i < NROUND; i++)
-        if (PAGE_ORDER[i] == v)
-            return i;
-    return -1;
-}
-/* the layer a page is (OCT- / OCT+: its level and its mute): the Chord, Pings, Bass, Drums and Noise pages and
- * their sound, FM and Pattern pages; -1 elsewhere (the Chords page too) */
+/* the layer a page is (SELECT: its level; OCT- / OCT+: its octave): the Chord, Pings, Bass, Drums and Noise pages
+ * and their sound, FM and Pattern pages; -1 elsewhere (the Chords page too) */
 #define NLAYER 5
 static int oct_layer(int v)
 {
@@ -220,10 +212,8 @@ static struct {
     uint8_t mv;                        /* (BERLIN) the black keys' moves held (EN_MV_*) */
     uint8_t slot, chords_from;         /* the Chords page: the slot edited; the page it was opened from */
     uint8_t noise_from;                /* the Noise page (SAVE): the page it was opened from */
-    uint8_t noise_round;               /* (1: SELECT brought it, and goes on from it) */
-    uint8_t oct_both, oct_done;        /* OCT- and OCT+ down together this press; its mute done (or too late) */
-    uint32_t oct_t, oct_rep;           /* when both went down; an OCT held: its next step */
-    uint8_t oct_ring;                  /* the level ring in the middle: its layer + 1 (0: none) */
+    int8_t oct_home[NLAYER];           /* each layer's octave as its piece was loaded (OCT- / OCT+ lit away from it) */
+    uint8_t oct_ring;                  /* the level ring in the middle (SELECT): its layer + 1 (0: none) */
     uint32_t card_until, card_t0;      /* a nudge's card in the middle: up until, then fading; when it came */
     uint8_t card_shake;                /* the card a big move's (red: a shake, new chords, a reset) or not */
     uint16_t card_col;                 /* its colour */
@@ -382,6 +372,7 @@ static void walk_written(int i, int *r, int *q, int *x)   /* a walk slot's chord
     en_walk_chord(proj.pool, proj.par[P_ROOT], (proj.par[P_CR0 + i] - 1) % scale_steps(), r, q, x);
 }
 static void knob_set(int k, int v);
+static void oct_home_take(void);
 static void slot_write(int i)                    /* a walk slot about to be edited: written as it sounds */
 {
     int r, q, x;
@@ -700,6 +691,7 @@ static void set_piece(int i)                    /* the piece playing kept as it 
 {
     project_piece(i);
     project_apply();
+    oct_home_take();
     en_seed(plat_ms());
     en_regrow();
     say_as("PIECE", piece_name(proj.piece), 0);
@@ -709,8 +701,7 @@ static void set_piece(int i)                    /* the piece playing kept as it 
 
 /* ----------------------------------------------------------- PERFORM --- */
 /* SEL's mode, on the keys from F3 up, in three sets, a dark key between:
- *   white 1-5    the layers, a press each: muted and back, their levels kept (chord, pings, bass, kick, hats: the
- *                mutes OCT- + OCT+ make on a layer's page, the same)
+ *   white 1-5    the layers, a press each: muted and back, their levels kept (chord, pings, bass, kick, hats)
  *   black 1-5    the same layers soloed, a press each (more than one: they play together; the rest muted)
  *   white 7-11   dub moves, held as long as the key is: every stab thrown into the echo, the filter pushed
  *                open, pushed shut, the floor dropped (the kick and the bass out), the echo pushed (all in, feeding back)
@@ -1038,8 +1029,8 @@ static void button(int b)
             return;
         }
     switch (b) {
-    case B_SEL:                                  /* PERFORM: one page, so again stays (1.3.0: a page's button or
-                                                  * SELECT leaves it) */
+    case B_SEL:                                  /* PERFORM: one page, so again stays (1.3.0: a page's button
+                                                  * leaves it) */
         if (!ui.perf)
             perf_set(1);
         else if (ui.view == V_MIX)
@@ -1071,7 +1062,6 @@ static void button(int b)
             set_view(ui.view == V_NSND ? V_NSND2 : ui.view == V_NSND2 ? V_AMOVE : V_NSND);
         } else {
             ui.noise_from = (uint8_t)ui.view;
-            ui.noise_round = 0;
             set_view(V_NSND);
         }
         break;
@@ -1080,17 +1070,25 @@ static void button(int b)
 }
 
 /* ---------------------------------------------------------- OCT- / OCT+ --- */
-/* on a layer's page (oct_layer): a tap its level -5 / +5 (on its release), held on from 400 ms a step every 100 ms;
- * both together, let go within a second: the layer muted, or back (on the first release: held longer, nothing, so
- * the update mode, both held 5 s, main_fm1.c, never mutes). Elsewhere nothing, for now */
-#define OCT_STEP 5
-#define OCT_REPEAT0 400u
-#define OCT_REPEAT 100u
-#define OCT_QUICK 1000u
-#define OCT_SHOW 1200u                           /* the ring up after the last press, then OCT_FADE fading */
+/* (the user, 2026-10-28) on the Sequence's, the Lead's and Sequence 2's pages (oct_layer): its octave, a step a tap
+ * (on its release; none held on, none when both are down: so the update mode, both held 5 s, main_fm1.c, moves
+ * nothing), said; lit while that octave is above (OCT+) or below (OCT-) its home, where the piece was loaded (oct_home).
+ * The Drone's and the Atmosphere's pages, and pages of no layer: nothing. (The levels are SELECT's now, with the ring;
+ * the mutes PERFORM's) */
+#define OCT_SHOW 1200u                           /* the ring up after the last turn, then OCT_FADE fading */
 #define OCT_FADE 250u
+#define NO_OCT 0xFFu
 static const uint8_t LAYER_LEVEL[NLAYER] = {P_CHORD, P_SEQ, P_LEAD, P_SEQ2, P_CRACKLE};
+static const uint8_t LAYER_OCT[NLAYER] = {NO_OCT, P_SEQOCT, P_LOCT, P_SEQ2OCT, NO_OCT};
 static const char *const LAYER_NAME[NLAYER] = {"DRONE", "SEQ", "LEAD", "SEQ 2", "ATMOS"};
+static const char *const OCT_NAME[NLAYER] = {"", "SEQ OCTAVE", "LEAD OCTAVE", "SEQ 2 OCTAVE", ""};
+static void oct_home_take(void)                  /* a piece loaded (or reset): its octaves, the lights' home */
+{
+    int l;
+    for (l = 0; l < NLAYER; l++)
+        if (LAYER_OCT[l] != NO_OCT)
+            ui.oct_home[l] = (int8_t)proj.par[LAYER_OCT[l]];
+}
 static void oct_show(int l)                      /* the ring up (from where it was, if it was: it glides) */
 {
     uint32_t now = plat_ms();
@@ -1106,64 +1104,39 @@ static int oct_ring_on(uint32_t now)             /* the ring's layer + 1, while 
         return 0;
     return ui.oct_ring;
 }
-static void oct_step(int b)
+static void level_turn(int l, int32_t e)         /* SELECT on a layer's page: its level, 1 a detent */
 {
-    int l = oct_layer(ui.view);
     char t[8];
-    if (l < 0)
-        return;
-    knob_set(LAYER_LEVEL[l], proj.par[LAYER_LEVEL[l]] + (b == B_OCTUP ? OCT_STEP : -OCT_STEP));
+    knob_set(LAYER_LEVEL[l], proj.par[LAYER_LEVEL[l]] + (int)e);
     itoa_u((uint32_t)proj.par[LAYER_LEVEL[l]], t);
     say(LAYER_NAME[l], t);
     oct_show(l);
 }
-static void oct_mute(void)
+static void oct_step(int b)
 {
-    int l = oct_layer(ui.view);
-    uint32_t m;
-    if (l < 0)
+    int l = oct_layer(ui.view), k;
+    char t[12];
+    if (l < 0 || LAYER_OCT[l] == NO_OCT)
         return;
-    m = LAYER_MUTE[l];
-    if ((ui.mutes & m) == m)                     /* (the drums: both out, back; else both out) */
-        ui.mutes &= ~m;
-    else
-        ui.mutes |= m;
-    perf_mutes();
-    say(LAYER_NAME[l], (ui.mutes & m) == m ? "MUTED" : "ON");
-    oct_show(l);
+    k = LAYER_OCT[l];
+    knob_set(k, knob_get(k) + (b == B_OCTUP ? 1 : -1));
+    en_param_text(k, knob_get(k), t);
+    say(OCT_NAME[l], t + (t[0] == '+'));         /* (as the knob shows it: "1", not "+1") */
+    if (VIEW_KNOB[ui.view][1] == k) {            /* (the page's Octave knob, lit a moment) */
+        ui.touched = 1;
+        ui.touch_until = plat_ms() + 1200u;
+    }
 }
 static void oct_press(int b)
 {
     const int other = b == B_OCTUP ? B_OCTDN : B_OCTUP;
-    if (ui.btn >> other & 1u) {                  /* both: a mute, if let go soon (the taps' steps not taken) */
-        ui.oct_both = 1;
-        ui.oct_done = 0;
-        ui.oct_t = plat_ms();
+    if (ui.btn >> other & 1u)                    /* both down: neither steps */
         ui.btn_used |= 1u << B_OCTDN | 1u << B_OCTUP;
-    } else {
-        ui.oct_both = 0;
-        ui.oct_rep = plat_ms() + OCT_REPEAT0;
-    }
 }
 static void oct_release(int b)
 {
-    if (ui.oct_both) {
-        if (!ui.oct_done && plat_ms() - ui.oct_t < OCT_QUICK)
-            oct_mute();
-        ui.oct_done = 1;
-    } else if (!(ui.btn_used >> b & 1u)) {
+    if (!(ui.btn_used >> b & 1u))
         oct_step(b);                             /* a tap */
-    }
-}
-static void oct_hold(void)                       /* one OCT held on: its steps */
-{
-    uint32_t dn = ui.btn >> B_OCTDN & 1u, up = ui.btn >> B_OCTUP & 1u, now = plat_ms();
-    int b = up ? B_OCTUP : B_OCTDN;
-    if (ui.oct_both || dn == up || (int32_t)(now - ui.oct_rep) < 0)
-        return;
-    ui.btn_used |= 1u << b;                      /* (its release then takes no step) */
-    ui.oct_rep = now + OCT_REPEAT;
-    oct_step(b);
 }
 
 /* MIDI in (USB and the TRS jack): channel 1 notes add or remove their note from the scale; clock and
@@ -1300,7 +1273,6 @@ static void nudge(int layer, int how)
     if (!ui.perf && !nudge_quiet) {
         if (SND[layer] == V_NSND && ui.view != V_NSND) {
             ui.noise_from = (uint8_t)ui.view;   /* (SAVE again goes back there) */
-            ui.noise_round = 0;
         }
         set_view(SND[layer]);
         for (j = 0; j < 4; j++)
@@ -1356,7 +1328,6 @@ static void input(void)
             button((int)i);
         }
     }
-    oct_hold();
     for (i = 0; i < NNUDGE; i++) {               /* a layer's button held: a nudge; held on: a shake (its release
                                                   * then does nothing) */
         static uint8_t shaken;
@@ -1372,7 +1343,7 @@ static void input(void)
             nudge((int)i, NUDGE_SHAKE);
         }
     }
-    {   /* (1.3.0) HOME held on (1.5 s, nothing turned meanwhile: not the tempo): a shake of everything that shakes,
+    {   /* (1.3.0) HOME held on (1.5 s, nothing turned meanwhile): a shake of everything that shakes,
          * the chord, the pings, the bass, the drums and the noise, at once; again and again, till something sounds */
         static uint8_t home_shaken;
         const uint32_t m = 1u << B_HOME;
@@ -1448,36 +1419,10 @@ static void input(void)
     if (btn || keys || ch)
         ui.act_t = plat_ms();
     midi_in();
-    if ((e = plat_enc(EN_SELECT)) != 0) {        /* SELECT: the pages; with HOME held, the tempo */
-        if (btn >> B_HOME & 1u) {
-            turn(EN_SELECT, P_TEMPO, e);
-            ui.btn_used |= 1u << B_HOME;
-            if (ui.view == V_KEY) {              /* Tempo is the Key page's first knob */
-                ui.touched = 0;
-                ui.touch_until = plat_ms() + 1200u;
-            } else {
-                char t[8];
-                itoa_u((uint32_t)proj.par[P_TEMPO], t);
-                say("TEMPO", t);
-            }
-        } else {                                 /* (in the round's order, PAGE_ORDER; at its ends, it stays) */
-            int from = page_of(ui.view), v;
-            if (ui.view == V_MIX || ui.view == V_PERF) {   /* from PERFORM: SELECT leaves it, on from the page it came
-                                                            * from */
-                from = page_of(ui.perf_from);
-                perf_set(0);
-            }
-            if (ui.view == V_CHORDS)
-                from = page_of(ui.chords_from);
-            v = round_pos(from) + (e > 0 ? 1 : -1);
-            if (round_pos(from) >= 0 && v >= 0 && v < NROUND) {
-                if (PAGE_ORDER[v] == V_NSND) {   /* (SAVE then goes back to the page before) */
-                    ui.noise_from = (uint8_t)from;
-                    ui.noise_round = 1;
-                }
-                set_view(PAGE_ORDER[v]);
-            }
-        }
+    if ((e = plat_enc(EN_SELECT)) != 0) {        /* (the user, 2026-10-28) a layer's pages: its level; elsewhere
+                                                  * nothing (no pages, no tempo: one knob, one job) */
+        if (oct_layer(ui.view) >= 0)
+            level_turn(oct_layer(ui.view), e);
         ui.turn_t = plat_ms();
     }
     if ((e = plat_enc(EN_ALGO)) != 0) {         /* a layer's page: its voice; the Chords page: the walk */
@@ -1509,6 +1454,7 @@ static void input(void)
         ui.btn_used |= 1u << B_GLO;
         project_piece_reset();
         project_apply();
+        oct_home_take();
         en_regrow();
         say("RESET", piece_name(proj.piece));
         card_show("RESET", piece_name(proj.piece), K_FROST, 1);
@@ -2131,9 +2077,9 @@ static void draw_slots(void)
     }
 }
 
-/* the level ring (OCT- / OCT+ on a layer's page): over the middle, the layer's level as a big knob in its colour, the
+/* the level ring (SELECT on a layer's page): over the middle, the layer's level as a big knob in its colour, the
  * number inside, its name under; the arc glides to the level, a step a brief brightening; muted, grey; it fades out
- * OCT_SHOW after the last press */
+ * OCT_SHOW after the last turn */
 static void draw_oct(uint32_t now)
 {
     static const uint16_t C[NLAYER] = {K_PAD, K_BELL, K_BASS, K_PULSE, K_NOISE};
@@ -2531,6 +2477,14 @@ static void leds(void)
                                                   * white keys; one dark while its effect is held, as PERFORM's moves) */
             if (!(BLACK_DO[bk] >= 100 ? ui.mv & (BLACK_DO[bk] - 100) : ui.bfx >> BLACK_DO[bk] & 1u))
                 k |= 1u << BLACK_KEY[bk];
+    }
+    {   /* (the user, 2026-10-28) a layer's page: OCT+ lit while its octave is above its home (oct_home), OCT- below */
+        const int l = oct_layer(ui.view);
+        if (l >= 0 && LAYER_OCT[l] != NO_OCT) {
+            const int v = knob_get(LAYER_OCT[l]);
+            if (v != ui.oct_home[l])
+                b |= 1u << (v > ui.oct_home[l] ? B_OCTUP : B_OCTDN);
+        }
     }
     plat_glow(proj.leds == 1);
     plat_leds(b, k);
@@ -2991,6 +2945,7 @@ void ui_init(void)
 {
     memset(&ui, 0, sizeof ui);
     ui.touched = -1;
+    oct_home_take();
     lcd_fill(0, 0, 240, 240, K_BG);
     if (!en_playing)
         en_play(1);                              /* it plays from the start */

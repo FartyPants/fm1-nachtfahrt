@@ -97,10 +97,10 @@ second.
 | Control | What it does |
 |---|---|
 | MASTER | The volume |
-| SELECT | The previous or next page, in the panel's order. With HOME held: the tempo |
+| SELECT | On a layer's pages (the Drone, the Sequence, the Lead, Sequence 2, the Atmosphere, and each one's further pages), the layer's level, 1 a click: a ring in the middle of the screen shows it, and the header says it ("SEQ 64"). Elsewhere it does nothing (the pages are on their buttons, the tempo on the Key page) |
 | PRESETS | The piece (eight) |
 | ALGORITHM | On a layer's page, its voice (on the Atmosphere's pages, its character). On the Chords page, the chord walk's character (Home, Wander, Free) |
-| OCT− / OCT+ | On a layer's page, its level, 5 a press (held: on). Both together, a quick press: the layer muted, or back (its level kept). Both held 5 s: the update mode |
+| OCT− / OCT+ | On the Sequence's, the Lead's and Sequence 2's pages, the layer's octave, a step a press (the Sequence −2 to 2, the Lead and Sequence 2 −2 to 1): the page's Octave knob shows it, the header says it ("SEQ OCTAVE −1"). OCT+ is lit while that octave is above where the piece was loaded, OCT− while it's below. On the other pages they do nothing. Both held 5 s: the update mode |
 | KNOB 1–4 | The four values at the bottom of the page. The line above them says what the one turning does |
 | White keys | Play the Lead in the piece's scale: the first white key is the root, the next the scale's second step, and so on up. While the Lead sounds a note, that key is lit. On the Pattern page they write the steps instead; in PERFORM they mute and play moves; with REC held they're the effects |
 | Black keys | Eleven effects, each while the key is held. They stay lit, so they stand apart from the Lead's white keys; a key goes dark while its effect is held: Take-off, Supernova, Twitter, Repeat, Swell, Freeze, Octave, Return, Rise, Close, Transpose (see [The effects grid](#9-the-effects-grid)). In PERFORM, the solos; on the Pattern page, the accents |
@@ -146,6 +146,8 @@ The screen is black, with a few dim stars drifting slowly left while the music p
   orbit, fading over a few seconds; the echo's repeats are smaller, dimmer dots with a short trail. **Hold**
   turns the chord and the dots red and says "hold". A new chord comes in big and cyan for a moment.
 - **Right:** the echo's level (ECHO).
+- **A ring in the middle:** while you turn SELECT on a layer's page, its level as a big knob in its colour, the
+  number inside and the layer's name under it (grey and MUTED if it's muted); it fades a moment after.
 - **Below:** two **lanes**, the Sequence (pink) and Sequence 2 (cyan), each as long as its sequence: a big dot
   for each step that plays, a speck for a rest, and a white cursor on the step playing now. Two sequences of
   different lengths drift apart and meet again, and you can see them do it. On a layer's page, the other

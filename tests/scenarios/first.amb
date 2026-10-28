@@ -33,10 +33,9 @@ tap GLO
 wait 100
 shot setup.png
 expect view 6
-# SELECT steps through the pages in the panel's order (FX ENV LFO GLO, HOME SAVE ARP SEQ): from Setup back to
-# Space, the first, then on to Drums, the last
+# (the user, 2026-10-28) SELECT no longer pages: on Setup it does nothing (octsel.amb has the rest)
 turn SELECT -3 100
-expect view 5
+expect view 6
 turn SELECT 7 100
-expect view 4
+expect view 6
 tap HOME
