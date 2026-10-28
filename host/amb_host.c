@@ -576,6 +576,16 @@ static int expect(const char *what, const char *val)
         got = ui.mac[what[3] - '0'];
     else if (!strncmp(what, "emac", 4) && what[4] >= '0' && what[4] <= '3' && !what[5])   /* emacN: as the engine hears it */
         got = en_mac[what[4] - '0'];
+    else if (!strcmp(what, "ringdots")) {        /* (the user, 2026-10-28) the chord's ring: its dots lit, 0..32 (-1:
+                                                  * none, Drift Hold) */
+        int l;
+        got = ring_dots(&l);
+    }
+    else if (!strcmp(what, "ringlast")) {        /* 1: the ring brighter, the chord's last bar */
+        int l;
+        (void)ring_dots(&l);
+        got = l;
+    }
     else if (!strcmp(what, "layoutclash")) {      /* (the user, 2026-10-28) the orbits round the chord (and its ring)
                                                   * against what is round them, in the main canvas: the page's name,
                                                   * its dots and CRANKY MAN (top right, the widest name), the section,

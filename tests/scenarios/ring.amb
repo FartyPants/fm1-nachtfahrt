@@ -1,0 +1,45 @@
+# (the user, 2026-10-28) the chord's progress: a ring of dots round it, growing clockwise from 12 o'clock as the chord
+# goes on, full as it changes, then from 12 again; brighter in its last bar; as it is while held (REC); none at Drift
+# Hold. Sunrain (Drift 16 bars, 130): its chords change on bars 17, 33 (this run's, deterministic); 32 dots, two a bar
+wait 300
+turn PRESET 5
+wait 500
+expect piece 5
+# the chord's last sixteenth (bar 16 played): full, the last bar
+bar 17
+expect ringdots 32
+expect ringlast 1
+# the new chord, its first sixteenth: empty
+wait 150
+expect ringdots 0
+expect ringlast 0
+shot ring_0.png
+# half way (eight bars played)
+bar 25
+expect ringdots 16
+expect ringlast 0
+shot ring_50.png
+# its last bar, half through: brighter
+bar 32
+wait 900
+expect ringdots 30
+expect ringlast 1
+shot ring_last.png
+# held (REC): the ring stays as it is, four bars on
+bar 37
+tap REC
+wait 300
+expect frozen 1
+expect ringdots 8
+bar 42
+expect ringdots 8
+shot ring_hold.png
+tap REC
+wait 300
+expect frozen 0
+# Drift at Hold: no ring
+spin K4 10
+wait 300
+expect par6 6
+expect ringdots -1
+expect layoutclash 0

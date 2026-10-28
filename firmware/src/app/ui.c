@@ -1934,6 +1934,52 @@ static int draw_orbits(void)                     /* 1: one still moves */
     return any;
 }
 
+/* (the user, 2026-10-28) the chord's progress: a ring of dots round it, in the orbits' style (their size, a glow on its
+ * head), growing clockwise from 12 o'clock as the chord goes on (Drift's bars and the bar's sixteenths), full as it
+ * changes, then from 12 again; it doesn't spin. Brighter in the chord's last bar (to play into the change); as it was
+ * while held (REC: in the hold's red); none at Drift Hold */
+#define RING_N 32
+static int ring_dots(int *last)                  /* the dots lit, 0..RING_N (-1: no ring); *last: the chord's last bar */
+{
+    static int keep = -1, keep_last;
+    const int db = en_drift_bars(proj.par[P_DRIFT]);
+    int k;
+    float p;
+    *last = 0;
+    if (!db)
+        return -1;
+    if (en_frozen && keep >= 0) {                /* (held: the engine counts on, the ring stays) */
+        *last = keep_last;
+        return keep;
+    }
+    k = (int)(en_drift * (float)db + 0.5f);      /* (the bars of this chord gone, the one playing not) */
+    p = ((float)k + (float)(en_drum_pos[0] + 1u) * (1.0f / 16.0f)) / (float)db;
+    keep = (int)(fm_clampf(p, 0.0f, 1.0f) * (float)RING_N);
+    keep_last = *last = k >= db - 1;
+    return keep;
+}
+static void draw_ring(void)
+{
+    static int8_t rx[RING_N], ry[RING_N];
+    static uint8_t init;
+    const uint16_t c = en_frozen ? K_FROST : K_PAD;
+    int last, n = ring_dots(&last), k;
+    if (!init) {                                 /* (the places once: from 12 o'clock, clockwise) */
+        for (k = 0; k < RING_N; k++) {
+            const float a = (float)k * (FM_TWO_PI / (float)RING_N) - 0.25f * FM_TWO_PI,
+                        x = RING_RX * fm_cosf(a), y = RING_RY * fm_sinf(a);
+            rx[k] = (int8_t)(int)(x + (x < 0.0f ? -0.5f : 0.5f));
+            ry[k] = (int8_t)(int)(y + (y < 0.0f ? -0.5f : 0.5f));
+        }
+        init = 1;
+    }
+    for (k = 0; k < n; k++) {                    /* (each an orbit's particle, 3 px; the head brightest, the three
+                                                  * before it a glow) */
+        const int back = n - 1 - k, f = back > 3 ? (last ? 12 : 7) : 16 - 2 * back;
+        cv_round(CX + rx[k] - 1, CY + ry[k] - 1, 3, 3, 1, last && !back ? mix(c, K_TEXT, 8) : mix(K_BG, c, f));
+    }
+}
+
 static void line(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint16_t c)   /* Bresenham */
 {
     int32_t dx = x1 > x0 ? x1 - x0 : x0 - x1, dy = y1 > y0 ? y0 - y1 : y1 - y0, sx = x0 < x1 ? 1 : -1,
@@ -2236,6 +2282,10 @@ static void draw_main(void)
         h = hash(h, en_lane[i] | (uint32_t)proj.par[i < 4 ? i : 0] << 16);
     h = hash(h, en_drum_pos[0] | (uint32_t)q16(en_duck) << 4 | (uint32_t)q16(en_pad_level) << 9 | (uint32_t)q16(en_bass_level) << 14);
     h = hash(h, (uint32_t)(en_prog_pos + 1) << 12);
+    {
+        int rl, rn = ring_dots(&rl);
+        h = hash(h, (uint32_t)(rn + 1) | (uint32_t)rl << 7);
+    }
     h = hash(h, (uint32_t)(en_drift * 40.0f) | en_section << 8 | (uint32_t)en_phrase_bar << 12 | (uint32_t)ui.perf << 16 | ui.solo << 20 |
                 (uint32_t)ui.lock << 28);
     for (i = 0; i < EN_NLOOP; i++)
@@ -2255,6 +2305,7 @@ static void draw_main(void)
     cv_begin(240, MAIN_H, K_BG);
     draw_stars();
     moving = (uint8_t)(draw_orbits() | en_playing);
+    draw_ring();                                 /* (the chord's progress, round it: over the orbits, under its name) */
     const int named = parent_of(ui.view) < 0 || scr_layer(ui.view) >= 0;   /* (a sound page: as its layer's) */
     static char ch_last[16];
     static uint32_t ch_t;
@@ -2300,12 +2351,6 @@ static void draw_main(void)
             const int bb = (b == 3 || b == 7) && !ui.lock, lit = en_playing && b <= en_phrase_bar;   /* (Lock: all alike) */
             uint16_t c = lit ? (bb ? K_TEXT : K_DIM) : (bb ? K_DIM : K_LINE);   /* (B bars: ahead, as bright as one played) */
             cv_round(9 + b * 5, 22, 3, 3, 1, c);
-        }
-        if (!en_frozen && en_drift_bars(proj.par[P_DRIFT])) {   /* under them, the way to the next chord (Drift) */
-            int32_t f = (int32_t)(en_drift * 38.0f + 0.5f);
-            cv_rect(9, 27, 38, 1, K_LINE);
-            if (f > 0)
-                cv_rect(9, 27, f, 1, K_PAD);
         }
     }
     {   /* (1.3.0) top right: the page's name (PERFORM's too); to its left, LOCK and SOLO while on */

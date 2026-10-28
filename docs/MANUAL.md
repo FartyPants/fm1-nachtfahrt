@@ -149,6 +149,10 @@ The screen is black, with a few dim stars drifting slowly left while the music p
   Sequence sends a pink dot round it on the inner orbit, each note of Sequence 2 a cyan one on the outer
   orbit, fading over a few seconds; the echo's repeats are smaller, dimmer dots with a short trail. **Hold**
   turns the chord and the dots red and says "hold". A new chord comes in big and cyan for a moment.
+- **The chord's ring:** round the orbits, a ring of violet dots shows how far the chord has gone: it grows
+  clockwise from 12 o'clock, bar by bar, and is full when the chord changes, then starts again from 12. In the
+  chord's last bar it is brighter, so you can play a phrase into the change. While held (REC) it stays as it
+  is, in red; with Drift at Hold (the chord never changes) there is no ring.
 - **Right:** the echo's level (ECHO).
 - **A ring in the middle:** while you turn SELECT on a layer's page, its level as a big knob in its colour, the
   number inside and the layer's name under it (grey and MUTED if it's muted); it fades a moment after.
