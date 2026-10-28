@@ -1309,6 +1309,123 @@ int main(void)
               "test_piece_macros_reset: pushed %d; after the change Filter %d, Wet %d, Energy %d, %d parameters moved",
               pushed, en_mac[EN_MAC_FILTER], en_mac[EN_MAC_DUB], en_mac[EN_MAC_ENERGY], off);
     }
+    /* (the user, 2026-10-28) the master actions move by themselves, Motion's (in the knobs' units, -50..50; the screen
+     * shows twice: Shut 30 = -15): Sunrain at Motion 0, ten minutes, none moves; at Motion 100 with Arc 1 (its rise
+     * 134 bars, the peak at bar 107), Filter within +-15 reaching near both ends in its first two rounds (128 bars),
+     * Wet within 0..25 reaching near 25, Energy 0 at the start and near 25 at the rise's peak; never a jump (a step at
+     * most between two looks half a second apart) */
+    {
+        int k, moved = 0, fmin = 99, fmax = -99, wmin = 99, wmax = -99, e0 = 0, epk = 0, jump = 0, was[3] = {0, 0, 0}, i;
+        fresh();
+        piece(5);
+        en_set(P_MOTION, 0);
+        en_play(1);
+        for (k = 0; k < 1200; k++) {
+            run(0.5f);
+            moved += en_mac[0] || en_mac[1] || en_mac[2];
+        }
+        CHECK(!moved, "test_mac_motion0: the master actions moved in %d of 1200 looks at Motion 0", moved);
+        fresh();
+        piece(5);
+        en_set(P_MOTION, 100);
+        en_set(P_ARC, 1);
+        en_play(1);
+        for (k = 0; (int)(en_bars / 16u) < 128; k++) {
+            const int bar = (int)(en_bars / 16u);
+            run(0.5f);
+            fmin = en_mac[0] < fmin ? en_mac[0] : fmin, fmax = en_mac[0] > fmax ? en_mac[0] : fmax;
+            wmin = en_mac[1] < wmin ? en_mac[1] : wmin, wmax = en_mac[1] > wmax ? en_mac[1] : wmax;
+            if (bar < 4)
+                e0 = en_mac[2] > e0 ? en_mac[2] : e0;
+            if (bar >= 104 && bar <= 110)
+                epk = en_mac[2] > epk ? en_mac[2] : epk;
+            for (i = 0; i < 3; i++) {
+                jump += abs(en_mac[i] - was[i]) > 1;
+                was[i] = en_mac[i];
+            }
+        }
+        printf("  master actions, Motion 100, 128 bars: Filter %d..%d, Wet %d..%d, Energy %d at the start, %d at the peak\n",
+               fmin, fmax, wmin, wmax, e0, epk);
+        CHECK(fmin >= -15 && fmin <= -13 && fmax <= 15 && fmax >= 13, "test_mac_filter: Filter %d..%d", fmin, fmax);
+        CHECK(wmin >= 0 && wmax <= 25 && wmax >= 23, "test_mac_wet: Wet %d..%d", wmin, wmax);
+        CHECK(e0 <= 1 && epk >= 23 && epk <= 25, "test_mac_energy: Energy %d at the start, %d at the peak", e0, epk);
+        CHECK(!jump, "test_mac_smooth: %d jumps", jump);
+        /* Arc 0: Energy stays 0 (no arc, no build), the Filter moves */
+        fresh();
+        piece(5);
+        en_set(P_MOTION, 100);
+        en_set(P_ARC, 0);
+        en_play(1);
+        for (moved = 0, e0 = 0, k = 0; k < 240; k++) {
+            run(0.5f);
+            e0 += en_mac[2] != 0;
+            moved += en_mac[0] != 0;
+        }
+        CHECK(!e0 && moved, "test_mac_arc0: Energy off 0 in %d looks, Filter moved in %d", e0, moved);
+        /* the hand holds: Energy +40 by hand (+80 on the screen) held till the section changes, then the motion takes
+         * it back without a jump (eight bars), well under where the hand left it */
+        {
+            int sec, held = 1, bar0, hand_jump = 0, v = 40;
+            fresh();
+            piece(5);
+            en_set(P_MOTION, 100);
+            en_play(1);
+            run(8.0f);
+            en_macro(EN_MAC_ENERGY, 40);
+            sec = en_section;
+            for (k = 0; k < 2400 && en_section == sec; k++) {
+                run(0.25f);
+                held &= en_section != sec || en_mac[2] == 40;
+            }
+            bar0 = (int)(en_bars / 16u);
+            for (k = 0; (int)(en_bars / 16u) < bar0 + 12 && k < 400; k++) {
+                run(0.25f);
+                hand_jump += abs(en_mac[2] - v) > 1;
+                v = en_mac[2];
+            }
+            printf("  Energy by hand 40: held %d till the section change (%d looks), then %d twelve bars on\n", held, k, v);
+            CHECK(held && sec != en_section && !hand_jump && v <= 26,
+                  "test_mac_hand: held %d, section %d -> %d, %d jumps, %d twelve bars after", held, sec, en_section,
+                  hand_jump, v);
+        }
+        /* Lock holds all three where they are; let go, they go on without a jump */
+        {
+            int same = 1, w[3], lock_jump = 0;
+            fresh();
+            piece(5);
+            en_set(P_MOTION, 100);
+            en_play(1);
+            run(40.0f);
+            en_lock(1);
+            run(0.05f);
+            for (i = 0; i < 3; i++)
+                w[i] = en_mac[i];
+            for (k = 0; k < 80; k++) {
+                run(0.5f);
+                for (i = 0; i < 3; i++)
+                    same &= en_mac[i] == w[i];
+            }
+            en_lock(0);
+            for (k = 0; k < 80; k++) {
+                run(0.5f);
+                for (i = 0; i < 3; i++) {
+                    lock_jump += abs(en_mac[i] - w[i]) > 1;
+                    w[i] = en_mac[i];
+                }
+            }
+            CHECK(same && !lock_jump, "test_mac_lock: held %d, %d jumps after", same, lock_jump);
+        }
+        /* a sequence the piece keeps silent (level 0) stays silent under Energy (Cyborg's Sequence 2); at 1, pushed */
+        fresh();
+        en_set(P_SEQ2, 0);
+        en_macro(EN_MAC_ENERGY, 50);
+        run(0.05f);
+        k = en_heard(P_SEQ2);
+        en_set(P_SEQ2, 1);
+        run(0.05f);
+        CHECK(k == 0 && en_heard(P_SEQ2) == 31, "test_energy_silent_seq: Sequence 2 at 0 heard %d, at 1 heard %d", k,
+              en_heard(P_SEQ2));
+    }
 
     /* every voice of every layer: it sounds, without NaN, under full scale */
     {
@@ -2259,7 +2376,12 @@ int main(void)
         memset(sec_ons, 0, sizeof sec_ons);
         en_play(1);
         for (k = 0; k < 1200; k++) {
-            run(1.0f);
+            int q;
+            for (q = 0; q < 4; q++) {             /* (Energy held at 0 by hand: its own motion, Motion's, would push
+                                                  * Repeat B in, which this test keeps off) */
+                en_macro(EN_MAC_ENERGY, 0);
+                run(0.25f);
+            }
             if (k >= 5) {                         /* (once its gate has opened: Timewind's own Atmosphere level) */
                 const float want = (float)tw_atm * 0.0035f, dif = fabsf(en_atm_gain - want);
                 atm_worst = fmaxf(atm_worst, dif);
@@ -2516,7 +2638,7 @@ int main(void)
 
     /* (BERLIN) no ending (spec 3.5): the shortest Arc (134 bars), two hours at 160: never Emerge again once it has left
      * it, the Sequence playing in every ten minutes, its long rise repeating (its peak, +1 octave, reached again and
-     * again: no wander, no Bridge) */
+     * again: no wander, no Bridge; Energy held at 0 by hand: its own motion, Motion's, would move Sweep) */
     {
         uint32_t ons = 0;
         int k, left = 0, back = 0, silent = 0, peaks = 0, high = 0;
@@ -2530,6 +2652,7 @@ int main(void)
         en_play(1);
         ch2_ons = 0;
         for (k = 0; k < 7200; k++) {
+            en_macro(EN_MAC_ENERGY, 0);
             run(1.0f);
             if (en_section != EN_SEC_EMERGE)
                 left = 1;

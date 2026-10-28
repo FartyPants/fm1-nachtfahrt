@@ -269,6 +269,22 @@ dot sits at the bottom, and the section reads EMERGE.
 Sections last 16 to 64 bars; **Motion** (the Nachtfahrt page) makes them shorter, and at 0 the piece stays in
 Flow. At a change of section, with Motion, Sequence 2 may move an octave away for that section (see Sequence 2).
 
+### The master actions move by themselves
+
+With Motion, PERFORM's **Filter**, **Wet** and **Energy** move on their own, slowly, and their knobs show it
+(the screen reader doesn't announce it):
+
+- **Filter:** a slow swing between Shut 30 and Open 30, 64 bars round, opening first.
+- **Wet:** from 0 up to +50 and back, 48 bars round.
+- **Energy:** follows the arc: 0 at the start of the Sequence's slow rise, +50 at its peak, back down after
+  (Arc 0: it stays at 0).
+
+Motion sets how far: at 100 the full ranges above, at 50 half of them, at 0 none of them moves. Turn one of the
+three knobs (or SELECT on the Nachtfahrt page, for Energy) and your value holds until the next change of
+section; then the motion takes over again from your value, gliding back over eight bars, without a jump. Lock
+holds all three where they are. A sequence whose level is 0 (Cyborg's Sequence 2) stays silent whatever
+Energy does. A new piece, or PLAY from the top, starts the motion from its beginning.
+
 ### The Arc page
 
 GLO twice. **Lead in** (0–64 bars): how long after the piece starts the Lead may play. **Bridge** (0–100): see
@@ -407,7 +423,9 @@ Tap SEL. The knobs become the master actions: **Filter** (as on the Nachtfahrt p
 echo: every layer's echo send, the Drone's, both Sequences', the Lead's and the Atmosphere's), **Energy**
 (sparser or busier: the Sequence's Density, levels, Sweep, note length, Cutoff, and Repeat B, the second
 repeat), and **Sweep** (how far the Sequence's cutoff wanders on its own: the same as its Width on the
-Move page, the piece's). The keys
+Move page, the piece's). With Motion, Filter, Wet and Energy also move by themselves, the knobs showing where
+they are; a turn of yours holds until the next section ([The master actions move by
+themselves](#the-master-actions-move-by-themselves)). The keys
 that do something are lit:
 
 - **White 1–5:** the Drone, the Sequence, the Lead, Sequence 2, the Atmosphere, muted and back (their levels

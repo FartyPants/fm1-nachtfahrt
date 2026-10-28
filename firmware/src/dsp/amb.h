@@ -142,7 +142,11 @@ void en_perf(uint32_t flags);
  * echo's send and feedback; Energy: Density, Hits and Stabs; Space: the reverb, the cloud and the plate's size */
 enum { EN_MAC_FILTER, EN_MAC_DUB, EN_MAC_ENERGY, EN_MAC_SPACE, EN_NMAC };
 void en_macro(int i, int v);
-extern volatile int8_t en_mac[EN_NMAC];        /* the master actions as heard now (a piece change: all 0) */
+extern volatile int8_t en_mac[EN_NMAC];        /* the master actions as heard now (a piece change: all 0; Filter,
+                                                * Wet and Energy moving by themselves with Motion, the hand holding) */
+#define EN_MAC_BUSY (-128)
+int en_macro_now(int i);                       /* (the UI) action i as heard, once the engine has taken every turn sent
+                                                * (else EN_MAC_BUSY) */
 /* (host tests only, between renders) a parameter as heard: the piece's, moved by the master actions */
 int en_heard(int p);
 void en_lock(int on);                          /* PERFORM's Lock: each phrase keeps the kick's shape, the noise's groove,

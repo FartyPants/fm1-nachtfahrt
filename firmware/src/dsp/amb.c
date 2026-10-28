@@ -445,7 +445,14 @@ void en_mute(uint32_t m) { post(C_MUTE, (int)(m & 0xFFu), 0); }
 void en_perf(uint32_t f) { post(C_PERF, (int)(f & 0xFFu), 0); }
 void en_fx(uint32_t m) { post(C_FX, 0, (int)(m & 0xFFFFu)); }
 void en_move(uint32_t m) { post(C_MOVE, 0, (int)(m & 0xFFu)); }
-void en_macro(int i, int v) { post(C_MACRO, i, v + 50); }   /* (sent as 0..100) */
+static uint8_t mac_sent;                         /* (the UI's turns of the master actions, counted: 6 bits) */
+volatile uint8_t en_mac_got;                     /* (the engine's: the count with the last it took) */
+void en_macro(int i, int v)                      /* (sent as 0..100) */
+{
+    mac_sent = (uint8_t)((mac_sent + 1u) & 63u);
+    post(C_MACRO, (i & 3) | mac_sent << 2, v + 50);
+}
+int en_macro_now(int i) { return en_mac_got == mac_sent ? en_mac[i] : EN_MAC_BUSY; }
 void en_lock(int on) { post(C_LOCK, on != 0, 0); }
 void en_prog_rotate(void) { post(C_PROT, 0, 0); }
 void en_prog_rewalk(void) { post(C_REWALK, 0, 0); }
@@ -520,7 +527,8 @@ static int8_t pofs[P_NPARAMS];
 static float dub_up;                            /* Dub turned up, 0..1: the echo darker, feeding back past its knob */                  /* what they add to the piece's parameters */
 static int pe(int p)                            /* a parameter as heard: the piece's, moved by the master actions */
 {
-    int v = par[p] + pofs[p];
+    int v = par[p] + (par[p] || (p != P_SEQ && p != P_SEQ2) ? pofs[p] : 0);   /* (a sequence the piece keeps silent,
+                                                  * level 0, stays silent: Energy doesn't wake it) */
     return v < PARAMS[p].lo ? PARAMS[p].lo : v > PARAMS[p].hi ? PARAMS[p].hi : v;
 }
 static uint32_t pool = 0xAADu;                  /* Ionian until told */
@@ -1063,6 +1071,50 @@ static void fo_bridge(void)                      /* a Bridge begins: each layer'
         fo_bs[l] = s * (0.6f + 0.4f * fo_u(l));
     }
 }
+/* (the user, 2026-10-28) the master actions move by themselves, Motion's: Filter a slow sine between Shut 30 and Open
+ * 30 (as its knob shows them: +-15 of its -50..50), 64 bars round, opening first; Wet from 0 up to +50 (25) and back,
+ * 48 bars round; Energy with the arc's long rise, 0 at its start, +50 (25) at its peak, 0 with no Arc. Each by
+ * Motion/100. The hand (a knob, or SELECT on HOME for Energy) holds its value till the next section change; then the
+ * motion takes over again from it, the difference gone over eight bars (no jump); Lock holds all three where they are.
+ * A piece, or the transport from the top, from their start (ar_start); once a chunk, a call to macro() only when a
+ * value moves a whole step */
+#define AM_N 3                                   /* (Filter, Wet, Energy: EN_MAC_*'s first three) */
+#define AM_GLIDE 8.0f                            /* (bars: the hand's value back to the motion's) */
+static float am_ph[2];                           /* bars into Filter's and Wet's rounds */
+static float am_off[AM_N], am_rate[AM_N];        /* the glide: where it is less the motion, shrinking at rate a bar */
+static uint8_t am_held, am_stuck;                /* the knobs the hand holds; held (or locked) the chunk before */
+static void macro(int i, int v);
+static void am_step(float d, float rise)        /* rise: the arc's long rise, 0..1 (0: no Arc) */
+{
+    static const float DEPTH[AM_N] = {15.0f, 25.0f, 25.0f}, ROUND[2] = {64.0f, 48.0f};
+    float t[AM_N];
+    int i;
+    for (i = 0; i < 2; i++)
+        if ((am_ph[i] += d) >= ROUND[i])
+            am_ph[i] -= ROUND[i];
+    t[0] = fm_sinf(am_ph[0] * (FM_TWO_PI / 64.0f));
+    t[1] = 0.5f - 0.5f * fm_cosf(am_ph[1] * (FM_TWO_PI / 48.0f));
+    t[2] = rise;
+    for (i = 0; i < AM_N; i++) {
+        float v;
+        int r;
+        t[i] *= DEPTH[i] * motion;
+        if ((am_held >> i & 1u) || lock) {
+            am_stuck |= (uint8_t)(1u << i);
+            continue;
+        }
+        if (am_stuck >> i & 1u) {               /* let go: on from where it is */
+            am_stuck &= (uint8_t)~(1u << i);
+            am_off[i] = (float)mac[i] - t[i];
+            am_rate[i] = fm_fabsf(am_off[i]) * (1.0f / AM_GLIDE);
+        }
+        am_off[i] = am_off[i] > 0.0f ? fm_maxf(am_off[i] - am_rate[i] * d, 0.0f) : fm_minf(am_off[i] + am_rate[i] * d, 0.0f);
+        v = fm_clampf(t[i] + am_off[i], -50.0f, 50.0f);
+        r = (int)(v + (v < 0.0f ? -0.5f : 0.5f));
+        if (r != mac[i])
+            macro(i, r);
+    }
+}
 static void fo_step(uint32_t n)                  /* once a chunk: the clock on, each layer's offset */
 {
     float d = 0.0f, rise = 0.0f, be;
@@ -1089,6 +1141,7 @@ static void fo_step(uint32_t n)                  /* once a chunk: the clock on, 
         x = ar_pos / L;
         rise = 2.0f * (x < 0.8f ? x * 1.25f : (1.0f - x) * 5.0f) - 1.0f;
     }
+    am_step(d, ar_len() ? 0.5f * (rise + 1.0f) : 0.0f);
     be = ar_sec == EN_SEC_BRIDGE && ar_left > 4 ? 1.0f : 0.0f;   /* the Bridge: in over four bars, out over its last */
     fo_be = be > fo_be ? fm_minf(fo_be + 0.25f * d, 1.0f) : fm_maxf(fo_be - 0.25f * d, 0.0f);
     be = fo_ease(fo_be) * 3.0f * (float)pe(P_BRIDGE) * 0.01f;
@@ -1147,6 +1200,8 @@ static void ar_start(void)                       /* the arc from its start: Emer
     en_swell = 0;
     ar_push = 0.0f;
     en_s2oct_shift = 0;                          /* (Sequence 2 at its home octave) */
+    am_ph[0] = am_ph[1] = 0.0f;                  /* (the master actions' motion from its start, on from where they are) */
+    am_stuck = (1u << AM_N) - 1u;
     if (fo_intro_max()) {
         ar_sec = EN_SEC_EMERGE;
         ar_left = fo_intro_max();
@@ -1198,8 +1253,10 @@ static void ar_tick_bar(void)                    /* a bar line (the first, at th
         ar_left = ar_sec_len();
         if (ar_sec == EN_SEC_BRIDGE)
             fo_bridge();
-        if (ar_sec != was)
+        if (ar_sec != was) {
             s2o_section();
+            am_held = 0;                         /* (the hand lets go of the master actions) */
+        }
     }
     en_swell = ar_sec == EN_SEC_BRIDGE && ar_left <= 2;
     en_section = ar_sec;
@@ -2552,8 +2609,13 @@ void en_init(void)
     }
     for (i = 0; i < EN_NLOOP * EN_LOOP_MAX; i++)   /* (DUB-1's ping loops: none) */
         en_loop_note[i / EN_LOOP_MAX][i % EN_LOOP_MAX] = -1;
-    for (i = 0; i < EN_NMAC; i++)                /* (the master actions at 0) */
+    for (i = 0; i < EN_NMAC; i++)                /* (the master actions at 0, the hand off them) */
         mac[i] = en_mac[i] = 0;
+    am_held = am_stuck = 0;
+    am_ph[0] = am_ph[1] = 0.0f;
+    for (i = 0; i < AM_N; i++)
+        am_off[i] = 0.0f;
+    en_mac_got = mac_sent;
     for (i = 0; i < P_NPARAMS; i++)
         pofs[i] = 0;
     for (i = 0; i < P_NPARAMS; i++)
@@ -2721,6 +2783,9 @@ static void drain(void)
             for (a = 0; a < EN_NMAC; a++)        /* (the user, 2026-10-28) a piece from the master actions at 0: none
                                                   * of the last one's push carried over */
                 macro(a, 0);
+            am_held = 0;
+            for (a = 0; a < AM_N; a++)
+                am_off[a] = 0.0f;
             regrow();
             if (seq_have)                        /* (a piece's own patterns, kept) */
                 seq_take();
@@ -2775,9 +2840,14 @@ static void drain(void)
                 prog_publish();
             }
             break;
-        case C_MACRO:
-            if (a < EN_NMAC && (unsigned)b <= 100u)
+        case C_MACRO:                            /* (a: the action, and the UI's count of its turns above it) */
+            en_mac_got = (uint8_t)(a >> 2);
+            a &= 3;
+            if (a < EN_NMAC && (unsigned)b <= 100u) {
+                if (a < AM_N)
+                    am_held |= (uint8_t)(1u << a);   /* (the hand holds it till the next section change) */
                 macro(a, b - 50);
+            }
             break;
         }
     }

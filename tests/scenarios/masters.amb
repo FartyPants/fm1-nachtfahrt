@@ -24,3 +24,27 @@ expect mac2 0
 expect emac0 0
 expect emac1 0
 expect emac2 0
+# (the user, 2026-10-28) and they move by themselves, Motion's: Sunrain (Motion 45) on PERFORM, half a minute on
+# (16 bars): Filter opened a little, Wet up, Energy still near 0 (its arc's rise just begun); the knobs show it, the
+# reader doesn't say it
+expect view 17
+listen
+wait 1500
+said Perform
+wait 30000
+expect mac0 >2
+expect mac1 >4
+expect emac0 >2
+expect mac2 <3
+said_none Filter
+said_none Wet
+said_none Energy
+shot perform_moving.png
+# the hand: Energy by hand, said, held (Motion's own value far under it)
+spin K3 12
+wait 300
+said Energy
+expect mac2 >8
+expect emac2 >8
+wait 8000
+expect mac2 >8

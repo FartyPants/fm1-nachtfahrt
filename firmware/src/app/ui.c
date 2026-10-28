@@ -2535,6 +2535,20 @@ static struct {
 } sp;
 static char sp_buf[ANN_MAX + 1];
 static uint32_t sp_n;
+/* (the user, 2026-10-28) Filter, Wet and Energy as the engine moves them (Motion's, or back to 0 for a new piece),
+ * into their knobs once it has taken every turn sent (a turn in flight never undone): shown, not said (the reader's
+ * copy moved with them) */
+static void mac_take(void)
+{
+    int i, j, v;
+    for (i = 0; i < EN_MAC_SPACE; i++)
+        if ((v = en_macro_now(i)) != EN_MAC_BUSY && v != ui.mac[i]) {
+            ui.mac[i] = (int8_t)v;
+            for (j = 0; j < 4; j++)
+                if (VIEW_KNOB[sp.view][j] == K_FILTER + i)
+                    sp.val[j] = (int16_t)v;
+        }
+}
 /* the chord names (en_chord_name's, after the root) in words: "m" and "M7" differ only in capitals, which
  * the words file ignores */
 static const char *const CHORD_Q[][2] = {
@@ -2977,6 +2991,7 @@ void ui_frame(void)
     prog_take();
     nudge_tick();
     input();
+    mac_take();
     autosave();
     if (grid_up()) {                             /* REC held: the effects, the whole screen */
         if (!(ui.frame % 3u))
