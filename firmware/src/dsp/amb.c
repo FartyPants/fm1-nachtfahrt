@@ -153,11 +153,12 @@ static const int16_t PC_MIRAGE[] = {          /* Schulze, Mirage: icy, a glass s
     P_MW0, 25, P_MR0, 20, P_MW4, 35, P_MR4, 20,
     P_MI1, 16, P_ARC, 20, P_MOTION, 40, -1};
 static const int16_t PC_CYBORG[] = {          /* Schulze, Cyborg: early, raw, deep organ drones beating; a quiet
-                                                * Sequence (20, the user's: at its defaults), no Sequence 2 */
+                                                * Sequence (20, the user's: at its defaults), no Sequence 2; the Lead
+                                                * up front (70, the user's) */
     P_TEMPO, 70, P_ROOT, 0, P_MODE, MODE_PHRYGIAN,
     P_SEQ, 20, P_SEQ2, 0,
     P_CHORD, 70, P_CVOICE, 0, P_CCOL, 25, P_PEDAL, 90, P_PHASER, 20, P_DRIFT, 4, P_PMODE, EN_WALK_WANDER,
-    P_LVOICE, 3, P_LDENS, 30, P_LOCT, -1, P_LDIN, 8,
+    P_LEAD, 70, P_LVOICE, 3, P_LDENS, 30, P_LOCT, -1, P_LDIN, 8,
     P_MW0, 50, P_MT0, 70, P_MR0, 45, P_MW2, 10, P_BRIDGE, 30,
     P_ARC, 15, P_MOTION, 35, -1};
 static const struct {

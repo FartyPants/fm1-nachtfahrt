@@ -3155,8 +3155,9 @@ int main(void)
               pa[1][P_CRES]);
         CHECK(pa[3][P_SVOICE] == 0 && pa[3][P_LVOICE] == 4, "test_pieces_voices: Rubycon Sequence %d (2600: 0), Lead %d "
               "(Synthi: 4) (the user's ear)", pa[3][P_SVOICE], pa[3][P_LVOICE]);
-        CHECK(pa[7][P_SEQ] == 20 && pa[7][P_SEQ2] == 0, "test_pieces_cyborg: Sequence %d, Sequence 2 %d", pa[7][P_SEQ],
-              pa[7][P_SEQ2]);
+        CHECK(pa[7][P_SEQ] == 20 && pa[7][P_SEQ2] == 0 && pa[7][P_LEAD] == 70,
+              "test_pieces_cyborg: Sequence %d, Sequence 2 %d, Lead %d (the user's: 20, 0, 70)", pa[7][P_SEQ],
+              pa[7][P_SEQ2], pa[7][P_LEAD]);
         for (a = 1; a < EN_NPIECES; a += 6)
             CHECK(pa[a][P_MW0] >= 40 && pa[a][P_MR0] >= 40, "test_pieces_move: %s Drone width %d rate %d",
                   en_piece_name(a), pa[a][P_MW0], pa[a][P_MR0]);
