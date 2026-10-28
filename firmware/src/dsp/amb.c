@@ -1521,36 +1521,159 @@ static int ld_near(int d, int c)                 /* degree c (0..ns-1) in the oc
     return d + (2 * k > ns ? k - ns : k);
 }
 
-/* a fresh motif (for now the phrases the Lead played before its memory, as offsets: a slow run of 3 to 6 steps one
- * way, the last held, or 1 to 3 long notes a third or a fifth apart; from a chord tone, now and then an octave up) */
+/* a fresh motif, as a player shapes one (the report's "new motifs"): its rhythm first, from the templates below (1, 2
+ * or 4 bars, the long values on beats 1 and 3; about 2 + 4 intensity notes: whole and half notes when calm, a run of
+ * 8ths or 16ths about a held note when busy), then its pitches one by one, each drawn by the product range x proximity
+ * x key (Temperley's): near a centre the contour moves (an arch half the time, a descent 30%, for a call a rise and
+ * hold 20%; less far in a motif of few notes), near the note before (mostly steps), on the chord on the strong beats. After a leap of 3 degrees or more
+ * (or 5 semitones) the next note turns back; a note held a dotted quarter or longer is a chord tone, but for the
+ * tension note (0.2 + 0.4 intensity of the motifs): a tone off the chord a degree above a chord tone (the 6th first,
+ * then the 4th), held half as long again, the next note the chord tone under it. Offsets from the chord root's
+ * degree; the register's centre an octave and a half over the Lead's root */
+#define LD_RST 0x80u                             /* (in a template: a rest, its length below) */
+#define LD_HELD 6                                /* (sixteenths: a held note) */
+static const uint8_t LD_RHY[][7] = {
+    {16, 16}, {8, 8}, {24, 8},
+    {8, 8, 16}, {12, 4, 16}, {4, 4, 8}, {8, LD_RST | 4, 4, 16},
+    {8, 4, 4, 16}, {12, 2, 2, 16}, {24, 8, 16, 16},
+    {8, 4, 4, 8, 8}, {6, 2, 8, 8, 8}, {4, 2, 2, 8, 16}, {12, LD_RST | 2, 2, 4, 4, 8},
+    {8, 2, 2, 2, 2, 16}, {12, 1, 1, 1, 1, 16}, {4, 4, 2, 2, 4, 16},
+};
+#define LD_NRHY ((int)(sizeof LD_RHY / sizeof LD_RHY[0]))
+static const uint8_t LD_R[7] = {16, 15, 12, 8, 5, 2, 1};   /* range: by degrees from the centre */
+static const uint8_t LD_P[8] = {4, 16, 6, 2, 1, 1, 1, 1};   /* proximity: by degrees from the note before (the
+                                                              * report's 4 16 8 4 2 1 1 2, steeper: held notes are
+                                                              * chord tones, a third apart) */
+
+static int ld_rhy_n(int j)                       /* a template's notes (its rests not counted) */
+{
+    int i, n = 0;
+    for (i = 0; i < 7 && LD_RHY[j][i]; i++)
+        n += !(LD_RHY[j][i] & LD_RST);
+    return n;
+}
+
 static void ld_motif_new(ld_motif_t *m, float intensity, int role)
 {
-    const int ns = nsteps ? nsteps : 7, run = seq_rand(&ld_rng) % 100u < 40u;
-    int d = ld_cdeg((int)(seq_rand(&ld_rng) % (uint32_t)(chord_nt ? chord_nt : 1))) - ld_cdeg(0), i;
-    (void)intensity, (void)role;
-    d = (d + ns) % ns;
-    if (seq_rand(&ld_rng) & 1u)
-        d += ns;
-    if (run) {
-        const int dir = seq_rand(&ld_rng) & 1u ? 1 : -1;
-        m->n = (uint8_t)(3 + seq_rand(&ld_rng) % 4u);
-        for (i = 0; i < m->n; i++) {
-            m->off[i] = (int8_t)(d + dir * i);
-            m->dur[i] = (uint8_t)(i + 1 < m->n ? 2 + seq_rand(&ld_rng) % 3u : 8 + seq_rand(&ld_rng) % 9u);
+    static const uint8_t W[3] = {6, 3, 1};       /* (a template's weight, by its notes' distance from the target) */
+    const int ns = nsteps ? nsteps : 7, r = ld_cdeg(0), w = ns < 6 ? ns : 6, c0 = ns + ns / 2 - r;
+    const float amp = ns < 7 ? (float)ns / 7.0f : 1.0f;
+    int i, j, k, n = 0, nn, p = 0, at = 0, shape, tp = -1, tc = -1, tx = 0, prev = 0, pd = 0, ps = 0;
+    uint32_t cm = 0, tot = 0, x;
+    const uint8_t *t;
+    intensity = intensity < 0.0f ? 0.0f : intensity > 1.0f ? 1.0f : intensity;
+    for (k = 0; k < chord_nt; k++)               /* (the chord's tones, as degrees over its root) */
+        cm |= 1u << ((ld_cdeg(k) - r + ns) % ns);
+    cm |= 1u;
+    {                                            /* the rhythm */
+        const int tgt = (int)(2.0f + 4.0f * intensity + 0.5f);
+        for (j = 0; j < LD_NRHY; j++) {
+            const int e = ld_rhy_n(j) - tgt;
+            tot += e > -3 && e < 3 ? W[e < 0 ? -e : e] : 0u;
         }
-    } else {
-        m->n = (uint8_t)(1 + seq_rand(&ld_rng) % 3u);
-        for (i = 0; i < m->n; i++) {
-            m->off[i] = (int8_t)d;
-            m->dur[i] = (uint8_t)(4 + seq_rand(&ld_rng) % 13u);
-            d += (seq_rand(&ld_rng) & 1u ? 2 : -2) * (1 + (int)(seq_rand(&ld_rng) % 2u));
+        x = seq_rand(&ld_rng) % tot;
+        for (j = 0;; j++) {
+            const int e = ld_rhy_n(j) - tgt;
+            const uint32_t v = e > -3 && e < 3 ? W[e < 0 ? -e : e] : 0u;
+            if (x < v || j + 1 >= LD_NRHY)
+                break;
+            x -= v;
+        }
+        t = LD_RHY[j];
+        nn = ld_rhy_n(j);
+        for (n = 0; n < 7 && t[n]; n++) {
+            m->dur[n] = (uint8_t)(t[n] & ~LD_RST);
+            m->off[n] = t[n] & LD_RST ? (int8_t)LD_REST : 0;
         }
     }
+    x = seq_rand(&ld_rng) % (role == LR_CALL ? 100u : 80u);
+    shape = x < 50u ? 0 : x < 80u ? 1 : 2;       /* (an arch, a descent, a rise and hold) */
+    if (seq_rand(&ld_rng) % 100u < (uint32_t)(20.0f + 40.0f * intensity)) {   /* the tension note: where, which tone */
+        int best = -1, q = 0, cand = 0;
+        for (k = 1; k < ns; k++)                 /* (off the chord, a degree over a chord tone: the 6th, the 4th, ...) */
+            if (!(cm >> k & 1u) && cm >> (k - 1) & 1u) {
+                const int s = (ld_deg_raw(r + k) - ld_deg_raw(r) + 120) % 12,
+                          v = s == 8 || s == 9 ? 3 : s == 5 || s == 6 ? 2 : 1;
+                if (v > best)
+                    best = v, tc = k;
+            }
+        for (i = 0; i + 1 < n; i++) {            /* (an inner note a quarter or longer, a note after it, then another) */
+            if (m->off[i] == LD_REST)
+                continue;
+            if (q >= 1 && q + 2 < nn && m->dur[i] >= 4 && m->off[i + 1] != LD_REST &&
+                seq_rand(&ld_rng) % (uint32_t)++cand == 0u)
+                tp = q;
+            q++;
+        }
+        if (tc < 0)
+            tp = -1;
+    }
+    for (i = 0; i < n; i++) {                    /* the pitches */
+        const int dur = m->dur[i], strong = !(at & 7) || dur >= 8, held = dur >= LD_HELD,
+                  turn = p >= 2 && (pd >= 3 || pd <= -3 || ps >= 5 || ps <= -5) ? (pd > 0 ? -1 : 1) : 0;
+        int cen, d = 0;
+        float u, c;
+        if (m->off[i] == LD_REST) {
+            at += dur;
+            continue;
+        }
+        u = nn > 1 ? (float)p / (float)(nn - 1) : 0.0f;
+        c = shape == 0 ? 2.0f - 6.0f * (u < 0.5f ? 0.5f - u : u - 0.5f)    /* (-1 .. +2 .. -1) */
+          : shape == 1 ? 2.0f - 4.0f * u                                    /* (+2 .. -2) */
+                       : (u < 0.5f ? 6.0f * u : 3.0f) - 1.0f;              /* (-1 .. +2, held) */
+        c *= amp * (nn < 6 ? (float)(nn - 1) * 0.2f : 1.0f);
+        cen = c0 + (int)(c < 0.0f ? c - 0.5f : c + 0.5f);
+        if (p == tp) {                           /* the tension note: tone tc nearest the note before, from no leap down
+                                                  * (its step down then turns), turning if it must */
+            d = prev - 2;
+            while (((d % ns) + ns) % ns != tc)
+                d++;
+            if (turn && (turn < 0 ? d >= prev : d <= prev))
+                tp = -1;
+            else {
+                const int e = dur + dur / 2;
+                m->dur[i] = (uint8_t)(e > 32 ? 32 : e);
+                if (m->dur[i + 1] > dur / 2 + 1)     /* (the time from the note after: the beats after it kept) */
+                    m->dur[i + 1] = (uint8_t)(m->dur[i + 1] - dur / 2);
+                tx = d;
+            }
+        }
+        if (tp >= 0 && p == tp + 1)              /* its resolution: a degree down, a chord tone */
+            d = tx - 1;
+        else if (p != tp) {                     /* (the draw: nothing to draw from, proximity let go, then the turn) */
+            uint32_t wt[13];
+            int pass;
+            for (pass = 0, tot = 0; pass < 3 && !tot; pass++)
+                for (k = 0; k <= 2 * w; k++) {
+                    const int y = cen - w + k, cls = ((y % ns) + ns) % ns, f = y > prev ? y - prev : prev - y;
+                    uint32_t v = LD_R[k > w ? k - w : w - k];
+                    if (p && !pass)
+                        v *= f < 8 ? LD_P[f] : 0u;
+                    if (turn && pass < 2 && (turn > 0 ? y <= prev : y >= prev))
+                        v = 0u;
+                    v *= cm >> cls & 1u ? (strong && !cls ? 10u : strong ? 6u : 4u) : held ? 0u : strong ? 1u : 4u;
+                    tot += wt[k] = v;
+                }
+            x = tot ? seq_rand(&ld_rng) % tot : 0u;
+            for (k = 0; k < 2 * w && x >= wt[k]; k++)
+                x -= wt[k];
+            d = cen - w + k;
+        }
+        if (p) {
+            pd = d - prev;
+            ps = ld_deg_raw(r + d) - ld_deg_raw(r + prev);
+        }
+        prev = d;
+        m->off[i] = (int8_t)d;
+        at += m->dur[i];                         /* (as held: a tension's longer) */
+        p++;
+    }
+    m->n = (uint8_t)n;
     m->heard = 0;
 }
 
-static int ld_fold(int d)                        /* (an octave down or up if the register would clip it: its pitch
-                                                  * class kept, the ending heard as chosen) */
+static int ld_fold(int d)                        /* (a note an octave down or up if the register would clip it: its
+                                                  * pitch class kept) */
 {
     const int ns = nsteps ? nsteps : 7;
     while (ld_deg_raw(d) > 100)
@@ -1587,9 +1710,9 @@ static int ld_ending(int d, int closed)          /* the phrase's last degree d m
 
 static void lead_plan(void)                      /* the next phrase: the answer due, or a new pair's call */
 {
-    const int r = ld_cdeg(0);
+    const int r = ld_cdeg(0), ns = nsteps ? nsteps : 7;
     const ld_motif_t *m;
-    int i, last = -1;
+    int i, last = -1, lo = 999, hi = -999, sh = 0;
     ld_int = ar_sec == EN_SEC_SOLO ? 0.7f : ar_sec == EN_SEC_EMERGE ? 0.0f : 0.2f;   /* (Solo: the arc's rise later) */
     if (!ld_bank[0].n)
         ld_motif_new(&ld_bank[0], ld_int, LR_CALL);   /* (the theme, a piece's first idea) */
@@ -1618,12 +1741,27 @@ static void lead_plan(void)                      /* the next phrase: the answer 
             last = i;
     }
     if (last >= 0) {
-        ld_dg[last] = (int8_t)ld_fold(ld_ending(ld_dg[last], ld_role == LR_ANSWER));
+        ld_dg[last] = (int8_t)ld_ending(ld_dg[last], ld_role == LR_ANSWER);
         if (ld_role == LR_ANSWER)
             ld_dur[last] = (uint8_t)(ld_dur[last] < 16 ? 2 * ld_dur[last] : 32);
     }
-    for (i = 0; i < ld_n; i++)
-        ld_note[i] = (uint8_t)(ld_dg[i] == LD_REST ? 0 : ld_deg_note(ld_dg[i]));
+    for (i = 0; i < ld_n; i++)                   /* (its range) */
+        if (ld_dg[i] != LD_REST) {
+            const int x = ld_deg_raw(ld_dg[i]);
+            lo = x < lo ? x : lo;
+            hi = x > hi ? x : hi;
+        }
+    while (hi + sh > 100 && lo + sh - 12 >= 36)  /* the whole phrase an octave down or up if the register would clip it
+                                                  * (its shape kept, every note in the scale; a note folded alone only
+                                                  * if the phrase can't fit) */
+        sh -= 12;
+    while (lo + sh < 36 && hi + sh + 12 <= 100)
+        sh += 12;
+    for (i = 0; i < ld_n; i++) {
+        if (ld_dg[i] != LD_REST)
+            ld_dg[i] = (int8_t)ld_fold(ld_dg[i] + sh / 12 * ns);
+        ld_note[i] = (uint8_t)(ld_dg[i] == LD_REST ? 0 : ld_deg_raw(ld_dg[i]));
+    }
     ld_i = 0;
     ld_left = 0;
     en_lead_role = ld_role;

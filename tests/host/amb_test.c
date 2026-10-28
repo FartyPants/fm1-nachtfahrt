@@ -449,6 +449,34 @@ static int lg_chord(int croot, int *pcs, int *p9, int *p5)
         }
     return 0;
 }
+/* (the generator's tension note) from the log, counted in tn_held: a note held 6 sixteenths or more on a tone off
+ * the chord (the chord at its phrase's start), not its phrase's last; in tn_unres those whose next note isn't 1 or 2
+ * semitones under it, on a chord tone */
+static uint32_t tn_held, tn_unres;
+static void lg_tension(void)
+{
+    uint32_t i;
+    int pcs[4], p9, p5, n = 0;
+    for (i = 0; i < lg_n; i++) {
+        int k, ct = 0, nt = 0, dn;
+        if (lg_first(i))
+            n = lg_chord(lg[i].croot, pcs, &p9, &p5);
+        if (lg_last(i) || !n || lg[i].off == 0xFFFFFFFFu || lg[i].off - lg[i].on < 6u)
+            continue;
+        for (k = 0; k < n; k++)
+            ct |= lg[i].note % 12 == pcs[k], nt |= lg[i + 1].note % 12 == pcs[k];
+        if (ct)
+            continue;
+        tn_held++;
+        dn = (int)lg[i].note - (int)lg[i + 1].note;
+        if (dn < 1 || dn > 2 || !nt) {
+            if (!tn_unres)
+                printf("  held %u (%u sixteenths) then %u (chord root %d)\n", lg[i].note, lg[i].off - lg[i].on,
+                       lg[i + 1].note, pcs[0]);
+            tn_unres++;
+        }
+    }
+}
 /* from the log: the first entry of the first phrase with role `role` at or after entry i (lg_n: none) */
 static uint32_t lg_find(uint32_t i, int role)
 {
@@ -1614,6 +1642,13 @@ int main(void)
         lead_metrics(1800.0f, &m);
         lm_print("test_lead_metrics: 30 min of Stratosfear's Lead, Motion 100", &m);
         CHECK(m.notes > 100u && m.phrases > 20u, "test_lead_metrics: %u notes, %u phrases", m.notes, m.phrases);
+        /* (the generator: mostly steps, as Temperley's Essen lines; after a leap of 5 semitones or more, back the
+         * other way at least 60% of the time, over 10 leaps or more) */
+        CHECK(m.step_share > 0.5f && m.intervals >= 100u, "test_motif_steps: %.1f%% of %u intervals 2 semitones or less",
+              (double)(100.0f * m.step_share), m.intervals);
+        CHECK(m.leap_turn >= 0.6f && m.leaps >= 10u, "test_motif_leap_turn: a turn after %.1f%% of %u leaps",
+              (double)(100.0f * m.leap_turn), m.leaps);
+        lg_tension();
     }
 
     /* (BERLIN, the Lead's memory) pairs: 20 minutes in D minor, the walk's chords, Motion 100, Lead in 0, Phrases 100.
@@ -1657,7 +1692,8 @@ int main(void)
                     bad_call++;
                 }
                 if (j + 1 >= lg_n) {
-                    if (lg[j].off == 0xFFFFFFFFu || en_bars - lg[j].off > 40u)
+                    if (lg[j].off != 0xFFFFFFFFu && en_bars - lg[j].off > 40u)   /* (a call still sounding as the run
+                                                                                 * ends: its answer not due yet) */
                         unanswered++;
                 } else if (lg[j + 1].role != LR_ANSWER) {
                     unanswered++;
@@ -1678,6 +1714,9 @@ int main(void)
               "test_pairs: %u calls, %u answers, %u unanswered, %u answered late", calls, answers, unanswered, late);
         CHECK(!bad_call && !bad_ans && !nochord, "test_pairs: endings: %u calls not open, %u answers not closed (%u "
               "phrases on a chord off the scale)", bad_call, bad_ans, nochord);
+        lg_tension();
+        CHECK(tn_held >= 10u && !tn_unres, "test_motif_tension: %u held tones off the chord (this run and "
+              "test_lead_metrics'), %u not resolved a step down onto it", tn_held, tn_unres);
     }
 
     /* (BERLIN, the Lead's memory) a chord change in the middle of a motif: its notes rendered at the phrase's start
@@ -1784,6 +1823,90 @@ int main(void)
             after += lg[i].sec != EN_SEC_EMERGE;
         }
         CHECK(!in_emerge && after, "test_lead_emerge_silent: %u Lead notes in Emerge, %u after", in_emerge, after);
+    }
+
+    /* (BERLIN, the Lead's memory) tiny scales: pools of 1, 2 and 3 notes and the minor pentatonic, on D; 150 s each,
+     * Lead in 0, Phrases 100, Motion 100: the Lead plays, every note in the scale and within 36..100, one at a time,
+     * nothing left sounding when stopped (its weights and its step down onto a chord tone never stuck) */
+    {
+        const uint32_t POOLS[4] = {0x001u, 0x081u, 0x089u, EN_MODE_POOL[MODE_PENT_MIN]};
+        int p;
+        for (p = 0; p < 4; p++) {
+            uint32_t i, range = 0, left = 0, k;
+            fresh();
+            ld_pool = POOLS[p];
+            en_set(P_ROOT, 2);
+            en_pool(ld_pool);
+            en_set(P_LEAD, 60);
+            en_set(P_LDIN, 0);
+            en_set(P_LDENS, 100);
+            en_set(P_MOTION, 100);
+            ld_ons = ld_outscale = ld_mono_bad = ld_on_now = 0;
+            lg_n = 0, lg_open = -1;
+            en_play(1);
+            run(150.0f);
+            en_play(0);
+            run(1.0f);
+            for (i = 0; i < lg_n; i++)
+                range += lg[i].note < 36 || lg[i].note > 100;
+            for (k = 0; k < 128u; k++)
+                left += sounding[2][k] != 0;
+            CHECK(ld_ons >= 4u && !ld_outscale && !ld_mono_bad && !range && !left,
+                  "test_motif_tiny_scale: pool %03x: %u notes, %u off the scale, %u over another, %u outside 36..100, "
+                  "%u left sounding", ld_pool, ld_ons, ld_outscale, ld_mono_bad, range, left);
+        }
+        ld_pool = 0xFFFu;
+    }
+
+    /* (BERLIN, the Lead's memory) a phrase the register would clip: F minor, Lead oct +1 and a motif two octaves up
+     * (offsets 7 9 11 14 12 10 9): the whole phrase an octave down, not its high notes clamped at 100 (an E, off the
+     * scale); then Lead oct -2 and the motif two octaves down: the phrase up. The call's and the answer's notes within
+     * 36..100 and in the scale, their steps (but the last, the ending's) the motif's */
+    {
+        static const int8_t HI[7] = {7, 9, 11, 14, 12, 10, 9}, LO[7] = {-7, -9, -11, -14, -12, -10, -9};
+        static const uint8_t DUR[7] = {4, 4, 4, 4, 4, 4, 8};
+        const uint32_t pl = EN_MODE_POOL[MODE_AEOLIAN];
+        int pass, ok[2] = {0, 0}, got[2] = {0, 0};
+        fresh();
+        en_set(P_ROOT, 5);
+        en_pool(pl);
+        lg_pool = pl, lg_root = 5;
+        en_set(P_LEAD, 60);
+        en_set(P_LDIN, 0);
+        en_set(P_LDENS, 100);
+        en_set(P_MOTION, 0);
+        en_play(1);
+        run(1.0f);
+        for (pass = 0; pass < 2; pass++) {
+            const int8_t *off = pass ? LO : HI;
+            uint32_t c = 0, a, k, j;
+            uint8_t ph;
+            en_set(P_LOCT, pass ? -2 : 1);
+            lg_n = 0, lg_open = -1;
+            en_lead_motif(1, off, DUR, 7);
+            got[pass] = lg_wait(LR_CALL, 120.0f);
+            ph = en_lead_phr;
+            run(25.0f);
+            if (!got[pass])
+                continue;
+            while (c < lg_n && lg[c].phr != ph)
+                c++;
+            a = lg_find(c + 1u, LR_ANSWER);
+            ok[pass] = a == c + 7u && a + 7u <= lg_n && lg_last(c + 6u) && lg_last(a + 6u);
+            for (j = 0; j < 2u && ok[pass]; j++) {
+                const uint32_t s = j ? a : c;
+                for (k = 0; k < 7u; k++)
+                    ok[pass] &= lg[s + k].note >= 36 && lg[s + k].note <= 100 && lg_deg(lg[s + k].note) > -99;
+                for (k = 0; k + 2u < 7u; k++)
+                    ok[pass] &= lg_deg(lg[s + k + 1u].note) - lg_deg(lg[s + k].note) == off[k + 1u] - off[k];
+            }
+            if (!ok[pass])
+                for (k = c; k < lg_n && k < c + 14u; k++)
+                    printf("  pass %d: note %u (degree %d), role %u\n", pass, lg[k].note, lg_deg(lg[k].note), lg[k].role);
+        }
+        en_set(P_LOCT, 0);
+        CHECK(got[0] && got[1] && ok[0] && ok[1], "test_lead_clip: high: a call %d, kept %d; low: a call %d, kept %d",
+              got[0], ok[0], got[1], ok[1]);
     }
 
     /* (BERLIN) the echo ping-pongs: one note into it alone (no repeats, no plate, no cloud, the others silent), Width
