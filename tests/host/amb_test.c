@@ -2719,6 +2719,105 @@ int main(void)
         run(4.0f);
     }
 
+    /* (BERLIN, the Lead's memory, review 1 of Task 5) only what the Lead plays from the keys is written: D Aeolian at
+     * 120, Flow, the chord held. (e) 3 keys (lengths 4 2 6), the Lead muted, a 4th key held 8 sixteenths and let go:
+     * the theme the 3, the last still 6 (the unheard key neither lengthens it nor is its quiet's). (f) 3 keys, STOP,
+     * PLAY, a key held 8: the buffer empty at the STOP, nothing taken (the theme as before). (g) MIDI out off and on
+     * in the middle of the keys' call: nothing left sounding */
+    {
+        static const int FG[4] = {2, 4, 3, 5}, FD[4] = {4, 2, 6, 8};
+        const uint32_t pl = EN_MODE_POOL[MODE_AEOLIAN];
+        int8_t off0[8], off[8];
+        uint8_t dur0[8], dur[8];
+        int nt, n0, cs, got, b, left;
+        uint8_t p0;
+        fresh();
+        en_set(P_ROOT, 2);
+        en_pool(pl);
+        lg_pool = pl, lg_root = 2;
+        en_set(P_TEMPO, 120);
+        en_set(P_LEAD, 60);
+        en_set(P_LDIN, 0);
+        en_set(P_MOTION, 0);
+        en_set(P_DRIFT, 6);
+        en_play(1);
+        run(12.0f);
+        keys_play(FG, FD, 3);                    /* (e) */
+        en_mute(EN_M_BASS);
+        keys_now(FG + 3, FD + 3, 1);
+        en_mute(0);
+        run(8.0f);
+        nt = en_lead_theme(off, dur);
+        CHECK(nt == 3 && dur[0] == 4 && dur[1] == 2 && dur[2] == 6,
+              "test_capture_unwritten: 3 keys, a 4th while the Lead is muted: the theme %d entries, lengths %d %d %d "
+              "(4 2 6)", nt, dur[0], dur[1], dur[2]);
+        n0 = en_lead_theme(off0, dur0);          /* (f) */
+        keys_play(FG, FD, 3);
+        en_play(0);
+        run(0.3f);
+        cs = en_lead_cap();
+        en_play(1);
+        keys_now(FG + 3, FD + 3, 1);
+        run(8.0f);
+        nt = en_lead_theme(off, dur);
+        CHECK(!cs && nt == n0 && !memcmp(off, off0, (size_t)n0) && !memcmp(dur, dur0, (size_t)n0),
+              "test_capture_unwritten: 3 keys, STOP, PLAY, a key: %d in the buffer at the STOP (0); the theme %d "
+              "entries, was %d (as it was)", cs, nt, n0);
+        memset(sounding[2], 0, sizeof sounding[2]);   /* (g) */
+        ld_on_now = 0;
+        p0 = en_lead_phr;
+        keys_play(FG, FD, 4);
+        for (got = 0, b = 0; b < 2000 && !got; b++) {
+            run(256.0f / 44100.0f + 1e-6f);
+            got = en_lead_phr != p0 && en_lead_slot == 0 && en_lead_role == LR_CALL;
+        }
+        run(0.3f);
+        en_set(P_MIDI, 0);
+        run(0.4f);
+        en_set(P_MIDI, 1);
+        run(20.0f);
+        en_mute(EN_M_BASS);
+        run(0.05f);
+        left = ld_left_on();
+        en_mute(0);
+        CHECK(got && !left,
+              "test_capture_unwritten: MIDI out off and on in the keys' call (begun %d): %d left sounding", got, left);
+    }
+
+    /* (BERLIN, the Lead's memory, review 1 of Task 5: the controller's ruling) a theme the player played comes back at
+     * the arc's moments even under Memory 20 (spec 2's anti-goal: a theme the user played thrown away at once): D
+     * Aeolian at 120, Motion 100, Lead in 0, Memory 10; 4 keys in Flow; within 6 minutes, after the keys' own pair, a
+     * call on the theme (slot 0) with the figure's intervals (its first return: not yet varied) */
+    {
+        static const int FG[4] = {7, 9, 8, 11}, FD[4] = {4, 2, 2, 8};
+        uint32_t i, s, back = 0, at = 0;
+        fresh();
+        lg_pool = EN_MODE_POOL[MODE_AEOLIAN], lg_root = 2;
+        en_set(P_ROOT, 2);
+        en_pool(lg_pool);
+        en_set(P_TEMPO, 120);
+        en_set(P_LEAD, 60);
+        en_set(P_LDIN, 0);
+        en_set(P_MOTION, 100);
+        en_set(P_LMEM, 10);
+        en_play(1);
+        run(6.0f);
+        bar_next();
+        lg_n = 0, lg_open = -1;
+        s = keys_now(FG, FD, 4);
+        run(360.0f);
+        for (i = lg_find(4, LR_CALL); i < lg_n && !back; i = lg_find(i + 1u, LR_CALL)) {
+            int k, ok = lg[i].slot == 0 && lg[i].on > s + 64u && i + 4u <= lg_n;
+            for (k = 0; k < 2 && ok; k++)   /* (the last note the ending's) */
+                ok &= lg_deg(lg[i + (uint32_t)k + 1u].note) - lg_deg(lg[i + (uint32_t)k].note) == FG[k + 1] - FG[k];
+            if (ok)
+                back = 1, at = (lg[i].on - s) / 16u;
+        }
+        CHECK(back, "test_capture_memory_low: Memory 10: the keys' theme not heard again in 6 minutes");
+        printf("  test_capture_memory_low: the keys' theme back %u bars after them\n", at);
+        en_set(P_LMEM, en_param_info(P_LMEM)->def);
+    }
+
     /* (BERLIN, the Lead's memory: the device's audio block near its limit) no tick of the grid draws more than one
      * motif: Stratosfear (no intro) 90 s, Motion 100, Lead in 0, Memory 85; a piece change in the middle of a call to
      * Sunrain, 90 s; 4 white keys captured there, 60 s; Cyborg 60 s. (The engine counts its draws a tick, the most) */
@@ -2739,7 +2838,16 @@ int main(void)
         en_set(P_LDIN, 0);
         run(90.0f);
         keys_play(FG, FD, 4);
-        run(60.0f);
+        run(4.0f);
+        {                                        /* (the capture taken: its lengths, its intervals) */
+            int8_t off[8];
+            uint8_t dur[8];
+            int nt = en_lead_theme(off, dur), k, ok = nt == 4;
+            for (k = 0; k < 4 && ok; k++)
+                ok &= dur[k] == FD[k] && (!k || off[k] - off[k - 1] == FG[k] - FG[k - 1]);
+            CHECK(ok, "test_lead_one_draw: the keys' figure not taken in Sunrain (the theme %d entries)", nt);
+        }
+        run(56.0f);
         piece(7);
         en_set(P_LDIN, 0);
         run(60.0f);

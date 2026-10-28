@@ -227,10 +227,11 @@ play are kept, at most eight notes and rests) and pause for two beats: at the ne
 you, in the octave you played them, as its call (its last note on an open ending), then its answer (closed, held
 longer). It does this in any part of the piece, Emerge too, even before **Lead in**: you asked by playing. From
 then on your notes are the piece's theme: they come back where the theme does, over whatever chord is playing, varied
-a little at a time like any of its ideas. One or two notes are just played, nothing is kept. Your notes sound as you
-play them; the Lead counts them on the grid, to the nearest sixteenth. PANIC forgets notes you are in the middle of
-playing, and an answer not yet begun (a theme already taken stays: the Lead plays it next, in its own time); a new
-piece starts with new ideas.
+a little at a time like any of its ideas, even when the Lead otherwise keeps little (a theme you played is never thrown
+away). One or two notes are just played, nothing is kept; notes played while the Lead is muted aren't kept either. Your
+notes sound as you play them; the Lead counts them on the grid, to the nearest sixteenth. Stopping the music, or PANIC,
+forgets notes you are in the middle of playing; PANIC also drops an answer not yet begun (a theme already taken stays:
+the Lead plays it next, in its own time). A new piece starts with new ideas.
 
 **The Atmosphere** (SAVE) is a background: **None**, **Wind** (a breath of noise through a narrow band, swept
 slowly), **Surf** (waves), **Space** (chirps and bursts, far away), **Air**, or **Tape** (a crackle ringing on
