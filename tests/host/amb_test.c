@@ -42,10 +42,39 @@ static int sounding[16][128];
  * in vel_bad); the Sequence's note-ons by the arc's section, and all of them */
 static int vel_lo = -1;
 static uint32_t vel_bad, sec_ons[EN_NSEC], ch2_ons;
+/* (BERLIN, the Lead's memory) the Lead's notes (channel 3) logged in order: onset and end (sixteenths; end ~0u: still
+ * sounding), the note, the phrase it belongs to (a new one after a bar or more of the Lead's silence), the section */
+#define LGN 16384
+static struct {
+    uint32_t on, off, phr;
+    uint8_t note, sec;
+} lg[LGN];
+static uint32_t lg_n, lg_phr, lg_last_off = 0xFFFFFFFFu;
+static int lg_open = -1;                         /* (the note sounding, its entry; -1: none) */
+static void lg_end(void)
+{
+    if (lg_open >= 0) {
+        lg[lg_open].off = en_bars;
+        lg_last_off = en_bars;
+    }
+    lg_open = -1;
+}
 void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2)
 {
     uint32_t b = en_bars / 16u;
     midi_count++;
+    if (st == 0x92u && d2 > 0u) {
+        lg_end();
+        if (lg_n < LGN) {
+            if (!lg_n || lg_last_off == 0xFFFFFFFFu || en_bars - lg_last_off >= 16u)
+                lg_phr++;
+            lg[lg_n].on = en_bars, lg[lg_n].off = 0xFFFFFFFFu, lg[lg_n].phr = lg_phr;
+            lg[lg_n].note = (uint8_t)d1, lg[lg_n].sec = en_section;
+            lg_open = (int)lg_n++;
+        }
+    } else if (st == 0x82u || (st == 0x92u && !d2) || (st == 0xB2u && d1 == 123u)) {
+        lg_end();
+    }
     if ((st & 0xF0u) == 0x90u && d2 > 0u) {
         sounding[st & 15u][d1 & 127u]++;
         if ((st & 15u) == 1u) {
@@ -327,6 +356,87 @@ static int chord_now(uint32_t pl, int root, int *pcs, char *name)
             return n;
         }
     return 0;
+}
+
+/* (BERLIN, the Lead's memory) a note as a scale degree from the root (any octave: 7 a degree an octave up, in a
+ * 7-note scale), in the pool lg_pool on root lg_root; -999 if it isn't in the scale */
+static uint32_t lg_pool = 0xAADu;
+static int lg_root;
+static int lg_deg(int note)
+{
+    int st[12], m = en_scale(lg_pool, st), r = note - lg_root + 120, k;
+    for (k = 0; k < m; k++)
+        if (st[k] == r % 12)
+            return (r / 12 - 10) * m + k;
+    return -999;
+}
+
+/* the log cleared, secs played, then the Lead's numbers (the report's "logging four numbers"): the share of its
+ * intervals within a phrase of 2 semitones or less; after a leap of 5 or more, how often the next interval turns
+ * back; and how often a phrase recurs: its (degree interval, onset gap, last note's length) string the same as one
+ * of the 4 phrases before it's, exactly or transposed */
+typedef struct {
+    float step_share, leap_turn, pair_recur;
+    uint32_t notes, phrases, intervals, leaps, compared;
+} lm_t;
+static int lg_first(uint32_t i) { return !i || lg[i - 1].phr != lg[i].phr; }
+static int lg_last(uint32_t i) { return i + 1 >= lg_n || lg[i + 1].phr != lg[i].phr; }
+static int lg_same(uint32_t a, uint32_t b)       /* the phrases from entries a and b: the same string (transposed) */
+{
+    for (;; a++, b++) {
+        const int la = lg_last(a), lb = lg_last(b);
+        if (la != lb || lg[a].off == 0xFFFFFFFFu || lg[b].off == 0xFFFFFFFFu)
+            return 0;
+        if (la)
+            return lg[a].off - lg[a].on == lg[b].off - lg[b].on;
+        if (lg[a + 1].on - lg[a].on != lg[b + 1].on - lg[b].on ||
+            lg_deg(lg[a + 1].note) - lg_deg(lg[a].note) != lg_deg(lg[b + 1].note) - lg_deg(lg[b].note) ||
+            lg_deg(lg[a].note) < -99 || lg_deg(lg[b].note) < -99)
+            return 0;
+    }
+}
+static void lead_metrics(float secs, lm_t *m)
+{
+    uint32_t i, steps = 0, turns = 0, recur = 0, starts[4] = {0, 0, 0, 0}, ns = 0;
+    memset(m, 0, sizeof *m);
+    lg_n = 0, lg_open = -1, lg_last_off = 0xFFFFFFFFu;
+    run(secs);
+    m->notes = lg_n;
+    for (i = 0; i < lg_n; i++) {
+        if (lg_first(i)) {                       /* a phrase: the same as one of the 4 before it? */
+            uint32_t k, hit = 0;
+            for (k = 0; k < ns && k < 4u; k++)
+                hit |= (uint32_t)lg_same(starts[k], i);
+            if (ns) {
+                m->compared++;
+                recur += hit;
+            }
+            for (k = 3; k > 0; k--)
+                starts[k] = starts[k - 1];
+            starts[0] = i;
+            ns++;
+            m->phrases++;
+        }
+        if (!lg_last(i)) {
+            const int d = (int)lg[i + 1].note - (int)lg[i].note;
+            m->intervals++;
+            steps += d <= 2 && d >= -2;
+            if ((d >= 5 || d <= -5) && !lg_last(i + 1)) {
+                const int e = (int)lg[i + 2].note - (int)lg[i + 1].note;
+                m->leaps++;
+                turns += d > 0 ? e < 0 : e > 0;
+            }
+        }
+    }
+    m->step_share = m->intervals ? (float)steps / (float)m->intervals : 0.0f;
+    m->leap_turn = m->leaps ? (float)turns / (float)m->leaps : 0.0f;
+    m->pair_recur = m->compared ? (float)recur / (float)m->compared : 0.0f;
+}
+static void lm_print(const char *what, const lm_t *m)
+{
+    printf("  %s: %u notes, %u phrases; steps (<= 2 semitones) %.1f%% of %u intervals, a turn after a leap %.1f%% of %u, "
+           "recurring %.1f%% of %u\n", what, m->notes, m->phrases, (double)(100.0f * m->step_share), m->intervals,
+           (double)(100.0f * m->leap_turn), m->leaps, (double)(100.0f * m->pair_recur), m->compared);
 }
 
 int main(void)
@@ -1450,6 +1560,23 @@ int main(void)
     peak = 0.0f;
     run(60.0f);
     CHECK(!bad && peak < 0.95f, "test_lead_glide_bounded: peak %f", (double)peak);
+
+    /* (BERLIN, the Lead's memory) the Lead's numbers over 30 minutes of Stratosfear, Motion 100 (Solo comes every few
+     * sections): printed (today's the baseline; the plan's later tasks assert them) */
+    {
+        int16_t pp[P_NPARAMS];
+        uint16_t pl;
+        lm_t m;
+        fresh();
+        piece(4);
+        en_piece(4, pp, &pl);
+        lg_pool = pl, lg_root = pp[P_ROOT];
+        en_set(P_MOTION, 100);
+        en_play(1);
+        lead_metrics(1800.0f, &m);
+        lm_print("test_lead_metrics: 30 min of Stratosfear's Lead, Motion 100", &m);
+        CHECK(m.notes > 100u && m.phrases > 20u, "test_lead_metrics: %u notes, %u phrases", m.notes, m.phrases);
+    }
 
     /* (BERLIN) the echo ping-pongs: one note into it alone (no repeats, no plate, no cloud, the others silent), Width
      * 100: its first repeat at least 6 dB louder on one side, its second on the other */
