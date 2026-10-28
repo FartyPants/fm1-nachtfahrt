@@ -69,3 +69,23 @@ minute of Timewind, Rubycon and Mirage is mostly Emerge (lighter); the stress ru
 The effects scenario (`tests/scenarios/effects.amb`: each of the sixteen held in turn, and all sixteen at once)
 ran at 0.98%. **Everything is within the 1.10% budget; nothing was cut.** The device's own readings wait for the
 device build (PLAN.md).
+
+# BERLIN with the filter motion (measured 2026-10-27, filter-motion Task 7)
+
+Same machine and method. No Emerge any more: every piece plays all its layers from the first bar (the Intros only
+close their filters), so the first minute is heavier than in 0.1's table above.
+
+| Script | Piece | Runs | Median | Peak |
+|---|---|---|---|---|
+| baseline_0 | Timewind | 0.71 0.73 0.72 | 0.72 | −6.4 dBFS |
+| baseline_1 | Wahnfried | 0.64 0.61 0.62 | 0.62 | −8.8 dBFS |
+| baseline_2 | Phaedra | 0.80 0.83 0.81 | 0.81 | −5.0 dBFS |
+| baseline_3 | Rubycon | 0.70 0.70 0.72 | 0.70 | −5.2 dBFS |
+| baseline_4 | Stratosfear | 0.80 0.83 0.81 | 0.81 | −3.9 dBFS |
+| baseline_5 | Sunrain | 0.89 0.94 0.87 | 0.89 | −3.9 dBFS |
+| baseline_6 | Mirage | 1.02 1.01 1.01 | **1.01** | −5.0 dBFS |
+| baseline_7 | Cyborg | 0.57 0.59 0.57 | 0.57 | −14.8 dBFS |
+| baseline_stress | Sunrain: Density, Repeat A and B, Sequence 2, Phaser, Phrases at 100 | 0.94 0.93 0.99 | 0.94 | −1.3 dBFS |
+
+**Every median within the 1.10% budget** (the heaviest, Mirage, 1.01: 0.09 left for the Lead-memory plan, whose own
+budget is the same 1.10%).
