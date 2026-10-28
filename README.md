@@ -13,8 +13,11 @@ slowly evolving textures, a strong sense of space. It plays itself from the mome
 - a **Lead**: one gliding voice (Odyssey, Mini, Flute, Theremin, Synthi) playing long, dreamy phrases deep in
   the reverb and the echo, which you can also play on the white keys, in the scale;
 - an **Atmosphere**: Wind, Surf, Space, Air or Tape (or none);
-- an **arc**: a piece emerges from the drone, flows, lets the Lead take over, drifts, and ends (a crash into
-  the echo, a supernova of feedback, or a fade) before it begins again.
+- an **arc**: a piece opens from the drone (each layer's filter rising from closed), flows, lets the Lead take
+  over and crosses a bridge in the middle, where the layers' filters part and come together. It never ends by
+  itself: it repeats for ever;
+- **filter motion**: every layer's filter moves on its own clock, always relative to where you've set its
+  Cutoff, so the layers diverge and converge, and you can turn the knob at any moment. The screen shows it.
 
 You don't play it, you steer it: pick a piece, change its key and tempo, thin or fill the sequences, push the
 echo, mute and solo the layers, play the Lead.
@@ -30,14 +33,14 @@ built for or run on an FM-1 yet (see [PLAN.md](PLAN.md)).
 
 | # | Piece | After | Key, tempo | |
 |---|---|---|---|---|
-| 1 | Timewind | Schulze, *Bayreuth Return* | D minor, 96 | One sequence, an organ through the phaser, a long emergence, ends in a crash |
-| 2 | Wahnfried | Schulze, *Wahnfried 1883* | B♭ Dorian, beatless | Drifting layers, the roots walking with no home, a screaming lead |
-| 3 | Phaedra | Tangerine Dream, *Phaedra* | D minor, 149 | A Moog bass line of 16 over a second line of 15, flutes, much filter movement |
-| 4 | Rubycon | Tangerine Dream, *Rubycon* | F minor, 144 | Dark organ, two sequences of 8 and 7 rising out of the drone |
-| 5 | Stratosfear | Tangerine Dream, *Stratosfear* | E minor, 138 | Brighter and driving, two sequences interlocking, the Lead forward |
-| 6 | Sunrain | Ashra, *New Age of Earth* | D major, 130 | The most hopeful: both echo repeats at full, bright strings, surf |
-| 7 | Mirage | Schulze, *Mirage* | F♯ minor, 95 | Icy glass sequences, a deep phaser, a long reverb, sparse |
-| 8 | Cyborg | Schulze, *Cyborg* | C Phrygian, beatless | Early and raw: deep organ drones beating, no sequence |
+| 1 | Timewind | Schulze, *Bayreuth Return* | D minor, 96 | One sequence, an organ through the phaser, a long opening (the Sequence's filter takes 32 bars to open) |
+| 2 | Wahnfried | Schulze, *Wahnfried 1883* | B♭ Dorian, beatless | Drifting layers, the roots walking with no home, a screaming lead; the Drone's filter is the main movement |
+| 3 | Phaedra | Tangerine Dream, *Phaedra* | D minor, 149 | A Moog bass line of 16 over a second line of 15, flutes, much filter movement; the Sequence opens over 16 bars, Sequence 2 is straight in |
+| 4 | Rubycon | Tangerine Dream, *Rubycon* | F minor, 144 | Dark organ, two sequences of 8 and 7 rising out of the drone: the Sequence opens over 16 bars, Sequence 2 after it, over 32 |
+| 5 | Stratosfear | Tangerine Dream, *Stratosfear* | E minor, 138 | Brighter and driving, two sequences interlocking, straight in, the Lead forward |
+| 6 | Sunrain | Ashra, *New Age of Earth* | D major, 130 | The most hopeful: both echo repeats at full, bright strings, surf; straight in |
+| 7 | Mirage | Schulze, *Mirage* | F♯ minor, 95 | Icy glass sequences opening slowly (16 and 24 bars), a deep phaser, a long reverb, sparse |
+| 8 | Cyborg | Schulze, *Cyborg* | C Phrygian, beatless | Early and raw: deep organ drones beating, no sequence; the Drone's filter moves widely |
 
 The names are working titles and the keys and tempos are starting points (from analysis sites, to tune by ear).
 BERLIN is not connected with any of these artists.
@@ -46,17 +49,18 @@ BERLIN is not connected with any of these artists.
 
 | | |
 |---|---|
-| White keys | Play the Lead, in the piece's scale (the key it sounds is lit); black keys do nothing |
+| White keys | Play the Lead, in the piece's scale (the key it sounds is lit) |
+| Black keys | Eleven effects, each while held: Take-off, Supernova, Twitter, Repeat, Swell, Freeze, Octave, Return, then Rise, Close, Transpose (in PERFORM: the solos) |
 | PLAY · REC · EDIT | Play / rest · a tap: hold (the echo repeats what it holds), held: the effects grid (16 effects on the white keys) · a tap: the Chords page, held: the next chord |
 | SEL | PERFORM: the knobs Filter, Wet, Energy, Sweep; white 1–5 mute the Drone, Sequence, Lead, Sequence 2, Atmosphere; black 1–5 solo them; white 6 held: the levels; white 7–11 held: Sweep, Open, Shut, Drop (both sequences out), Echo. Held: Lock |
 | HOME | The Berlin page (Filter, Evolve, Motion, Drift); again, the Key page (Tempo, Root, Mode, Transpose) |
-| ENV | The Drone (Pedal, Reso, Phaser, Attack); again, its sound (Colour, Release, Reverb, Echo) |
-| ARP | The Sequence (Density, Octave, Length, Grid); again, its sound (Cutoff, Decay, Reverb, Echo); again, its Repeats (Repeat A, A time, Repeat B, B time) |
-| LFO | The Lead (Phrases, Octave, Glide, Vibrato); again, its sound (Tone, Attack, Reverb, Echo) |
-| SEQ | Sequence 2 (Chance, Octave, Length, Level); again, its sound; again, the Pattern page (write the steps on the keys) |
-| SAVE | The Atmosphere (Density, Width, Drift, Air); again, its sound (Colour, Ring, Reverb, Echo) |
+| ENV | The Drone (Pedal, Reso, Phaser, Attack); again, its sound (Colour, Release, Reverb, Echo); again, its Move page (Width, Time, Rate, Intro) |
+| ARP | The Sequence (Density, Octave, Length, Grid); again, its sound (Cutoff, Decay, Reverb, Echo); again, its Repeats (Repeat A, A time, Repeat B, B time); again, its Move page |
+| LFO | The Lead (Phrases, Octave, Glide, Vibrato); again, its sound (Tone, Attack, Reverb, Echo); again, its Move page |
+| SEQ | Sequence 2 (Chance, Octave, Length, Level); again, its sound; again, the Pattern page (write the steps on the keys); again, its Move page |
+| SAVE | The Atmosphere (Density, Width, Drift, Air); again, its sound (Colour, Ring, Reverb, Echo); again, its Move page |
 | FX | Space (Echo, Echo time, Feedback, Reverb); again, the Echo page (Blur, Tone, Width, Size) |
-| GLO | Setup (Tune, MIDI out, Lights, Save); again, the Arc (Emerge, Seq2 in, Lead in, Arc). Held: save; held on: the piece back to its recipe |
+| GLO | Setup (Tune, MIDI out, Lights, Save); again, the Arc (Lead in, Bridge, Arc). Held: save; held on: the piece back to its recipe |
 | ALGORITHM | On a layer's page, its voice (the Atmosphere: its character) |
 | PRESETS | The piece |
 | OCT− / OCT+ | On a layer's page, its level; both together, quickly: mute it |

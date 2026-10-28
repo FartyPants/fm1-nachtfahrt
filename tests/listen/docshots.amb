@@ -1,5 +1,5 @@
-# the manual's screenshots (BERLIN): Stratosfear playing (no Emerge: both sequences from the first bar), each page,
-# PERFORM, hold, the effects grid; build/host/amb_host tests/listen/docshots.amb docs/img
+# the manual's screenshots (BERLIN): Stratosfear playing (straight in: both sequences from the first bar), each page,
+# the Move pages, PERFORM, hold, the effects grid, the launch screen; build/host/amb_host tests/listen/docshots.amb docs/img
 wait 300
 turn PRESET 4
 wait 20000
@@ -15,12 +15,21 @@ wait 400
 shot screen-sequence.png
 tap ARP
 wait 400
+shot screen-seqsound.png
 tap ARP
 wait 400
 shot screen-repeats.png
+tap ARP
+wait 400
+shot screen-seqmove.png
 tap LFO
 wait 400
 shot screen-lead.png
+tap LFO
+wait 400
+tap LFO
+wait 400
+shot screen-leadmove.png
 tap SEQ
 wait 400
 shot screen-seq2.png
@@ -55,3 +64,6 @@ shot screen-grid.png
 key w12 up
 release REC
 wait 300
+# the launch screen (its last frame)
+splash 25
+shot screen-launch.png

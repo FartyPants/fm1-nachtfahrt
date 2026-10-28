@@ -5,8 +5,8 @@ music of Tangerine Dream, Klaus Schulze and Ashra: long, hypnotic pieces built o
 sequences, slowly evolving textures and a lot of space. It plays itself from the moment it's switched on.
 A sequence of plucked notes runs over a drone, its notes repeated by the echo; a second sequence, often a
 step shorter, drifts against it; a lead sings long phrases far back in the reverb; wind, surf or the sounds
-of space pass behind. Each piece emerges from the drone, flows, gives the lead its turn, drifts, ends and
-begins again. You don't play it, you steer it: pick a piece and a key, thin or fill the sequences, open the
+of space pass behind. Each piece opens from the drone, flows, gives the lead its turn, crosses a bridge, and goes on for ever;
+every layer's filter moves slowly on its own. You don't play it, you steer it: pick a piece and a key, thin or fill the sequences, open the
 filter, push the echo, mute and solo the layers, or play the lead yourself on the white keys.
 
 BERLIN is a fork of DUB-1, itself a fork of AMB-1, Charles Vestal's generative ambient firmware for the FM-1.
@@ -25,7 +25,7 @@ built for or run on an FM-1.
 3. Controls
 4. The screen
 5. The layers
-6. The arc
+6. The arc and the filter motion
 7. The pieces
 8. The pages
 9. The effects grid
@@ -62,24 +62,30 @@ updater, M-UPGRADE, puts the stock firmware back.
 
 BERLIN starts playing as soon as it's on. A few minutes with it:
 
-1. **Listen.** The first piece, Timewind (D minor, 96), begins with only its drone, an organ through a
-   phaser, and the wind. Its sequence fades in through a closed filter over the first two minutes or so.
-   Then the sequence runs, its notes repeated by the echo, and later the lead comes in. Turn MASTER for the
-   volume.
+1. **Listen.** The first piece, Timewind (D minor, 96), begins with its drone, an organ through a
+   phaser, and the wind. Its sequence is there from the start, behind a closed filter that opens over the
+   first 32 bars (about 80 seconds). Then the sequence runs, its notes repeated by the echo, and later the
+   lead comes in. Nothing is hidden: no layer is turned down behind your back, only filters move. Turn
+   MASTER for the volume.
 2. **Try another piece.** Turn PRESETS. Each of the eight has its own key, tempo, voices, sequences and
-   arc. Stratosfear starts at once with both sequences; Wahnfried and Cyborg have no sequence at all.
+   arc. Stratosfear and Sunrain start at once with both sequences; Wahnfried and Cyborg have no sequence at all.
 3. **Play the lead.** Press a white key: the lead plays that step of the scale, from the root up, and its
-   key lights while it sounds. It glides from note to note, deep in the reverb and the echo.
+   key lights while it sounds. It glides from note to note, deep in the reverb and the echo. The black keys play effects while you hold
+   them (Rise opens every filter, Close shuts them, and so on: see [The effects grid](#9-the-effects-grid)).
 4. **Shape the sequence.** Press ARP: the Sequence page. KNOB 1 (Density) thins it out or fills it in;
    KNOB 3 (Length) makes it shorter or longer. Press ARP again for its sound (Cutoff opens the filter), and
-   again for its **Repeats**: the notes the echo plays back, as loud as the note itself.
+   again for its **Repeats**: the notes the echo plays back, as loud as the note itself. One press more:
+   its **Move** page, how its filter wanders around the Cutoff you set.
 5. **Hold the echo.** Tap REC: the echo stops listening and repeats what it holds while the music goes
    on dry above it. Tap REC again to let it go. Hold REC: the effects grid, sixteen effects on the white
    keys, each one there while its key is held.
 6. **Perform.** Tap SEL: white keys 1–5 mute the five layers, black keys 1–5 solo them, and white keys
    7–11, held, sweep the sequence, open or shut the filter, drop both sequences out or push the echo.
-7. **Rest.** Press PLAY: the music stops and the echo and reverb ring away. PLAY again and the piece starts
-   from the top of its arc.
+7. **Watch the filters.** On a layer's sound page, a small cyan dot on the brightness knob's ring shows where
+   the filter is now, and the screen says how far it has moved ("MOVING DARKER, -1.5 OCT"). Turn the knob:
+   the movement goes on around its new setting.
+8. **Rest.** Press PLAY: the music stops and the echo and reverb ring away. PLAY again and the piece opens
+   again from the top.
 
 What you change is kept with the piece. BERLIN saves it by itself while resting; or hold GLO for half a
 second.
@@ -97,19 +103,19 @@ second.
 | OCT− / OCT+ | On a layer's page, its level, 5 a press (held: on). Both together, a quick press: the layer muted, or back (its level kept). Both held 5 s: the update mode |
 | KNOB 1–4 | The four values at the bottom of the page. The line above them says what the one turning does |
 | White keys | Play the Lead in the piece's scale: the first white key is the root, the next the scale's second step, and so on up. While the Lead sounds a note, that key is lit. On the Pattern page they write the steps instead; in PERFORM they mute and play moves; with REC held they're the effects |
-| Black keys | Nothing (in PERFORM, the solos) |
+| Black keys | Eleven effects, each while the key is held and lit: Take-off, Supernova, Twitter, Repeat, Swell, Freeze, Octave, Return, Rise, Close, Transpose (see [The effects grid](#9-the-effects-grid)). In PERFORM, the solos; on the Pattern page, the accents |
 | PLAY | Play / rest |
 | REC | A tap: hold (the echo and the cloud repeat what they hold). Held: the effects grid |
 | EDIT | A tap: the Chords page. Held: the next chord, on the next bar. Held on (1.5 s): new chords |
 | SEL | A tap: PERFORM. Held: **Lock** (the sequences stop varying, each pass as the last, until SEL is held again; not saved) |
 | HOME | The Berlin page; again, the Key page |
-| ENV | The Drone; again, its sound page |
-| ARP | The Sequence; again, its sound page; again, its Repeats |
-| LFO | The Lead; again, its sound page |
-| SEQ | Sequence 2; again, its sound page; again, the Pattern page |
-| SAVE | The Atmosphere; again, its sound page |
+| ENV | The Drone; again, its sound page; again, its Move page |
+| ARP | The Sequence; again, its sound page; again, its Repeats; again, its Move page |
+| LFO | The Lead; again, its sound page; again, its Move page |
+| SEQ | Sequence 2; again, its sound page; again, the Pattern page; again, its Move page |
+| SAVE | The Atmosphere; again, its sound page; again, its Move page |
 | FX | The Space page; again, the Echo page |
-| GLO | The Setup page; again, the Arc page. Held half a second: save. Held on (1.5 s): the piece back to its recipe |
+| GLO | The Setup page; again, the Arc page (Lead in, Bridge, Arc). Held half a second: save. Held on (1.5 s): the piece back to its recipe |
 
 **Nudges.** Hold a layer's button (ENV, ARP, LFO, SEQ) for half a second: its sound takes a small step
 somewhere new (its filter, envelope, tone or vibrato, never its sends or octave). Hold it on for 1.5 s: a
@@ -123,16 +129,41 @@ A long press says what it did on a card in the middle of the screen.
 
 ## 4. The screen
 
-![Stratosfear playing: the piece, its key and tempo at the top, the section (FLOW) and its bars on the left, the chord Em7 in the middle, the echo's level on the right, the sequences' steps below, the Berlin page's four knobs at the bottom](img/screen-main.png)
+![Stratosfear playing: the piece, its key and tempo at the top, FLOW and its bars on the left over five level meters, the chord Em7 in white in the middle with the sequences' notes circling it, CRANKY MANS and the page's name at the top right, the echo's level on the right, two lanes of steps below, the Berlin page's four knobs at the bottom](img/screen-main.png "The main screen, Stratosfear")
+
+The screen is black, with a few dim stars drifting slowly left while the music plays.
 
 - **Top:** the piece, its key and mode, the tempo (EXT under MIDI clock). A dot means unsaved changes.
-- **Top left:** the section of the arc (EMERGE, FLOW, SOLO, DRIFT) and the bars, and the five layers'
-  levels as bars: the Drone, the Sequence, the Lead, Sequence 2, the Atmosphere.
-- **Middle:** the chord the Drone plays. Each note of the sequences sends a ripple out from it, and the
-  echo's repeats come back as fainter rings. **Hold** turns the chord red and says "hold".
-- **Top right:** the page's name. **Right:** the echo's level (ECHO).
-- **Below:** the sequences' steps, a lane each, the step playing marked as it moves.
+- **Top left:** the section of the arc (EMERGE, FLOW, SOLO, BRIDGE), with **hold** and **lock** after it in red
+  while they're on, and under it the eight bars of the phrase.
+- **Top right:** "CRANKY MANS", small, and under it the page's name (with SOLO beside it while a solo is on).
+- **Left:** five **meters**, one for each layer in its own colour: the Drone (violet), the Sequence (pink), the
+  Lead (gold), Sequence 2 (cyan), the Atmosphere (grey). Each rises with what its layer is playing. Across each
+  one, a white **tick** shows where that layer's filter has moved to: above the middle, brighter; below,
+  darker; six pixels for each octave.
+- **Middle:** the chord the Drone plays, its name in white with nothing behind it. Each note of the
+  Sequence sends a pink dot round it on the inner orbit, each note of Sequence 2 a cyan one on the outer
+  orbit, fading over a few seconds; the echo's repeats are smaller, dimmer dots with a short trail. **Hold**
+  turns the chord and the dots red and says "hold". A new chord comes in big and cyan for a moment.
+- **Right:** the echo's level (ECHO).
+- **Below:** two **lanes**, the Sequence (pink) and Sequence 2 (cyan), each as long as its sequence: a big dot
+  for each step that plays, a speck for a rest, and a white cursor on the step playing now. Two sequences of
+  different lengths drift apart and meet again, and you can see them do it. On a layer's page, the other
+  lane is greyed.
 - **Bottom:** the page's four knobs and their values.
+
+**The filter motion, shown.** On a layer's *sound* page (the one with its brightness knob), a small cyan
+dot sits on that knob's ring where the filter really is now: the knob's own pointer stays where you set it.
+Under the lanes the screen says how far it has moved: "MOVING DARKER, -1.5 OCT" or "MOVING BRIGHTER, +0.8 OCT"
+(not shown while it is within a tenth of an octave of the knob). The screen reader says it too ("Cutoff
+moving darker, about -1 octave").
+
+![The Sequence's sound page: Cutoff, Decay, Reverb and Echo, with MOVING DARKER, -0.5 OCT under the lanes](img/screen-seqsound.png "A sound page: the cyan dot on Cutoff's ring, and the words under the lanes")
+
+**The launch screen.** Every time the FM-1 starts, BERLIN comes up large on black among a few stars, with
+"by CRANKY MANS" under it and the version at the foot, for a moment. The music starts as always, under it.
+
+![The launch screen: BERLIN, by CRANKY MANS, and the version](img/screen-launch.png "The launch screen")
 
 ---
 
@@ -144,16 +175,19 @@ played on a plucked voice: **2600** (a saw), **Moog** (two saws a little apart),
 swept down by a short envelope. The root step is accented and the others quieter (Accent, on the Pattern
 page). Density decides how many of the steps sound, the least important dropping out first. Now and then
 (Evolve, Motion) a step changes, a note moves, an octave jumps; the sequence follows the Drone's chord
-(Transpose, on the Key page). Its cutoff wanders slowly over minutes (Sweep, in PERFORM).
+(Transpose, on the Key page). Its cutoff wanders slowly over minutes, around the Cutoff you set (its Move page, below; its Width is the
+**Sweep**, also on PERFORM).
 
 **The Repeats** (ARP, third page) are what makes it Berlin: each note is played again at one of the echo's
 times, by default a dotted eighth (**Repeat A**, as loud as the note: 100), and a second time
 (**Repeat B**) into the rests only. They are real notes, so they go through the filter and the echo like the
-rest.
+rest, and the Sequences are sent into the echo generously. The echo's own time is by default a dotted
+quarter (1/4.), so Repeat A, a dotted eighth, doesn't land on the echo's first repeat.
 
 **Sequence 2** (SEQ; channel 4) is a second line, by default an octave down and a step shorter (7 against
 8), so the two drift apart and come back together. It has the same voices and **Sub** (a sine and its
-octave below). Chance thins it at random. On the Arc page, **Seq2 in** brings it in over that many bars.
+octave below). Chance thins it at random. Its **Intro** (Move page) opens its filter, from closed, over that many bars: in Rubycon
+it comes out of the drone after the Sequence.
 
 **The Drone** (ENV; channel 1) holds the chord on two banks of five voices: the chord's four notes and the
 root an octave under (the **Pedal**). Voices: **Organ**, **Strings** (through an ensemble), **Choir**, **Saws**,
@@ -163,8 +197,8 @@ root an octave under (the **Pedal**). Voices: **Organ**, **Strings** (through an
 **The Lead** (LFO; channel 3) is one voice, gliding: **Odyssey**, **Mini**, **Flute**, **Theremin**, **Synthi**. It plays
 phrases, long notes or a slow run ending long, starting on a chord tone, with a breath of bars between
 (**Phrases**: how often). Its vibrato comes in late. By default its reverb and echo are at 90, so it sings far
-away. It comes in **Lead in** bars after the sequence (the Arc page), plays now and then in Flow and fully in
-Solo. The white keys play it too.
+away. It may start **Lead in** bars after the piece starts (the Arc page), plays now and then in Flow and fully in
+Solo. Its filter's movement is kept gentle: never more than three quarters of an octave either way. The white keys play it too.
 
 **The Atmosphere** (SAVE) is a background: **None**, **Wind** (a breath of noise through a narrow band, swept
 slowly), **Surf** (waves), **Space** (chirps and bursts, far away), **Air**, or **Tape** (a crackle ringing on
@@ -172,56 +206,98 @@ the chord, DUB-1's).
 
 ---
 
-## 6. The arc
+## 6. The arc and the filter motion
 
-A piece is not a loop: it goes through sections, chosen as it plays.
+A piece is not a loop: it goes through sections, chosen as it plays. But it never ends by itself: once it has
+opened, it goes on through flow, solo and bridge for ever, until you stop it or change the piece.
 
-- **Emerge:** the drone and the atmosphere alone; the sequence fades in through a closed filter over the
-  last half. Its length is **Emerge** on the Arc page (0: no Emerge, straight into Flow; 1–100: about 33 to
-  190 bars).
+### The filter motion
+
+Nothing in BERLIN fades behind your back. A layer whose level is up and which isn't muted always plays at its
+level (your mutes, your solos and PERFORM's Drop are the only ways a layer goes quiet, and they are shown).
+What moves is each layer's **brightness**: the Drone's Colour, the Sequence's and Sequence 2's Cutoff, the
+Lead's Tone and the Atmosphere's Colour. BERLIN moves each one's filter by an **offset in octaves from the
+knob**, never to a value of its own. The knob keeps the value you gave it; turn it and the whole movement
+moves with it at once.
+
+Each layer has a **Move** page: ENV (the Drone), LFO (the Lead) or SAVE (the Atmosphere) pressed a third
+time; ARP (the Sequence) or SEQ (Sequence 2) a fourth time. Its four knobs are the same on every layer:
+
+| Knob | What it does |
+|---|---|
+| **Width** | How far the filter may move, either way: up to 2 octaves at 100 (the Lead: three quarters of an octave). 0: no wandering. On the Sequence's page this is the **Sweep** knob |
+| **Time** | How long one move takes to arrive, eased: from about a bar to 32 bars (the Lead never under 4) |
+| **Rate** | How often a new move starts: 100, about every 2 bars; 50, about every 11; lower, rarer; 0, never (the filter rests where its last move left it) |
+| **Intro** | 0–64 bars. When the piece starts, the filter begins closed and opens over this many bars, slowly at first. 0: open from the start |
+
+Each layer picks its own moves at random, so the layers diverge and converge: one getting darker while
+another brightens. A new target near the knob's setting is a little likelier than one at the edge, so the
+music comes back to the sound you set. The defaults are Width 20, Time 50, Rate 30, Intro 0; each piece sets
+its own (see [The pieces](#7-the-pieces)). The clock is the transport's bars, so the motion stands still
+while the music rests, and follows an external MIDI clock. The Atmosphere's colour is kept within about an
+octave either way, whatever its Width.
+
+The Intro happens once, when the piece starts (PLAY, or the piece changed or set back to its recipe). A filter
+at the start of its Intro is closed, so its layer is quiet for a while: the meter's tick sits low, the knob's
+dot sits at the bottom, and the section reads EMERGE.
+
+### The sections
+
+- **Emerge:** the opening, for as long as the longest Intro is still opening. With every Intro at 0, a piece
+  starts in Flow. It happens once and doesn't come back.
 - **Flow:** the sequences; the Lead now and then.
 - **Solo:** the Lead in full.
-- **Drift:** the sequences out, the drone and the lead alone; a swell of echo in the two bars before Flow
-  returns.
+- **Bridge:** the sequences keep playing, but each layer's filter takes an extra move of its own, darker or
+  brighter at random, of up to **Bridge**'s amount (the Arc page: up to 3 octaves at 100; the Lead's a third
+  of that), eased in over the bridge's first four bars and out again over its last four. The layers part, and
+  come together again at the end. Bridge 0: no extra move, and the section is like Flow. A swell of echo in
+  the two bars before Flow returns.
 
 Sections last 16 to 64 bars; **Motion** (the Berlin page) makes them shorter, and at 0 the piece stays in
-Flow. Across the whole arc the Sequence's filter rises towards a peak and settles. **Arc** (the Arc page)
-sets how long the whole arc is (0: no end; 1–100: about 130 to 770 bars). It then ends, in the piece's own
-way, and begins again with Emerge:
+Flow.
 
-- **Crash:** a take-off, noise falling five octaves into the echo;
-- **Supernova:** the echo's feedback past full, everything blooming into it;
-- **Fade:** the music falls away.
+### The Arc page
 
-Changing the piece (or setting it back to its recipe) starts its arc from the beginning.
+GLO twice. **Lead in** (0–64 bars): how long after the piece starts the Lead may play. **Bridge** (0–100): see
+above. **Arc** (0–100): the length of the Sequence's slow rise: its filter climbs towards a peak (four fifths
+of the way through) and settles, then does it again, for ever (0: no rise; 1–100: about 130 to 770 bars). The
+fourth knob is empty.
+
+![The Arc page: Lead in, Bridge, Arc](img/screen-arc.png "The Arc page")
+
+The Sequence's offset is the sum of its wander, its Intro, the bridge's move and this rise; the black keys'
+Rise and Close ([The effects grid](#9-the-effects-grid)) are one more term. The total is kept inside each
+filter's usable range.
 
 ---
 
 ## 7. The pieces
 
-| # | Piece | After | Key, tempo | Sequence | Drone, Lead | Atmosphere | Ending |
+| # | Piece | After | Key, tempo | Sequence | Drone, Lead | Atmosphere | Moves |
 |---|---|---|---|---|---|---|---|
-| 1 | **Timewind** | Schulze, *Bayreuth Return* | D minor, 96 | One, 2600, 16 steps in 16ths, Repeat B | Organ + phaser, Odyssey | Wind | Crash |
-| 2 | **Wahnfried** | Schulze, *Wahnfried 1883* | B♭ Dorian, 80 | None (beatless) | Choir, the roots walking free; Synthi, bright | None | Supernova |
-| 3 | **Phaedra** | Tangerine Dream, *Phaedra* | D minor, 149 | Moog bass 16, a Moog line of 15 over it, much sweep | Choir, Flute | Tape | Supernova |
-| 4 | **Rubycon** | Tangerine Dream, *Rubycon* | F minor, 144 | Synthi 8 and Sub 7, dark; Seq 2 in over 16 bars | Organ, low and dark, Mini | None | Fade |
-| 5 | **Stratosfear** | Tangerine Dream, *Stratosfear* | E minor, 138 | Pulse 16 and 2600 15, together from the start | Strings, Mini forward | None | Crash |
-| 6 | **Sunrain** | Ashra, *New Age of Earth* | D major, 130 | Pulse 8, Glass 6, both repeats at 100 | Strings, Odyssey | Surf | Supernova |
-| 7 | **Mirage** | Schulze, *Mirage* | F♯ minor, 95 | Glass 12 and 9, sparse, in 16ths | Glass + deep phaser, Theremin; a long reverb | Space | Fade |
-| 8 | **Cyborg** | Schulze, *Cyborg* | C Phrygian, 70 | None (beatless) | Organ, deep and beating; Theremin, low | None | Fade |
+| 1 | **Timewind** | Schulze, *Bayreuth Return* | D minor, 96 | One, 2600, 16 steps in 16ths, Repeat B | Organ + phaser, Odyssey | Wind | A slow opening: the Sequence's Intro is 32 bars. A gentle wander on every layer; Bridge 45 |
+| 2 | **Wahnfried** | Schulze, *Wahnfried 1883* | B♭ Dorian, 80 | None (beatless) | Choir, the roots walking free; Synthi, bright | None | The Drone's filter is the main movement: Width 45, with long moves; Bridge 30 |
+| 3 | **Phaedra** | Tangerine Dream, *Phaedra* | D minor, 149 | Moog bass 16, a Moog line of 15 over it, much sweep | Choir, Flute | Tape | The Sequence opens over 16 bars (Sweep 85, wide); Sequence 2 straight in, sweeping often |
+| 4 | **Rubycon** | Tangerine Dream, *Rubycon* | F minor, 144 | Synthi 8 and Sub 7, dark | Organ, low and dark, Mini | None | The Sequence opens over 16 bars, then Sequence 2 over 32: it comes out of the drone after it; Bridge 50 |
+| 5 | **Stratosfear** | Tangerine Dream, *Stratosfear* | E minor, 138 | Pulse 16 and 2600 15, together from the start | Strings, Mini forward | None | Straight in, no Intros; both sequences' filters move often |
+| 6 | **Sunrain** | Ashra, *New Age of Earth* | D major, 130 | Pulse 8, Glass 6, both repeats at 100 | Strings, Odyssey | Surf | Straight in, no Intros; Sequence 2 and the Atmosphere wander a little wider |
+| 7 | **Mirage** | Schulze, *Mirage* | F♯ minor, 95 | Glass 12 and 9, sparse, in 16ths | Glass + deep phaser, Theremin; a long reverb | Space | A slow opening: the Sequence's Intro 16 bars, Sequence 2's 24; the Atmosphere moves widest |
+| 8 | **Cyborg** | Schulze, *Cyborg* | C Phrygian, 70 | None (beatless) | Organ, deep and beating; Theremin, low | None | The Drone's filter moves widely and slowly (Width 50, Time 70) |
 
-The names are working titles. The keys and tempos are starting points from music analysis sites, to be
-tuned by ear; fast readings such as Phaedra's 149 and Rubycon's 144 may be double the felt tempo (they run
-in eighths, which feel like sixteenths at half the speed). BERLIN is not connected with any of these artists.
+In every piece the Lead's Width is low: it stays gentle. The names are working titles. The keys and tempos are
+starting points from music analysis sites, to be tuned by ear; fast readings such as Phaedra's 149 and
+Rubycon's 144 may be double the felt tempo (they run in eighths, which feel like sixteenths at half the speed).
+BERLIN is not connected with any of these artists.
 
 ---
 
 ## 8. The pages
 
-![The Sequence page: Density, Octave, Length, Grid](img/screen-sequence.png) ![The Repeats page: Repeat A, A time, Repeat B, B time](img/screen-repeats.png) ![The Arc page: Emerge, Seq2 in, Lead in, Arc](img/screen-arc.png)
+![The Sequence page: Density, Octave, Length, Grid](img/screen-sequence.png) ![The Repeats page: Repeat A, A time, Repeat B, B time](img/screen-repeats.png) ![The Sequence's Move page: Width, Time, Rate, Intro](img/screen-seqmove.png)
 
 Each layer's pages share a layout: its main page has how much (K1), its octave (K2) and two of its own; its
-sound page has brightness, envelope, Reverb and Echo (the layer's sends).
+sound page has brightness, envelope, Reverb and Echo (the layer's sends); its **Move** page has Width, Time,
+Rate and Intro (see [The arc and the filter motion](#6-the-arc-and-the-filter-motion)).
 
 **HOME: Berlin:** Filter (on everything, Off in the middle: turned down it shuts, a low-pass; turned up it
 opens, a resonant high-pass), Evolve (how often the sequences change
@@ -235,29 +311,31 @@ the scale), **Diatonic** moves it by scale steps (it stays in the scale) and **B
 chord changes under it).
 
 **ENV: Drone:** Pedal (the root an octave under), Reso, Phaser, Attack. **Its sound:** Colour (darker or
-brighter, and the voices' detune), Release, Reverb, Echo.
+brighter, and the voices' detune), Release, Reverb, Echo. **Its Move page:** Width, Time, Rate, Intro.
 
 **ARP: Sequence:** Density, Octave, Length (3–16), Grid (8ths or 16ths). **Its sound:** Cutoff, Decay,
 Reverb, Echo. **Repeats:** Repeat A, A time, Repeat B, B time (1/8, dotted 1/8, 1/4, dotted 1/4, 1/2, a bar).
+**Its Move page** (a fourth press): Width (this is Sweep), Time, Rate, Intro.
 
 **LFO: Lead:** Phrases, Octave (−2 to +1), Glide (1–150 ms), Vibrato. **Its sound:** Tone, Attack, Reverb,
-Echo.
+Echo. **Its Move page:** Width, Time, Rate, Intro (the tone's wander is kept gentle).
 
 **SEQ: Sequence 2:** Chance, Octave, Length, Level. **Its sound:** Cutoff, Decay, Reverb, Echo. **SEQ a third
 time: Pattern:** write the sequences yourself. KNOB 1 picks a lane: Steps (which of the Sequence's steps
 play), Steps 2 (Sequence 2's), Octaves and Octaves 2 (which steps jump an octave), Skips (steps passed
 over). The white keys are its sixteen steps. KNOB 2 is the Accent, KNOB 3 the lane's chance, KNOB 4 Play:
-**Auto** (generated) or **Pattern** (as written).
+**Auto** (generated) or **Pattern** (as written). **SEQ a fourth time: its Move page** (Width, Time, Rate,
+Intro).
 
 **SAVE: Atmosphere:** Density, Width, Drift, Air; ALGORITHM its character. **Its sound:** Colour, Ring,
-Reverb, Echo.
+Reverb, Echo. **Its Move page:** Width, Time, Rate, Intro.
 
-**FX: Space:** Echo (how much of everything goes into it), Echo time, Feedback (the tail, in seconds),
-Reverb. The echo is a tape echo that ping-pongs left and right. **FX again: Echo:** Blur, Tone, Width, Size
+**FX: Space:** Echo (how much of everything goes into it), Echo time (a dotted quarter by default), Feedback
+(the tail, in seconds), Reverb. The echo is a tape echo that ping-pongs left and right. **FX again: Echo:** Blur, Tone, Width, Size
 (the plate).
 
-**GLO: Setup:** Tune (±50 cents), MIDI out, Lights, Save. **GLO again: Arc:** Emerge, Seq2 in, Lead in,
-Arc (see [The arc](#6-the-arc)).
+**GLO: Setup:** Tune (±50 cents), MIDI out, Lights, Save. **GLO again: Arc:** Lead in, Bridge, Arc
+(see [The arc and the filter motion](#6-the-arc-and-the-filter-motion)).
 
 **EDIT: Chords:** eight slots. In **Endless** the walk writes them and slot 1 plays; on each change they move
 up a slot. A key writes a slot's root, KNOB 2 its kind, KNOB 3 its type, KNOB 4 Play: Endless or **Loop**
@@ -277,8 +355,34 @@ they're let go.
 |---|---|---|---|---|
 | **Echo** | Repeat: the Sequence thrown into the echo | Time: the echo's time doubled | Tape stop: the tape slowing to a quarter | Swell: everything into the echo |
 | **Filter** | Low-pass: down to 350 Hz | High-pass: up to 1.3 kHz | Sweep: the Sequence's filter swept two octaves each way | Phaser: a deep phaser on all the music |
-| **Space** | Reverb: the dry music into the plate | Take-off: the Crash ending's noise, falling into the echo | Freeze: the cloud holds what it has | Wash: everything into the echo and the plate, the dry down |
+| **Space** | Reverb: the dry music into the plate | Take-off: a burst of noise falling into the echo | Freeze: the cloud holds what it has | Wash: everything into the echo and the plate, the dry down |
 | **Moves** | Octave: the Sequence an octave up | Return: both sequences round their first four steps | Twitter: a burst of bleeps into the echo | Supernova: the echo's feedback past full |
+
+### The black keys
+
+In normal playing the black keys play effects too, each **while it is held** and lit, so one hand can play
+the Lead on the white keys and the other the effects, with no REC needed. Left to right, the eleven black keys
+are:
+
+| Black key | Effect |
+|---|---|
+| 1 | **Take-off** (the grid's) |
+| 2 | **Supernova** (the grid's) |
+| 3 | **Twitter** (the grid's) |
+| 4 | **Repeat** (the grid's: the Sequence thrown into the echo) |
+| 5 | **Swell** (the grid's: everything into the echo) |
+| 6 | **Freeze** (the grid's: the cloud holds) |
+| 7 | **Octave** (the grid's: the Sequence an octave up) |
+| 8 | **Return** (the grid's: both sequences round their first four steps) |
+| 9 | **Rise:** every layer's filter opens together, up to 2 octaves, easing in over about a second and back over about three when you let go |
+| 10 | **Close:** every layer's filter closes together, down 4 octaves, eased the same way: a breakdown played by hand |
+| 11 | **Transpose:** both sequences three scale steps up (a fourth, in a seven-note scale) while held; the Drone's chord and the Lead stay |
+
+The first eight are the grid's own effects, not copies: a black key and the grid's white key for the same
+effect are one effect, on while either is held. Rise and Close are offsets from the knobs, like the filter
+motion's, added to it (the Lead's stays within its three quarters of an octave); they never set a filter to
+a value of their own. In PERFORM the black keys solo, and on the Pattern page they accent steps. The screen
+reader names the effect as each key goes down.
 
 ---
 
@@ -287,12 +391,17 @@ they're let go.
 ![PERFORM: the knobs Filter, Wet, Energy and Sweep](img/screen-perform.png)
 
 Tap SEL. The knobs become the master actions: **Filter** (as on the Berlin page), **Wet** (the whole music dry, or drowned in the
-echo), **Energy**, and **Sweep** (how far the Sequence's cutoff wanders on its own, the piece's). The keys
+echo: every layer's echo send, the Drone's, both Sequences', the Lead's and the Atmosphere's), **Energy**
+(sparser or busier: the Sequence's Density, levels, Sweep, note length, Cutoff, and Repeat B, the second
+repeat), and **Sweep** (how far the Sequence's cutoff wanders on its own: the same as its Width on the
+Move page, the piece's). The keys
 that do something are lit:
 
 - **White 1–5:** the Drone, the Sequence, the Lead, Sequence 2, the Atmosphere, muted and back (their levels
-  kept).
-- **Black 1–5:** the same, soloed (more than one: they play together).
+  kept). A mute is complete: a muted Lead lets go of its note at once (and plays nothing from the white keys),
+  a muted Drone is silent, and neither sends MIDI notes while muted.
+- **Black 1–5:** the same, soloed (more than one: they play together). (In normal playing, the black keys
+  play effects instead: [The black keys](#the-black-keys).)
 - **White 6, held:** the knobs become the levels (Drone, Seq, Lead, Seq 2).
 - **White 7–11, held:** **Sweep** (the Sequence's filter swept), **Open**, **Shut** (the filter pushed),
   **Drop** (both sequences out), **Echo** (the echo pushed, everything in and feeding back).
@@ -305,7 +414,7 @@ SEL again, or a page's button, leaves.
 
 MIDI comes in over USB and the TRS jack, and goes out over USB.
 
-- **Out** (on by default): the Drone on channel 1, the Sequence (and its repeats) on 2, the Lead on 3,
+- **Out** (on by default; a muted layer sends nothing): the Drone on channel 1, the Sequence (and its repeats) on 2, the Lead on 3,
   Sequence 2 on 4, and, on its own tempo, clock with start and stop.
 - **In, clock:** the sequences follow MIDI clock, and start, continue and stop start, continue and stop
   the music. The screen shows EXT for the tempo; when the clock stops, BERLIN goes back to its own.
@@ -317,7 +426,7 @@ MIDI comes in over USB and the TRS jack, and goes out over USB.
 BERLIN can tell the [FM-1 Screen Reader](https://charlesvestal.github.io/fm1-reader/) what its screen
 shows, over USB: the page and its knobs, a knob's value as it turns, the piece, its key and tempo, the
 chord as it moves, the effects as they're held, and every message. Press W in the reader to hear the whole
-screen again, with the section of the arc and its bar. The FM-1 says nothing until the page connects.
+screen again, with the section of the arc and its bar, and how far a filter has moved. The FM-1 says nothing until the page connects.
 
 ---
 
