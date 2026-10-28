@@ -10,8 +10,17 @@ expect litkey6 1
 key w3 up
 wait 300
 expect litkey6 0
+# (the user) in play the black keys stay lit, apart from the white ones: the effects there; one goes dark while held;
+# a white key unlit until played
+expect litkey1 1
+expect litkey13 1
+expect litkey25 1
+expect litkey0 0
 key b1 down
 wait 300
+expect litkey3 0
+expect litkey1 1
 key b1 up
 wait 300
+expect litkey3 1
 expect pool 1453

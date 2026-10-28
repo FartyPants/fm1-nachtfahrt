@@ -2526,8 +2526,9 @@ static void leds(void)
         int bk;
         if (d >= 0 && d < 16)
             k |= 1u << STEP_KEY[d];
-        for (bk = 0; bk < NBLACK; bk++)          /* (a black key's effect held: lit) */
-            if (BLACK_DO[bk] >= 100 ? ui.mv & (BLACK_DO[bk] - 100) : ui.bfx >> BLACK_DO[bk] & 1u)
+        for (bk = 0; bk < NBLACK; bk++)          /* (the user: the black keys lit, the effects apart from the Lead's
+                                                  * white keys; one dark while its effect is held, as PERFORM's moves) */
+            if (!(BLACK_DO[bk] >= 100 ? ui.mv & (BLACK_DO[bk] - 100) : ui.bfx >> BLACK_DO[bk] & 1u))
                 k |= 1u << BLACK_KEY[bk];
     }
     plat_glow(proj.leds == 1);

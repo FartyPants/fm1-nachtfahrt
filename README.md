@@ -50,7 +50,7 @@ BERLIN is not connected with any of these artists.
 | | |
 |---|---|
 | White keys | Play the Lead, in the piece's scale (the key it sounds is lit) |
-| Black keys | Eleven effects, each while held: Take-off, Supernova, Twitter, Repeat, Swell, Freeze, Octave, Return, then Rise, Close, Transpose (in PERFORM: the solos) |
+| Black keys | Eleven effects, each while held (lit; dark while held): Take-off, Supernova, Twitter, Repeat, Swell, Freeze, Octave, Return, then Rise, Close, Transpose (in PERFORM: the solos) |
 | PLAY · REC · EDIT | Play / rest · a tap: hold (the echo repeats what it holds), held: the effects grid (16 effects on the white keys) · a tap: the Chords page, held: the next chord |
 | SEL | PERFORM: the knobs Filter, Wet, Energy, Sweep; white 1–5 mute the Drone, Sequence, Lead, Sequence 2, Atmosphere; black 1–5 solo them; white 6 held: the levels; white 7–11 held: Sweep, Open, Shut, Drop (both sequences out), Echo. Held: Lock |
 | HOME | The Berlin page (Filter, Evolve, Motion, Drift); again, the Key page (Tempo, Root, Mode, Transpose) |

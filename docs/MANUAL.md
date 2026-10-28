@@ -70,8 +70,8 @@ BERLIN starts playing as soon as it's on. A few minutes with it:
 2. **Try another piece.** Turn PRESETS. Each of the eight has its own key, tempo, voices, sequences and
    arc. Stratosfear and Sunrain start at once with both sequences; Wahnfried and Cyborg have no sequence at all.
 3. **Play the lead.** Press a white key: the lead plays that step of the scale, from the root up, and its
-   key lights while it sounds. It glides from note to note, deep in the reverb and the echo. The black keys play effects while you hold
-   them (Rise opens every filter, Close shuts them, and so on: see [The effects grid](#9-the-effects-grid)).
+   key lights while it sounds. It glides from note to note, deep in the reverb and the echo. The black keys stay lit: they play effects while you hold
+   them, dark while held (Rise opens every filter, Close shuts them, and so on: see [The effects grid](#9-the-effects-grid)).
 4. **Shape the sequence.** Press ARP: the Sequence page. KNOB 1 (Density) thins it out or fills it in;
    KNOB 3 (Length) makes it shorter or longer. Press ARP again for its sound (Cutoff opens the filter), and
    again for its **Repeats**: the notes the echo plays back, as loud as the note itself. One press more:
@@ -103,7 +103,7 @@ second.
 | OCT− / OCT+ | On a layer's page, its level, 5 a press (held: on). Both together, a quick press: the layer muted, or back (its level kept). Both held 5 s: the update mode |
 | KNOB 1–4 | The four values at the bottom of the page. The line above them says what the one turning does |
 | White keys | Play the Lead in the piece's scale: the first white key is the root, the next the scale's second step, and so on up. While the Lead sounds a note, that key is lit. On the Pattern page they write the steps instead; in PERFORM they mute and play moves; with REC held they're the effects |
-| Black keys | Eleven effects, each while the key is held and lit: Take-off, Supernova, Twitter, Repeat, Swell, Freeze, Octave, Return, Rise, Close, Transpose (see [The effects grid](#9-the-effects-grid)). In PERFORM, the solos; on the Pattern page, the accents |
+| Black keys | Eleven effects, each while the key is held. They stay lit, so they stand apart from the Lead's white keys; a key goes dark while its effect is held: Take-off, Supernova, Twitter, Repeat, Swell, Freeze, Octave, Return, Rise, Close, Transpose (see [The effects grid](#9-the-effects-grid)). In PERFORM, the solos; on the Pattern page, the accents |
 | PLAY | Play / rest |
 | REC | A tap: hold (the echo and the cloud repeat what they hold). Held: the effects grid |
 | EDIT | A tap: the Chords page. Held: the next chord, on the next bar. Held on (1.5 s): new chords |
