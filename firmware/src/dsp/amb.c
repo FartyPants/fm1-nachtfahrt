@@ -1436,10 +1436,9 @@ static void seq_tick(void)                       /* a sixteenth: the sequences' 
 }
 
 /* ------------------------------------------------------------------ the lead --- */
-/* (BERLIN) the Lead: one voice, gliding, its vibrato coming in late; it plays phrases (long notes, or a slow run of
- * scale steps ending long), starting on a chord tone, a breath of 2 to 8 bars between (Phrases: how often). Voices:
- * Odyssey (a saw and a pulse), Mini (three saws), Flute (a sine and breath), Theremin (a sine, always wavering),
- * Synthi (a square). MIDI channel 3 */
+/* (BERLIN) the Lead: one voice, gliding, its vibrato coming in late; it plays its motifs in pairs (below), never in
+ * Emerge, a breath between pairs (Phrases: how often). Voices: Odyssey (a saw and a pulse), Mini (three saws), Flute
+ * (a sine and breath), Theremin (a sine, always wavering), Synthi (a square). MIDI channel 3 */
 static struct {
     uint8_t on, note;                            /* sounding (its gate); the note it glides to */
     float cur, ph, ph2, ph3, vph, env, fenv, vt, s1[2], s2[2], c1[4], c2[4];
@@ -1449,6 +1448,47 @@ static uint8_t ld_note[8], ld_dur[8], ld_n, ld_i, ld_left, ld_rest;
 static int8_t ld_dg[8], ld_key = -1;             /* (the phrase's degrees; the degree held on the keys, -1: none) */
 volatile int8_t en_lead_deg = -1;                /* (the degree the Lead sounds, for the keys' light; -1: none) */
 static uint32_t ld_rng = 0x3C6EF372u;
+/* (BERLIN, the Lead's memory: the report's "remembered-motif Lead") four motifs, each up to 8 entries: a scale degree
+ * from the chord root's degree (LD_REST: a rest) and its length in sixteenths; slot 0 the theme (never a fresh draw's).
+ * Rendered at a phrase's start from the chord then (a motif again over a new chord: transposed; a note in flight never
+ * moves). Played in pairs: a call, its last note an open ending (a chord tone not the root, now and then the 9th),
+ * then at the next bar line (a bar later when calm) its answer, the same rhythm with a closed ending (the root, or 30%
+ * the fifth) held twice as long. Each pair a fresh motif (Memory's blocks come later), drawn into the oldest of slots
+ * 1..3 */
+typedef struct {
+    int8_t off[8];
+    uint8_t dur[8];
+    uint8_t n, heard;                            /* (entries, 1..8; passes played) */
+} ld_motif_t;
+static ld_motif_t ld_bank[4];
+static uint8_t ld_slot, ld_fresh = 1, ld_role, ld_due;   /* the pair's motif; the next fresh draw's slot; the phrase's
+                                                  * role; an answer due */
+static int8_t ld_next = -1;                      /* (a slot the next pair plays; -1: a fresh draw) */
+static float ld_int;                             /* intensity 0..1 (from the section) */
+volatile uint8_t en_lead_role, en_lead_phr;
+
+static void ld_reseed(void)                      /* a new piece: new ideas (the bank drawn again as it's needed) */
+{
+    int k;
+    for (k = 0; k < 4; k++)
+        ld_bank[k].n = 0;
+    ld_fresh = 1;
+    ld_next = -1;
+    ld_due = 0;
+}
+#ifdef EN_HOST
+void en_lead_motif(int slot, const int8_t *off, const uint8_t *dur, int n)
+{
+    ld_motif_t *m = &ld_bank[slot & 3];
+    int i;
+    n = n < 1 ? 1 : n > 8 ? 8 : n;
+    for (i = 0; i < n; i++)
+        m->off[i] = off[i], m->dur[i] = dur[i];
+    m->n = (uint8_t)n;
+    m->heard = 0;
+    ld_next = (int8_t)(slot & 3);
+}
+#endif
 
 static int ld_audible(void) { return lead_vol > 0.0f && !(mutes & EN_M_BASS); }
 
@@ -1462,38 +1502,131 @@ static void lead_off(void)                       /* the note let go */
 }
 void en_lead_key(int d, int on) { post(C_LKEY, d, on); }
 
-static int ld_deg_note(int d)                    /* scale degree d (any) as a note, in the Lead's register */
+static int ld_deg_raw(int d)                     /* scale degree d (any) as a note, in the Lead's register */
 {
-    const int ns = nsteps ? nsteps : 7, o = (d + 64 * ns) / ns - 64, k = (d + 64 * ns) % ns,
-              n = 60 + par[P_ROOT] % 12 + 12 * par[P_LOCT] + 12 * o + (nsteps ? steps[k] : 2 * k);
+    const int ns = nsteps ? nsteps : 7, o = (d + 64 * ns) / ns - 64, k = (d + 64 * ns) % ns;
+    return 60 + par[P_ROOT] % 12 + 12 * par[P_LOCT] + 12 * o + (nsteps ? steps[k] : 2 * k);
+}
+static int ld_deg_note(int d)                    /* (kept within 36 .. 100) */
+{
+    const int n = ld_deg_raw(d);
     return n < 36 ? 36 : n > 100 ? 100 : n;
 }
 
-static void lead_phrase(void)                    /* a new phrase: its notes and their lengths, in sixteenths */
+static int ld_cdeg(int k) { return en_deg_of(pool, chord_pcs[k] - par[P_ROOT]); }   /* chord tone k's degree */
+static int ld_near(int d, int c)                 /* degree c (0..ns-1) in the octave nearest degree d */
+{
+    const int ns = nsteps ? nsteps : 7, k = ((c - d) % ns + ns) % ns;
+    return d + (2 * k > ns ? k - ns : k);
+}
+
+/* a fresh motif (for now the phrases the Lead played before its memory, as offsets: a slow run of 3 to 6 steps one
+ * way, the last held, or 1 to 3 long notes a third or a fifth apart; from a chord tone, now and then an octave up) */
+static void ld_motif_new(ld_motif_t *m, float intensity, int role)
 {
     const int ns = nsteps ? nsteps : 7, run = seq_rand(&ld_rng) % 100u < 40u;
-    int d = en_deg_of(pool, (chord_pcs[seq_rand(&ld_rng) % (uint32_t)(chord_nt ? chord_nt : 1)] - par[P_ROOT] + 24) % 12), i;
+    int d = ld_cdeg((int)(seq_rand(&ld_rng) % (uint32_t)(chord_nt ? chord_nt : 1))) - ld_cdeg(0), i;
+    (void)intensity, (void)role;
+    d = (d + ns) % ns;
     if (seq_rand(&ld_rng) & 1u)
-        d += ns;                                 /* (now and then from the octave above) */
-    if (run) {                                   /* a slow run: 3 to 6 steps one way, the last held */
+        d += ns;
+    if (run) {
         const int dir = seq_rand(&ld_rng) & 1u ? 1 : -1;
-        ld_n = (uint8_t)(3 + seq_rand(&ld_rng) % 4u);
-        for (i = 0; i < ld_n; i++) {
-            ld_dg[i] = (int8_t)(d + dir * i);
-            ld_note[i] = (uint8_t)ld_deg_note(d + dir * i);
-            ld_dur[i] = (uint8_t)(i + 1 < ld_n ? 2 + seq_rand(&ld_rng) % 3u : 8 + seq_rand(&ld_rng) % 9u);
+        m->n = (uint8_t)(3 + seq_rand(&ld_rng) % 4u);
+        for (i = 0; i < m->n; i++) {
+            m->off[i] = (int8_t)(d + dir * i);
+            m->dur[i] = (uint8_t)(i + 1 < m->n ? 2 + seq_rand(&ld_rng) % 3u : 8 + seq_rand(&ld_rng) % 9u);
         }
-    } else {                                     /* long notes: 1 to 3, a beat to a bar each, on chord tones */
-        ld_n = (uint8_t)(1 + seq_rand(&ld_rng) % 3u);
-        for (i = 0; i < ld_n; i++) {
-            ld_dg[i] = (int8_t)d;
-            ld_note[i] = (uint8_t)ld_deg_note(d);
-            ld_dur[i] = (uint8_t)(4 + seq_rand(&ld_rng) % 13u);
-            d += (seq_rand(&ld_rng) & 1u ? 2 : -2) * (1 + (int)(seq_rand(&ld_rng) % 2u));   /* (a third or a fifth away) */
+    } else {
+        m->n = (uint8_t)(1 + seq_rand(&ld_rng) % 3u);
+        for (i = 0; i < m->n; i++) {
+            m->off[i] = (int8_t)d;
+            m->dur[i] = (uint8_t)(4 + seq_rand(&ld_rng) % 13u);
+            d += (seq_rand(&ld_rng) & 1u ? 2 : -2) * (1 + (int)(seq_rand(&ld_rng) % 2u));
         }
     }
+    m->heard = 0;
+}
+
+static int ld_fold(int d)                        /* (an octave down or up if the register would clip it: its pitch
+                                                  * class kept, the ending heard as chosen) */
+{
+    const int ns = nsteps ? nsteps : 7;
+    while (ld_deg_raw(d) > 100)
+        d -= ns;
+    while (ld_deg_raw(d) < 36)
+        d += ns;
+    return d;
+}
+static int ld_ending(int d, int closed)          /* the phrase's last degree d moved to the role's ending, nearest d */
+{
+    const int r = ld_cdeg(0);
+    int k, best = 99, e = r, c;
+    if (closed) {                                /* the root, or 30% the chord tone nearest a fifth above it */
+        if (chord_nt > 1 && seq_rand(&ld_rng) % 100u < 30u) {
+            int bk = 1;
+            for (k = 1; k < chord_nt; k++) {
+                const int iv = (chord_pcs[k] - chord_pcs[0] + 12) % 12, x = iv > 7 ? iv - 7 : 7 - iv;
+                if (x < best)
+                    best = x, bk = k;
+            }
+            e = ld_cdeg(bk);
+        }
+        return ld_near(d, e);
+    }
+    if (seq_rand(&ld_rng) % 100u >= (uint32_t)(5.0f + 20.0f * ld_int))   /* open: another chord tone (the nearest) */
+        for (k = 1; k < chord_nt; k++)
+            if ((c = ld_cdeg(k)) != r) {
+                const int t = ld_near(d, c), x = t > d ? t - d : d - t;
+                if (x < best)
+                    best = x, e = t;
+            }
+    return best < 99 ? e : ld_near(d, (r + 1) % (nsteps ? nsteps : 7));   /* (or the 9th) */
+}
+
+static void lead_plan(void)                      /* the next phrase: the answer due, or a new pair's call */
+{
+    const int r = ld_cdeg(0);
+    const ld_motif_t *m;
+    int i, last = -1;
+    ld_int = ar_sec == EN_SEC_SOLO ? 0.7f : ar_sec == EN_SEC_EMERGE ? 0.0f : 0.2f;   /* (Solo: the arc's rise later) */
+    if (!ld_bank[0].n)
+        ld_motif_new(&ld_bank[0], ld_int, LR_CALL);   /* (the theme, a piece's first idea) */
+    if (ld_due) {
+        ld_role = LR_ANSWER;
+        ld_due = 0;
+    } else {
+        ld_role = LR_CALL;
+        if (ld_next >= 0) {
+            ld_slot = (uint8_t)ld_next;
+            ld_next = -1;
+        } else {
+            ld_slot = ld_fresh;
+            ld_fresh = (uint8_t)(ld_fresh % 3 + 1);
+            ld_motif_new(&ld_bank[ld_slot], ld_int, LR_CALL);
+        }
+        if (ld_bank[ld_slot].heard < 255)
+            ld_bank[ld_slot].heard++;
+    }
+    m = &ld_bank[ld_slot];
+    ld_n = m->n;
+    for (i = 0; i < ld_n; i++) {
+        ld_dur[i] = m->dur[i];
+        ld_dg[i] = m->off[i] == LD_REST ? (int8_t)LD_REST : (int8_t)(r + m->off[i]);
+        if (m->off[i] != LD_REST)
+            last = i;
+    }
+    if (last >= 0) {
+        ld_dg[last] = (int8_t)ld_fold(ld_ending(ld_dg[last], ld_role == LR_ANSWER));
+        if (ld_role == LR_ANSWER)
+            ld_dur[last] = (uint8_t)(ld_dur[last] < 16 ? 2 * ld_dur[last] : 32);
+    }
+    for (i = 0; i < ld_n; i++)
+        ld_note[i] = (uint8_t)(ld_dg[i] == LD_REST ? 0 : ld_deg_note(ld_dg[i]));
     ld_i = 0;
     ld_left = 0;
+    en_lead_role = ld_role;
+    en_lead_phr++;
 }
 
 static void lead_note(int n)                     /* the next note: legato (it glides there), or from silence */
@@ -1519,11 +1652,12 @@ static void lead_tick(void)                      /* a sixteenth: the phrase goes
     if (!(sixteenth & 15u) && !ld_n) {           /* a bar line, between phrases */
         if (ld_rest)
             ld_rest--;
-        else if (ar_bar >= par[P_LDIN] &&
-                 seq_rand(&ld_rng) % 100u < (uint32_t)(20 + 6 * pe(P_LDENS) / 10) /
-                                                (ar_sec == EN_SEC_FLOW || ar_sec == EN_SEC_EMERGE ? 3u : 1u))
-            lead_phrase();                       /* (not before Lead in bars from the piece's start; Solo and Bridge its
-                                                  * own, Emerge and Flow now and then) */
+        else if (ar_sec != EN_SEC_EMERGE && ar_bar >= par[P_LDIN] &&
+                 (ld_due || seq_rand(&ld_rng) % 100u < (uint32_t)(20 + 6 * pe(P_LDENS) / 10) /
+                                                          (ar_sec == EN_SEC_FLOW ? 3u : 1u)))
+            lead_plan();                         /* (an answer due at once; a pair not before Lead in bars from the
+                                                  * piece's start, never in Emerge; Solo and Bridge its own, Flow now and
+                                                  * then) */
     }
     if (!ld_n)
         return;
@@ -1533,14 +1667,26 @@ static void lead_tick(void)                      /* a sixteenth: the phrase goes
             return;
     }
     if (ld_i < ld_n) {
-        lead_note(ld_note[ld_i]);
-        en_lead_deg = lead.on ? ld_dg[ld_i] : -1;
+        if (ld_dg[ld_i] == LD_REST) {
+            lead_off();                          /* (a rest: the note let go, silence its length) */
+        } else {
+            lead_note(ld_note[ld_i]);
+            en_lead_deg = lead.on ? ld_dg[ld_i] : -1;
+        }
         ld_left = ld_dur[ld_i++];
         return;
     }
-    lead_off();                                  /* the phrase done: a breath of 2 .. 8 bars (fewer as Phrases rises) */
+    lead_off();                                  /* the phrase done: after a call its answer (the next bar line, a bar
+                                                  * later when calm); after an answer a breath, (1 + 4 (1 - intensity))
+                                                  * (1.5 - Phrases) bars and 1 or 2 more, then the roll */
     ld_n = 0;
-    ld_rest = (uint8_t)(2 + seq_rand(&ld_rng) % (uint32_t)(1 + 6 * (100 - pe(P_LDENS)) / 100));
+    if (ld_role == LR_CALL) {
+        ld_due = 1;
+        ld_rest = (uint8_t)(ld_int < 0.3f);
+    } else {
+        ld_rest = (uint8_t)((int)((1.0f + 4.0f * (1.0f - ld_int)) * (1.5f - (float)pe(P_LDENS) * 0.01f) + 0.5f) + 1 +
+                            (int)(seq_rand(&ld_rng) & 1u));
+    }
 }
 
 /* ------------------------------------------------------- the bar line --- */
@@ -2195,6 +2341,7 @@ void en_init(void)
     memset(pluck, 0, sizeof pluck);              /* (BERLIN's voices from rest: none sounding, none to let go) */
     memset(&lead, 0, sizeof lead);
     ld_key = -1;
+    ld_reseed();
     dr_on[0] = dr_on[1] = dr_midi[0] = dr_midi[1] = 0;
     dr_lvl[0] = dr_lvl[1] = 0.0f;
     plate_init();
@@ -2272,6 +2419,7 @@ static void play_start(int from_top)
     drone_chord();
     ld_n = ld_i = 0;                             /* (the Lead: a breath before its first phrase) */
     ld_rest = 2;
+    ld_due = 0;
     if (!en_ext)
         midi(from_top ? 0xFA : 0xFB, 0, 0);
 }
@@ -2363,7 +2511,8 @@ static void drain(void)
         case C_PANIC: quiet(); break;
         case C_LKEY:                             /* (the white keys: the Lead, in the scale) */
             if (b) {
-                ld_n = 0;                        /* (its own phrase let go) */
+                ld_n = 0;                        /* (its own phrase let go, its pair too) */
+                ld_due = 0;
                 ld_key = (int8_t)a;
                 lead_note(ld_deg_note(a));
                 en_lead_deg = lead.on ? (int8_t)a : -1;
@@ -2385,6 +2534,7 @@ static void drain(void)
                 seq_take();
             ar_start();                          /* (BERLIN) a piece (changed, or back to its recipe) from its arc's
                                                   * start: its intros (Emerge), or Flow at once */
+            ld_reseed();                         /* (the Lead's ideas new: a new piece) */
             break;
         case C_SEQ:
             seq_have = (uint8_t)a;

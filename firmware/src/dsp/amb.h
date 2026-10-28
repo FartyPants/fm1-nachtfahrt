@@ -176,6 +176,15 @@ extern volatile uint16_t en_seq_lane[5], en_seq_acc[2];   /* the Pattern page's 
 void en_lead_key(int degree, int on);           /* the white keys: the Lead plays scale degree `degree` (0: the
                                                  * root) from the root up, in its register; on 0 lets it go */
 extern volatile int8_t en_lead_deg;             /* the degree the Lead sounds (played or its own): -1 none */
+/* (BERLIN, the Lead's memory) its phrases' roles: a pair's call (an open ending) and answer (closed), a sentence's
+ * sequence and fragment, its cadence (the run); the role of the phrase playing, and a count of its phrases so far (for
+ * tests: a phrase begins where the count moves) */
+enum { LR_CALL, LR_ANSWER, LR_SEQ, LR_FRAG, LR_CADENCE };
+extern volatile uint8_t en_lead_role, en_lead_phr;
+#define LD_REST (-128)                          /* a rest inside a motif */
+/* (host tests only, between renders) motif slot `slot` (0..3) written: n entries (1..8), each a scale degree from the
+ * chord root's degree (LD_REST: a rest) and its length in sixteenths; the Lead's next pair plays it */
+void en_lead_motif(int slot, const int8_t *off, const uint8_t *dur, int n);
 void en_seq_set(int layer, const seq_t *s);   /* a pattern written into a sequence (0: the Sequence, 1:
                                                * Sequence 2): played as written, from its first step */
 extern const char *const EN_CV_NAME[EN_NCV], *const EN_BV_NAME[EN_NBV];

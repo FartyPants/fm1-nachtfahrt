@@ -43,20 +43,19 @@ static int sounding[16][128];
 static int vel_lo = -1;
 static uint32_t vel_bad, sec_ons[EN_NSEC], ch2_ons;
 /* (BERLIN, the Lead's memory) the Lead's notes (channel 3) logged in order: onset and end (sixteenths; end ~0u: still
- * sounding), the note, the phrase it belongs to (a new one after a bar or more of the Lead's silence), the section */
+ * sounding), the note, the phrase it belongs to (the engine's count, en_lead_phr) and its role, the section, the
+ * chord's root (pitch class) as the note began */
 #define LGN 16384
 static struct {
-    uint32_t on, off, phr;
-    uint8_t note, sec;
+    uint32_t on, off;
+    uint8_t note, sec, phr, role, croot;
 } lg[LGN];
-static uint32_t lg_n, lg_phr, lg_last_off = 0xFFFFFFFFu;
+static uint32_t lg_n;
 static int lg_open = -1;                         /* (the note sounding, its entry; -1: none) */
 static void lg_end(void)
 {
-    if (lg_open >= 0) {
+    if (lg_open >= 0)
         lg[lg_open].off = en_bars;
-        lg_last_off = en_bars;
-    }
     lg_open = -1;
 }
 void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2)
@@ -66,10 +65,9 @@ void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2)
     if (st == 0x92u && d2 > 0u) {
         lg_end();
         if (lg_n < LGN) {
-            if (!lg_n || lg_last_off == 0xFFFFFFFFu || en_bars - lg_last_off >= 16u)
-                lg_phr++;
-            lg[lg_n].on = en_bars, lg[lg_n].off = 0xFFFFFFFFu, lg[lg_n].phr = lg_phr;
-            lg[lg_n].note = (uint8_t)d1, lg[lg_n].sec = en_section;
+            lg[lg_n].on = en_bars, lg[lg_n].off = 0xFFFFFFFFu, lg[lg_n].phr = en_lead_phr;
+            lg[lg_n].note = (uint8_t)d1, lg[lg_n].sec = en_section, lg[lg_n].role = en_lead_role;
+            lg[lg_n].croot = en_chord_root;
             lg_open = (int)lg_n++;
         }
     } else if (st == 0x82u || (st == 0x92u && !d2) || (st == 0xB2u && d1 == 123u)) {
@@ -373,8 +371,8 @@ static int lg_deg(int note)
 
 /* the log cleared, secs played, then the Lead's numbers (the report's "logging four numbers"): the share of its
  * intervals within a phrase of 2 semitones or less; after a leap of 5 or more, how often the next interval turns
- * back; and how often a phrase recurs: its (degree interval, onset gap, last note's length) string the same as one
- * of the 4 phrases before it's, exactly or transposed */
+ * back; and how often a call recurs (spec 7.2): its (degree interval, onset gap, last note's length) string the same
+ * as one of the 4 calls before it's, exactly or transposed (answers not counted: their endings differ by design) */
 typedef struct {
     float step_share, leap_turn, pair_recur;
     uint32_t notes, phrases, intervals, leaps, compared;
@@ -399,11 +397,12 @@ static void lead_metrics(float secs, lm_t *m)
 {
     uint32_t i, steps = 0, turns = 0, recur = 0, starts[4] = {0, 0, 0, 0}, ns = 0;
     memset(m, 0, sizeof *m);
-    lg_n = 0, lg_open = -1, lg_last_off = 0xFFFFFFFFu;
+    lg_n = 0, lg_open = -1;
     run(secs);
     m->notes = lg_n;
     for (i = 0; i < lg_n; i++) {
-        if (lg_first(i)) {                       /* a phrase: the same as one of the 4 before it? */
+        m->phrases += (uint32_t)lg_first(i);
+        if (lg_first(i) && lg[i].role != LR_ANSWER) {   /* a call: the same as one of the 4 before it? */
             uint32_t k, hit = 0;
             for (k = 0; k < ns && k < 4u; k++)
                 hit |= (uint32_t)lg_same(starts[k], i);
@@ -415,7 +414,6 @@ static void lead_metrics(float secs, lm_t *m)
                 starts[k] = starts[k - 1];
             starts[0] = i;
             ns++;
-            m->phrases++;
         }
         if (!lg_last(i)) {
             const int d = (int)lg[i + 1].note - (int)lg[i].note;
@@ -431,6 +429,45 @@ static void lead_metrics(float secs, lm_t *m)
     m->step_share = m->intervals ? (float)steps / (float)m->intervals : 0.0f;
     m->leap_turn = m->leaps ? (float)turns / (float)m->leaps : 0.0f;
     m->pair_recur = m->compared ? (float)recur / (float)m->compared : 0.0f;
+}
+/* the scale's chord whose root is pitch class croot (lg_pool on lg_root): its tones (count; 0: none), the pitch class
+ * of its 9th (the degree above its root) and of its fifth (the tone nearest 7 semitones above the root) */
+static int lg_chord(int croot, int *pcs, int *p9, int *p5)
+{
+    int st[12], m = en_scale(lg_pool, st), d, n, k, best = 99;
+    for (d = 0; d < m; d++)
+        if ((lg_root + st[d]) % 12 == croot) {
+            n = en_chord_tones(lg_pool, lg_root, d, pcs);
+            *p9 = (lg_root + st[(d + 1) % m]) % 12;
+            *p5 = pcs[0];
+            for (k = 1; k < n; k++) {
+                const int iv = (pcs[k] - pcs[0] + 12) % 12, e = iv > 7 ? iv - 7 : 7 - iv;
+                if (e < best)
+                    best = e, *p5 = pcs[k];
+            }
+            return n;
+        }
+    return 0;
+}
+/* from the log: the first entry of the first phrase with role `role` at or after entry i (lg_n: none) */
+static uint32_t lg_find(uint32_t i, int role)
+{
+    for (; i < lg_n; i++)
+        if (lg_first(i) && lg[i].role == role)
+            return i;
+    return lg_n;
+}
+/* played until the Lead begins a phrase of role `role` (at most secs; 0 if it didn't), a block at a time */
+static int lg_wait(int role, float secs)
+{
+    const uint8_t p0 = en_lead_phr;
+    int b;
+    for (b = 0; b < (int)(secs * 44100.0f / 256.0f); b++) {
+        run(256.0f / 44100.0f + 1e-6f);
+        if (en_lead_phr != p0 && en_lead_role == role && lg_n && lg[lg_n - 1].phr == en_lead_phr)
+            return 1;
+    }
+    return 0;
 }
 static void lm_print(const char *what, const lm_t *m)
 {
@@ -1576,6 +1613,176 @@ int main(void)
         lead_metrics(1800.0f, &m);
         lm_print("test_lead_metrics: 30 min of Stratosfear's Lead, Motion 100", &m);
         CHECK(m.notes > 100u && m.phrases > 20u, "test_lead_metrics: %u notes, %u phrases", m.notes, m.phrases);
+    }
+
+    /* (BERLIN, the Lead's memory) pairs: 20 minutes in D minor, the walk's chords, Motion 100, Lead in 0, Phrases 100.
+     * Every call answered (the next phrase, beginning within 2 bars of the call's end); the answer ends on the chord's
+     * root or fifth, the call on another chord tone or the 9th (the chord as it was at the phrase's start) */
+    {
+        const uint32_t pl = EN_MODE_POOL[MODE_AEOLIAN];
+        uint32_t i, calls = 0, answers = 0, unanswered = 0, late = 0, bad_call = 0, bad_ans = 0, nochord = 0;
+        lm_t m;
+        fresh();
+        en_set(P_ROOT, 2);
+        en_pool(pl);
+        lg_pool = pl, lg_root = 2;
+        en_set(P_LEAD, 60);
+        en_set(P_LDIN, 0);
+        en_set(P_LDENS, 100);
+        en_set(P_MOTION, 100);
+        en_play(1);
+        lead_metrics(1200.0f, &m);
+        for (i = 0; i < lg_n; i++) {
+            int pcs[4], p9 = -1, p5 = -1, n, pc, k, ok = 0;
+            uint32_t j = i;
+            if (!lg_first(i))
+                continue;
+            while (!lg_last(j))
+                j++;
+            n = lg_chord(lg[i].croot, pcs, &p9, &p5);
+            pc = lg[j].note % 12;
+            if (!n) {
+                nochord++;
+                continue;
+            }
+            if (lg[i].role == LR_CALL) {
+                calls++;
+                for (k = 1; k < n; k++)
+                    ok |= pc == pcs[k];
+                ok |= pc == p9;
+                if (!ok) {
+                    if (!bad_call)
+                        printf("  a call ending on %d (chord root %d, its 9th %d)\n", pc, pcs[0], p9);
+                    bad_call++;
+                }
+                if (j + 1 >= lg_n) {
+                    if (lg[j].off == 0xFFFFFFFFu || en_bars - lg[j].off > 40u)
+                        unanswered++;
+                } else if (lg[j + 1].role != LR_ANSWER) {
+                    unanswered++;
+                } else if (lg[j].off == 0xFFFFFFFFu || lg[j + 1].on - lg[j].off > 32u) {
+                    late++;
+                }
+            } else if (lg[i].role == LR_ANSWER) {
+                answers++;
+                if (pc != pcs[0] && pc != p5) {
+                    if (!bad_ans)
+                        printf("  an answer ending on %d (chord root %d, fifth %d)\n", pc, pcs[0], p5);
+                    bad_ans++;
+                }
+            }
+        }
+        lm_print("test_pairs: 20 min, D minor, Motion 100", &m);
+        CHECK(calls >= 20u && answers >= calls - 1u && !unanswered && !late,
+              "test_pairs: %u calls, %u answers, %u unanswered, %u answered late", calls, answers, unanswered, late);
+        CHECK(!bad_call && !bad_ans && !nochord, "test_pairs: endings: %u calls not open, %u answers not closed (%u "
+              "phrases on a chord off the scale)", bad_call, bad_ans, nochord);
+    }
+
+    /* (BERLIN, the Lead's memory) a chord change in the middle of a motif: its notes rendered at the phrase's start
+     * (the call's notes all from the chord it began on, the note in flight across the change not struck again), and
+     * the next pass, the answer, transposed to the new chord (the same rhythm, its offsets from the new root). The
+     * motif 6 6 6 6 8 sixteenths from a bar line: the next chord (en_next) comes during its third note */
+    {
+        static const int8_t OFF[5] = {0, 1, 2, 4, 2};
+        static const uint8_t DUR[5] = {6, 6, 6, 6, 8};
+        const uint32_t pl = EN_MODE_POOL[MODE_AEOLIAN];
+        int tries, done = 0, ok = 0, st[12], ns = en_scale(pl, st);
+        fresh();
+        en_set(P_ROOT, 2);
+        en_pool(pl);
+        lg_pool = pl, lg_root = 2;
+        en_set(P_LEAD, 60);
+        en_set(P_LDIN, 0);
+        en_set(P_LDENS, 100);
+        en_set(P_MOTION, 0);
+        en_set(P_DRIFT, 6);                      /* (Hold: only en_next moves the chord) */
+        en_play(1);
+        run(1.0f);
+        for (tries = 0; tries < 8 && !done; tries++) {
+            int r0, r1;
+            uint32_t c, a, k;
+            lg_n = 0, lg_open = -1;
+            en_lead_motif(1, OFF, DUR, 5);
+            if (!lg_wait(LR_CALL, 120.0f))
+                break;
+            r0 = en_chord_root;
+            en_next();
+            run(25.0f);
+            r1 = en_chord_root;
+            c = lg_find(0, LR_CALL);
+            a = lg_find(c, LR_ANSWER);
+            if (r1 == r0 || a >= lg_n || a < c + 5u || a + 5u > lg_n)
+                continue;
+            done = 1;
+            ok = lg[c].croot == r0 && lg[a].croot == r1 && lg_last(c + 4u) && lg_last(a + 4u);
+            for (k = 0; k < 5u && ok; k++) {
+                ok &= lg[c + k].on - lg[c].on == lg[a + k].on - lg[a].on;   /* (the same rhythm) */
+                if (k < 4u)                      /* (the last note: the ending's) */
+                    ok &= lg_deg(lg[c + k].note) - 5 * ns - en_deg_of(pl, r0 - 2) == OFF[k] &&
+                          lg_deg(lg[a + k].note) - 5 * ns - en_deg_of(pl, r1 - 2) == OFF[k];
+            }
+            ok &= lg[c + 2].on - lg[c].on == 12u && lg[c + 3].on - lg[c].on == 18u;   /* (nothing struck at 16) */
+            if (!ok)
+                for (k = 0; k < 5u; k++)
+                    printf("  call %u at +%u, answer %u at +%u (roots %d %d)\n", lg[c + k].note, lg[c + k].on - lg[c].on,
+                           lg[a + k].note, lg[a + k].on - lg[a].on, r0, r1);
+        }
+        CHECK(done && ok, "test_motif_chord_change: tried %d, done %d, ok %d", tries, done, ok);
+    }
+
+    /* (BERLIN, the Lead's memory) rests in a motif: 4 sixteenths of a note, a rest of 4, a note of 4, a rest of 2, the
+     * last note 6. Each rest lets the note go (its note-off at the rest's start) and holds silence its length; the
+     * answer the same, its last note twice as long */
+    {
+        static const int8_t OFF[5] = {0, LD_REST, 2, LD_REST, 4};
+        static const uint8_t DUR[5] = {4, 4, 4, 2, 6};
+        static const uint32_t ON[3] = {0, 8, 14}, END[3] = {4, 12, 20};
+        uint32_t c = 0, a = 0, k;
+        int ok = 0, got;
+        fresh();
+        en_set(P_LEAD, 60);
+        en_set(P_LDIN, 0);
+        en_set(P_LDENS, 100);
+        en_set(P_MOTION, 0);
+        en_play(1);
+        run(1.0f);
+        lg_n = 0, lg_open = -1;
+        en_lead_motif(2, OFF, DUR, 5);
+        got = lg_wait(LR_CALL, 120.0f);
+        run(25.0f);
+        if (got) {
+            c = lg_find(0, LR_CALL);
+            a = lg_find(c, LR_ANSWER);
+            ok = a + 3u <= lg_n && a == c + 3u && lg_last(c + 2u) && lg_last(a + 2u);
+            for (k = 0; k < 3u && ok; k++)
+                ok &= lg[c + k].on - lg[c].on == ON[k] && lg[c + k].off - lg[c].on == END[k] &&
+                      lg[a + k].on - lg[a].on == ON[k] && lg[a + k].off - lg[a].on == (k < 2u ? END[k] : 26u);
+            if (!ok)
+                for (k = 0; k < 3u && c + k < lg_n; k++)
+                    printf("  call note %u: on +%u off +%u\n", k, lg[c + k].on - lg[c].on, lg[c + k].off - lg[c].on);
+        }
+        CHECK(got && ok, "test_lead_rests: a call %d, its rests as written %d", got, ok);
+    }
+
+    /* (BERLIN, the Lead's memory) the generated Lead is silent in Emerge (spec 3.1): the Drone's Intro 24 (Emerge 24
+     * bars), Lead in 0, Phrases 100: no Lead note before Flow, and some after */
+    {
+        uint32_t i, in_emerge = 0, after = 0;
+        fresh();
+        en_set(P_MI0, 24);
+        en_set(P_LEAD, 60);
+        en_set(P_LDIN, 0);
+        en_set(P_LDENS, 100);
+        en_set(P_MOTION, 0);
+        en_play(1);
+        lg_n = 0, lg_open = -1;
+        run(120.0f);
+        for (i = 0; i < lg_n; i++) {
+            in_emerge += lg[i].sec == EN_SEC_EMERGE;
+            after += lg[i].sec != EN_SEC_EMERGE;
+        }
+        CHECK(!in_emerge && after, "test_lead_emerge_silent: %u Lead notes in Emerge, %u after", in_emerge, after);
     }
 
     /* (BERLIN) the echo ping-pongs: one note into it alone (no repeats, no plate, no cloud, the others silent), Width
