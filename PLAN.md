@@ -42,6 +42,12 @@ Done, with the whole suite passing (`tests/run_tests.sh`, gate `tools/suite_gate
 - **Storage**: one project, magic "BRL1", format 7; other firmwares' saves and older NACHTFAHRT formats are not read.
 - **Docs**: README, MANUAL, this file; the manual's screenshots (`tests/listen/docshots.amb`) and panel drawing,
   brought up to date with the filter motion.
+- **The user's batch of 2026-10-28**: the name NACHTFAHRT (by CRANKY MAN); SELECT a layer's level on its pages
+  (nothing elsewhere: no paging, no tempo), OCT− / OCT+ the Sequence's, the Lead's and Sequence 2's octave (lit away
+  from the piece's own); the lengths Timewind 16/15, Sunrain 8/7, Mirage 12/11, Rubycon's octaves −2 / 0, Cyborg's
+  Sequence at 20; Motion no longer changes Sequence 2's length; Sequence 2's octave moves with Motion, a section at a
+  time. CPU after it (baseline.sh, medians): Timewind 0.74, Wahnfried 0.60, Phaedra 0.77, Rubycon 0.68, Stratosfear
+  0.78, Sunrain 0.85, Mirage 0.93, Cyborg 0.58, stressed 0.86.
 
 ## CPU (host proxy)
 
