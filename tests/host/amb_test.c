@@ -2654,7 +2654,7 @@ int main(void)
         const uint32_t pl = EN_MODE_POOL[MODE_AEOLIAN];
         int8_t off0[8], off[8];
         uint8_t dur0[8], dur[8];
-        int n0, n1, ca, cd, got, left, pass;
+        int n0, n1, ca, cd, got, left, pass, pl0, pl1;
         fresh();
         en_set(P_ROOT, 2);
         en_pool(pl);
@@ -2688,12 +2688,17 @@ int main(void)
             }
             n0 = en_lead_theme(off0, dur0);      /* (the figure, taken) */
             run(0.3f);
+            pl0 = en_lead_played();
             if (pass)
                 piece(4);
             else
                 en_panic();
-            run(0.1f);
+            run(256.0f / 44100.0f + 1e-6f);      /* (a block: the change taken, no draw yet) */
+            pl1 = en_lead_played();
+            run(0.1f - 256.0f / 44100.0f);
             cd = en_lead_cap();
+            CHECK(pl0 && pl1 == !pass, "test_lead_memory_panic: %s: the theme the keys' %d before, %d after (1, %d)",
+                  pass ? "a piece change" : "PANIC", pl0, pl1, !pass);
             run(20.0f);
             en_mute(EN_M_BASS);                  /* (the Lead muted: what it sounds let go; anything left is stuck) */
             run(0.05f);
@@ -3555,6 +3560,13 @@ int main(void)
         CHECK(pa[7][P_SEQ] == 20 && pa[7][P_SEQ2] == 0 && pa[7][P_LEAD] == 70,
               "test_pieces_cyborg: Sequence %d, Sequence 2 %d, Lead %d (the user's: 20, 0, 70)", pa[7][P_SEQ],
               pa[7][P_SEQ2], pa[7][P_LEAD]);
+        /* (the Lead's memory, spec 3.3) each piece's Memory (the Arc page's fourth knob): the report's starting
+         * values, to tune by ear */
+        for (a = 0; a < EN_NPIECES; a++) {
+            static const int LMEM[EN_NPIECES] = {55, 40, 75, 45, 85, 60, 50, 35};
+            CHECK(pa[a][P_LMEM] == LMEM[a], "test_pieces_memory: %s Memory %d (spec 3.3: %d)", en_piece_name(a),
+                  pa[a][P_LMEM], LMEM[a]);
+        }
         for (a = 1; a < EN_NPIECES; a += 6)
             CHECK(pa[a][P_MW0] >= 40 && pa[a][P_MR0] >= 40, "test_pieces_move: %s Drone width %d rate %d",
                   en_piece_name(a), pa[a][P_MW0], pa[a][P_MR0]);

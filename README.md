@@ -20,8 +20,9 @@ can play with it: the white keys give you the melody, always in the piece's key.
   down now and then, for a section;
 - a **Drone**: a chord on two banks of voices (Organ, Strings, Choir, Saws, Glass) with a pedal under it, a
   phaser and a slow walk from chord to chord;
-- a **Lead**: one gliding voice (Odyssey, Mini, Flute, Theremin, Synthi) playing long, dreamy phrases deep in
-  the reverb and the echo, which you can also play on the white keys, in the scale;
+- a **Lead**: one gliding voice (Odyssey, Mini, Flute, Theremin, Synthi) playing dreamy calls and answers deep in
+  the reverb and the echo; it remembers its motifs and returns to the piece's theme (how much it keeps: **Memory**).
+  You can also play it on the white keys, in the scale: three notes or more and a pause become its theme;
 - an **Atmosphere**: Wind, Surf, Space, Air or Tape (or none);
 - an **arc**: a piece opens from the drone (each layer's filter rising from closed), flows, lets the Lead take
   over and crosses a bridge in the middle, where the layers' filters part and come together. It never ends by
@@ -71,7 +72,7 @@ NACHTFAHRT is not connected with any of these artists.
 | SEQ | Sequence 2 (Chance, Octave, Length, Level); again, its sound; again, the Pattern page (write the steps on the keys); again, its Move page |
 | SAVE | The Atmosphere (Density, Width, Drift, Air); again, its sound (Colour, Ring, Reverb, Echo); again, its Move page |
 | FX | Space (Echo, Echo time, Feedback, Reverb); again, the Echo page (Blur, Tone, Width, Size) |
-| GLO | Setup (Tune, MIDI out, Lights, Save); again, the Arc (Lead in, Bridge, Arc). Held: save; held on: the piece back to its recipe |
+| GLO | Setup (Tune, MIDI out, Lights, Save); again, the Arc (Lead in, Bridge, Arc, Memory). Held: save; held on: the piece back to its recipe |
 | ALGORITHM | On a layer's page, its voice (the Atmosphere: its character) |
 | PRESETS | The piece |
 | SELECT | On a layer's pages, its level; on the Nachtfahrt page, Energy (elsewhere nothing) |

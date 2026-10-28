@@ -89,3 +89,22 @@ close their filters), so the first minute is heavier than in 0.1's table above.
 
 **Every median within the 1.10% budget** (the heaviest, Mirage, 1.01: 0.09 left for the Lead-memory plan, whose own
 budget is the same 1.10%).
+
+# BERLIN with the Lead's memory (measured 2026-10-28, Lead-memory Task 6)
+
+Same method; a busier session than the table above, so the base (202f76e, before Memory went on the Arc page) was
+measured in it too. The peaks are the same to the 0.1 dB.
+
+| Script | Piece | Runs | Median | Base median |
+|---|---|---|---|---|
+| baseline_0 | Timewind | 0.79 0.87 0.82 | 0.82 | 0.80 |
+| baseline_1 | Wahnfried | 0.78 0.74 0.78 | 0.78 | 0.75 |
+| baseline_2 | Phaedra | 0.83 0.83 0.83 | 0.83 | 0.83 |
+| baseline_3 | Rubycon | 0.70 0.74 0.70 | 0.70 | 0.72 |
+| baseline_4 | Stratosfear | 0.83 0.87 0.84 | 0.84 | 0.84 |
+| baseline_5 | Sunrain | 0.97 0.91 0.92 | 0.92 | 0.90 |
+| baseline_6 | Mirage | 1.02 1.05 1.02 | **1.02** | 1.03 |
+| baseline_7 | Cyborg | 0.68 0.66 0.74 | 0.68 | 0.65 |
+| baseline_stress | Sunrain, stressed | 1.13 0.94 0.94 | 0.94 | 0.95 |
+
+**Every median within the 1.10% budget**; the differences from the base are the host's noise (±0.03).

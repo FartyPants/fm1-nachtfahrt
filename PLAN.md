@@ -12,15 +12,16 @@ Done, with the whole suite passing (`tests/run_tests.sh`, gate `tools/suite_gate
   times, as notes; Density thinning by priority; eighths or sixteenths; the Pattern page.
 - **Sequence 2**, its own length (by default a step shorter), Chance, Sub voice.
 - **The Drone**: two banks (chord + pedal), five voices, ensemble, phaser.
-- **The Lead**: one gliding voice, phrases, five voices, dreamy sends (reverb and echo 90); the white keys play it.
+- **The Lead**: one gliding voice, five voices, dreamy sends (reverb and echo 90); calls and answers that remember
+  their motifs and the piece's theme (Memory, below); the white keys play it and write its theme.
 - **The Atmosphere**: None, Wind, Surf, Space, Air, Tape.
 - **The arc**: Emerge (only while the Intros open), Flow, Solo, Bridge; the swell into Flow; no endings (a piece
   repeats for ever); a piece changed starts its own arc.
 - **Filter motion**:
   no hidden levels (Emerge, Seq2 in, Ending and the level fades are gone); each layer's filter wanders, opens
   (Intro) and takes the Bridge's move as an offset from its knob; a Move page (Width, Time, Rate, Intro) for each
-  layer, the Sequence's Width being Sweep; the Arc page (Lead in, Bridge, Arc, the fourth knob empty); the motion
-  shown (meter ticks, the dot on the brightness knob's ring, "MOVING DARKER, -n OCT", the screen reader).
+  layer, the Sequence's Width being Sweep; the Arc page (Lead in, Bridge, Arc; its fourth knob the Lead's Memory);
+  the motion shown (meter ticks, the dot on the brightness knob's ring, "MOVING DARKER, -n OCT", the screen reader).
 - **The black keys** play eleven effects while held (Take-off, Supernova, Twitter, Repeat, Swell, Freeze, Octave,
   Return, Rise, Close, Transpose).
 - **PERFORM finished**: a muted Lead and a muted Drone are silent (MIDI too); Energy drives Repeat B; Wet moves
@@ -35,7 +36,8 @@ Done, with the whole suite passing (`tests/run_tests.sh`, gate `tools/suite_gate
 - **The eight pieces**: Timewind, Wahnfried, Phaedra, Rubycon, Stratosfear, Sunrain, Mirage, Cyborg, each with its
   moves (Timewind's Sequence opens over 32 bars, Rubycon's Sequence 2 after its Sequence, Stratosfear and Sunrain
   straight in, Wahnfried and Cyborg moving on the Drone).
-- **Storage**: one project, magic "BRL1", format 7; other firmwares' saves and older NACHTFAHRT formats are not read.
+- **Storage**: one project, magic "BRL1", format 8 (8: the Lead's Memory appended); other firmwares' saves and older
+  NACHTFAHRT formats are not read (a format-7 save, 0.9.1's, loads as the recipes).
 - **Docs**: README, MANUAL, this file; the manual's screenshots (`tests/listen/docshots.amb`) and panel drawing,
   brought up to date with the filter motion.
 - **The user's batch of 2026-10-28**: the name NACHTFAHRT (by CRANKY MAN); SELECT a layer's level on its pages
@@ -51,13 +53,22 @@ Budget: **1.10%** of real time (DUB-1's heaviest piece × 1.10; [docs/BASELINE.m
 `tests/listen/baseline.sh`, three runs, medians (2026-10-28, after the user's batch): Timewind 0.74, Wahnfried 0.60,
 Phaedra 0.77, Rubycon 0.68, Stratosfear 0.78, Sunrain 0.85, Mirage 0.93, Cyborg 0.58; stressed (Sunrain, Density,
 both repeats, Sequence 2, Phaser and Phrases at 100) 0.86 (before the filter motion: 0.58 .. 0.83, stressed 0.85); the effects scenario, with all sixteen held at once in it, 0.98. All within the
-budget, so nothing was cut.
+budget, so nothing was cut. After the Lead's memory (2026-10-28, a busier session): 0.68 .. 1.02 (Mirage),
+stressed 0.94, all within the budget ([docs/BASELINE.md](docs/BASELINE.md)).
 
 ## Next
 
-**A Lead that remembers** (six steps, three done): a small motif memory for the Lead,
-call-and-answer phrasing, callbacks, intensity from the arc, white-key theme capture, and a **Memory** knob on
-the Arc page's fourth knob (not built yet: the knob is empty until then).
+**A Lead that remembers: done** (six steps). The Lead plays in pairs, a call and its answer a beat or two later;
+it remembers four motifs and plays one for a block of pairs, then keeps it (Memory's chance), varies it or finds a
+new one; its first is the piece's theme, back when Solo begins, after the rise peaks, at each Bridge and after six
+blocks without it; intensity follows the arc (more notes, shorter and higher towards the peak, a run to a close);
+three white-key notes or more and a pause become the theme. **Memory** is the Arc page's fourth knob (0–100,
+"How much the Lead keeps its ideas"); the pieces: Timewind 55, Wahnfried 40, Phaedra 75, Rubycon 45, Stratosfear
+85, Sunrain 60, Mirage 50, Cyborg 35 (the starting values, to tune by ear). CPU after it (baseline.sh, medians):
+Timewind 0.82, Wahnfried 0.78, Phaedra 0.83, Rubycon 0.70, Stratosfear 0.84, Sunrain 0.92, Mirage 1.02, Cyborg
+0.68, stressed 0.94 (the same session before Memory went on the panel: 0.80 0.75 0.83 0.72 0.84 0.90 1.03 0.65,
+0.95: the host's noise). Still to hear: the user's ear on each piece's Memory; whether the theme (about 40% of the calls in the
+first minutes) is too much of a loop.
 
 ## To do
 

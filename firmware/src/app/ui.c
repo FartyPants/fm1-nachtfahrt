@@ -108,8 +108,8 @@ static const uint16_t VIEW_KNOB[NVIEWS][4] = {
     {P_NGRAIN, P_NWIDTH, P_NDRIFT, P_NROOM},       /* the Atmosphere */
     {P_EBLUR, P_ETONE, P_EWIDTH, P_SIZE},
     {P_NCOL, P_NTUNE, P_NPLATE, P_NECHO},      /* its space */
-    {P_LDIN, P_BRIDGE, P_ARC, K_NONE},         /* the Arc (GLO again): how the piece builds (the intros are each
-                                                  * layer's, on its Move page) */
+    {P_LDIN, P_BRIDGE, P_ARC, P_LMEM},         /* the Arc (GLO again): how the piece builds (the intros are each
+                                                  * layer's, on its Move page), and how much the Lead keeps its ideas */
     {P_MW1, P_MT1, P_MR1, P_MI1},                /* the Sequence's Move (ARP, a fourth time; its Width is Sweep) */
     {P_MW3, P_MT3, P_MR3, P_MI3},                /* Sequence 2's Move (SEQ, a fourth time) */
     {P_MW4, P_MT4, P_MR4, P_MI4},                /* the Atmosphere's Move (SAVE, a third time) */
@@ -137,7 +137,7 @@ static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Density", "Width", "Drift", "Air"},
     {"Blur", "Tone", "Width", "Size"},
     {"Colour", "Ring", "Reverb", "Echo"},
-    {"Lead in", "Bridge", "Arc", ""},
+    {"Lead in", "Bridge", "Arc", "Memory"},
     {"Width", "Time", "Rate", "Intro"},
     {"Width", "Time", "Rate", "Intro"},
     {"Width", "Time", "Rate", "Intro"},
@@ -168,7 +168,7 @@ static const char *const KNOB_HELP[NVIEWS][4] = {   /* (BERLIN's, a row a view, 
     {"How busy it is", "Mono, to wide", "How quickly it changes", "The air under it"},
     {"Clean repeats, to a dissolving wash", "The repeats darker, or brighter", "The echo mono, to wide", "How long the plate rings"},
     {"Darker, or brighter", "How much it rings", "How much goes into the plate", "How much goes into the echo"},
-    {"Bars before the Lead may start", "How far the bridge moves filters", "The Sequence's long rise: 0 none", ""},
+    {"Bars before the Lead may start", "How far the bridge moves filters", "The Sequence's long rise: 0 none", "How much the Lead keeps its ideas"},
     {"How far its filter wanders", "How long one move takes", "How often a new move starts", "Bars its filter takes to open"},
     {"How far its filter wanders", "How long one move takes", "How often a new move starts", "Bars its filter takes to open"},
     {"How far its filter wanders", "How long one move takes", "How often a new move starts", "Bars its filter takes to open"},

@@ -120,7 +120,7 @@ second.
 | SEQ | Sequence 2; again, its sound page; again, the Pattern page; again, its Move page |
 | SAVE | The Atmosphere; again, its sound page; again, its Move page |
 | FX | The Space page; again, the Echo page |
-| GLO | The Setup page; again, the Arc page (Lead in, Bridge, Arc). Held half a second: save. Held on (1.5 s): the piece back to its recipe |
+| GLO | The Setup page; again, the Arc page (Lead in, Bridge, Arc, Memory). Held half a second: save. Held on (1.5 s): the piece back to its recipe |
 
 **Nudges.** Hold a layer's button (ENV, ARP, LFO, SEQ) for half a second: its sound takes a small step
 somewhere new (its filter, envelope, tone or vibrato, never its sends or octave). Hold it on for 1.5 s: a
@@ -214,9 +214,11 @@ root an octave under (the **Pedal**). Voices: **Organ**, **Strings** (through an
 **The Lead** (LFO; channel 3) is one voice, gliding: **Odyssey**, **Mini**, **Flute**, **Theremin**, **Synthi**. It plays
 in pairs: a call that ends open, then, a beat or two later, its answer, the same rhythm ending on the chord's root or
 fifth, held longer. It remembers its motifs: it plays one for a few pairs, then keeps it, varies it a little (a note
-moved, a new tail, its first half twice, slower) or finds a new one. Its first idea is the piece's theme, and the theme
-comes back when Solo begins, after the arc's rise peaks, when a Bridge begins, and when it hasn't been heard for a
-while. Towards the arc's peak it plays more notes, shorter and higher, and sometimes builds a longer phrase that ends in
+moved, a new tail, its first half twice, slower) or finds a new one. How much it keeps is **Memory** (the Arc page):
+the chance that after those few pairs it keeps the motif; at 100 it holds on to an idea, at 0 it changes it nearly
+every pair. Its first idea is the piece's theme, and the theme comes back when Solo begins, after the
+arc's rise peaks, when a Bridge begins, and when it hasn't been heard for a while (with Memory under 20 the theme it
+made itself doesn't come back). Towards the arc's peak it plays more notes, shorter and higher, and sometimes builds a longer phrase that ends in
 a quick run, mostly downwards, to a close. Between pairs it breathes for bars (**Phrases**: how often). Its vibrato comes in late.
 By default its reverb and echo are at 90, so it sings far away. It may start **Lead in** bars after the piece starts
 (the Arc page), plays now and then in Flow and fully in Solo. Its filter's movement is kept gentle: never more than
@@ -311,10 +313,12 @@ Energy does. A new piece, or PLAY from the top, starts the motion from its begin
 
 GLO twice. **Lead in** (0–64 bars): how long after the piece starts the Lead may play. **Bridge** (0–100): see
 above. **Arc** (0–100): the length of the Sequence's slow rise: its filter climbs towards a peak (four fifths
-of the way through) and settles, then does it again, for ever (0: no rise; 1–100: about 130 to 770 bars). The
-fourth knob is empty.
+of the way through) and settles, then does it again, for ever (0: no rise; 1–100: about 130 to 770 bars).
+**Memory** (0–100): how much the Lead keeps its ideas: the chance that, after a few pairs on one motif, it keeps
+it rather than varying it or finding a new one (see [The layers](#5-the-layers)). Each piece sets its own (see
+[The pieces](#7-the-pieces)).
 
-![The Arc page: Lead in, Bridge, Arc](img/screen-arc.png "The Arc page")
+![The Arc page: Lead in, Bridge, Arc, Memory](img/screen-arc.png "The Arc page")
 
 The Sequence's offset is the sum of its wander, its Intro, the bridge's move and this rise; the black keys'
 Rise and Close ([The effects grid](#9-the-effects-grid)) are one more term. The total is kept inside each
@@ -335,7 +339,9 @@ filter's usable range.
 | 7 | **Mirage** | Schulze, *Mirage* | F♯ minor, 95 | Glass 12 and 11, sparse, in 16ths | Glass + deep phaser, Theremin; a long reverb | Space | A slow opening: the Sequence's Intro 16 bars, Sequence 2's 24; the Atmosphere moves widest |
 | 8 | **Cyborg** | Schulze, *Cyborg* | C Phrygian, 70 | One, quiet (level 20): 2600, 8 steps in 8ths; no Sequence 2 | Organ, deep and beating; Theremin, low and up front (level 70) | None | The Drone's filter moves widely and slowly (Width 50, Time 70) |
 
-In every piece the Lead's Width is low: it stays gentle. The names are working titles. The keys and tempos are
+In every piece the Lead's Width is low: it stays gentle. Its **Memory** (the Arc page): Timewind 55, Wahnfried
+40, Phaedra 75, Rubycon 45, Stratosfear 85, Sunrain 60, Mirage 50, Cyborg 35 (Stratosfear's and Phaedra's Leads hold
+on to their ideas, Cyborg's and Wahnfried's wander). The names are working titles. The keys and tempos are
 starting points from music analysis sites, to be tuned by ear; fast readings such as Phaedra's 149 and
 Rubycon's 144 may be double the felt tempo (they run in eighths, which feel like sixteenths at half the speed).
 NACHTFAHRT is not connected with any of these artists.
@@ -385,8 +391,8 @@ Reverb, Echo. **Its Move page:** Width, Time, Rate, Intro.
 (the tail, in seconds), Reverb. The echo is a tape echo that ping-pongs left and right. **FX again: Echo:** Blur, Tone, Width, Size
 (the plate).
 
-**GLO: Setup:** Tune (±50 cents), MIDI out, Lights, Save. **GLO again: Arc:** Lead in, Bridge, Arc
-(see [The arc and the filter motion](#6-the-arc-and-the-filter-motion)).
+**GLO: Setup:** Tune (±50 cents), MIDI out, Lights, Save. **GLO again: Arc:** Lead in, Bridge, Arc,
+Memory (see [The arc and the filter motion](#6-the-arc-and-the-filter-motion)).
 
 **EDIT: Chords:** eight slots. In **Endless** the walk writes them and slot 1 plays; on each change they move
 up a slot. A key writes a slot's root, KNOB 2 its kind, KNOB 3 its type, KNOB 4 Play: Endless or **Loop**

@@ -229,6 +229,9 @@ static void orph_run(int p, int v, float *e, uint32_t *mh)
     if (p == P_BRIDGE)                           /* (the arc's Bridge within the 40 s: Motion 100, 16 bars of Flow at
                                                   * 160, then its first section, a Bridge from en_init's dice) */
         en_set(P_TEMPO, 160), en_set(P_MOTION, 100);
+    if (p == P_LMEM)                             /* (the Lead's Memory: a block's length and what it keeps, so a second
+                                                  * block within the 40 s: 160, the Lead's phrases at their most often) */
+        en_set(P_TEMPO, 160), en_set(P_LDENS, 100);
     en_set(p, v);
     en_regrow();
     en_play(1);

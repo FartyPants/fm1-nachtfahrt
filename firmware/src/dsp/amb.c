@@ -80,7 +80,9 @@ const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PAR
  *  times: 1/8 1/8. 1/4 1/4. 1/2 1 bar. Drift: 2 4 8 16 32 64 bars, Hold. Play: the walk Home, Wander, Free. Grid:
  *  8ths, 16ths. Atmosphere: None Wind Surf Space Air Tape. The moves (filter motion spec 9): MW/MT/MR/MI a layer's
  *  Width, Time, Rate and Intro in bars (0 Drone, 1 Sequence, 2 Lead, 3 Sequence 2, 4 Atmosphere; the Sequence's Width
- *  is Sweep); the Lead's Width kept low; Bridge the middle section's move) */
+ *  is Sweep); the Lead's Width kept low; Bridge the middle section's move. Memory: how much the Lead keeps its ideas,
+ *  the Lead's memory spec 3.3's starting values, to tune by ear; every piece's set, Mirage's 50 the default too, so
+ *  the table reads whole) */
 static const int16_t PC_TIMEWIND[] = {        /* Schulze, Bayreuth Return: an organ through the phaser; Sequence 2
                                                 * at its default 60 and the reverb at 50, the lengths 16/15 (the user's
                                                 * ear) */
@@ -91,7 +93,7 @@ static const int16_t PC_TIMEWIND[] = {        /* Schulze, Bayreuth Return: an or
     P_LVOICE, 0, P_LDIN, 32,
     P_NCHAR, 1, P_CRACKLE, 7,
     P_MW0, 30, P_MR0, 25, P_MW2, 15, P_MW4, 30, P_BRIDGE, 45,
-    P_MI1, 32, P_ARC, 25, P_MOTION, 45, -1};
+    P_MI1, 32, P_ARC, 25, P_MOTION, 45, P_LMEM, 55, -1};
 static const int16_t PC_WAHNFRIED[] = {       /* Schulze, Wahnfried 1883: roots walking with no home, strings, the
                                                 * Sequence a faint heartbeat under them (the user's ear) */
     P_TEMPO, 80, P_ROOT, 10, P_MODE, MODE_DORIAN,
@@ -100,7 +102,7 @@ static const int16_t PC_WAHNFRIED[] = {       /* Schulze, Wahnfried 1883: roots 
     P_LEAD, 54, P_LVOICE, 3, P_LTONE, 75, P_VIB, 55, P_LDENS, 60, P_LDIN, 8,
     P_FEEDBACK, 75, P_REVERB, 45,
     P_MW0, 45, P_MT0, 60, P_MR0, 45, P_MW2, 15, P_BRIDGE, 30,
-    P_ARC, 20, P_MOTION, 55, -1};
+    P_ARC, 20, P_MOTION, 55, P_LMEM, 40, -1};
 static const int16_t PC_PHAEDRA[] = {         /* Tangerine Dream, Phaedra: a Moog bass line, Mellotron flutes */
     P_TEMPO, 149, P_ROOT, 2, P_MODE, MODE_AEOLIAN,
     P_SVOICE, 1, P_SEQOCT, -1, P_SEQLEN, 16, P_DENSITY, 70, P_SWEEP, 85,
@@ -109,7 +111,7 @@ static const int16_t PC_PHAEDRA[] = {         /* Tangerine Dream, Phaedra: a Moo
     P_LVOICE, 2, P_LDIN, 24,
     P_NCHAR, 5, P_CRACKLE, 10,
     P_MW0, 25, P_MW3, 30, P_MR3, 40, P_MW4, 25,
-    P_MI1, 16, P_ARC, 30, P_MOTION, 55, -1};
+    P_MI1, 16, P_ARC, 30, P_MOTION, 55, P_LMEM, 75, -1};
 static const int16_t PC_RUBYCON[] = {         /* Tangerine Dream, Rubycon: dark, two sequences out of the drone (the
                                                 * octaves and voices the user's ear: the Sequence -2 on the 2600, Sequence 2 0,
                                                 * the Lead the Synthi) */
@@ -120,7 +122,7 @@ static const int16_t PC_RUBYCON[] = {         /* Tangerine Dream, Rubycon: dark,
     P_CHORD, 65, P_CVOICE, 0, P_CCOL, -20, P_PEDAL, 85, P_DRIFT, 4,
     P_LVOICE, 4, P_LDIN, 32,
     P_MW0, 35, P_MR0, 25, P_MW3, 30, P_BRIDGE, 50,
-    P_MI1, 16, P_ARC, 40, P_MOTION, 65, -1};
+    P_MI1, 16, P_ARC, 40, P_MOTION, 65, P_LMEM, 45, -1};
 static const int16_t PC_STRATOSFEAR[] = {     /* Tangerine Dream, Stratosfear: brighter, driving, the Lead forward */
     P_TEMPO, 138, P_ROOT, 4, P_MODE, MODE_AEOLIAN,
     P_SVOICE, 3, P_SEQLEN, 16, P_DENSITY, 70, P_CUTOFF, 55,
@@ -128,7 +130,7 @@ static const int16_t PC_STRATOSFEAR[] = {     /* Tangerine Dream, Stratosfear: b
     P_CVOICE, 1, P_DRIFT, 3,
     P_LEAD, 52, P_LVOICE, 1, P_LDENS, 65, P_LDIN, 12,
     P_MR1, 40, P_MW3, 30, P_MR3, 40, P_BRIDGE, 35,
-    P_ARC, 20, P_MOTION, 50, -1};
+    P_ARC, 20, P_MOTION, 50, P_LMEM, 85, -1};
 static const int16_t PC_SUNRAIN[] = {         /* Ashra, New Age of Earth: major, the strongest repeats, bright strings;
                                                 * the lengths 8/7 (the user: "works best") */
     P_TEMPO, 130, P_ROOT, 2, P_MODE, MODE_IONIAN,
@@ -139,7 +141,7 @@ static const int16_t PC_SUNRAIN[] = {         /* Ashra, New Age of Earth: major,
     P_LVOICE, 0, P_LDIN, 16,
     P_NCHAR, 2, P_CRACKLE, 5,
     P_MW3, 25, P_MW4, 25, P_BRIDGE, 35,
-    P_ARC, 25, P_MOTION, 45, -1};
+    P_ARC, 25, P_MOTION, 45, P_LMEM, 60, -1};
 static const int16_t PC_MIRAGE[] = {          /* Schulze, Mirage: icy, a glass sequence, sparse, a long reverb; the
                                                 * lengths 12/11 (the user's) */
     P_TEMPO, 95, P_ROOT, 6, P_MODE, MODE_AEOLIAN,
@@ -151,7 +153,7 @@ static const int16_t PC_MIRAGE[] = {          /* Schulze, Mirage: icy, a glass s
     P_REVERB, 55, P_SIZE, 90,
     P_NCHAR, 3, P_CRACKLE, 10,
     P_MW0, 25, P_MR0, 20, P_MW4, 35, P_MR4, 20,
-    P_MI1, 16, P_ARC, 20, P_MOTION, 40, -1};
+    P_MI1, 16, P_ARC, 20, P_MOTION, 40, P_LMEM, 50, -1};
 static const int16_t PC_CYBORG[] = {          /* Schulze, Cyborg: early, raw, deep organ drones beating; a quiet
                                                 * Sequence (20, the user's: at its defaults), no Sequence 2; the Lead
                                                 * up front (70, the user's) */
@@ -160,7 +162,7 @@ static const int16_t PC_CYBORG[] = {          /* Schulze, Cyborg: early, raw, de
     P_CHORD, 70, P_CVOICE, 0, P_CCOL, 25, P_PEDAL, 90, P_PHASER, 20, P_DRIFT, 4, P_PMODE, EN_WALK_WANDER,
     P_LEAD, 70, P_LVOICE, 3, P_LDENS, 30, P_LOCT, -1, P_LDIN, 8,
     P_MW0, 50, P_MT0, 70, P_MR0, 45, P_MW2, 10, P_BRIDGE, 30,
-    P_ARC, 15, P_MOTION, 35, -1};
+    P_ARC, 15, P_MOTION, 35, P_LMEM, 35, -1};
 static const struct {
     const char *name;
     const int16_t *set;
@@ -1627,8 +1629,11 @@ static uint8_t ld_draws;
 static void ld_reseed(void)                      /* a new piece: new ideas (the bank drawn again as it's needed) */
 {
     int k;
-    for (k = 0; k < 4; k++)
+    for (k = 0; k < 4; k++) {
         ld_bank[k].n = ld_bank[k].heard = 0;
+        ld_bank[k].cm = 0;                       /* (the keys' theme gone with it: no LD_PLAYED left to bring an
+                                                  * empty slot back at the arc's moments) */
+    }
     ld_fresh = 1;
     ld_next = -1;
     ld_due = ld_blen = ld_pair = ld_step = ld_sent = ld_since = ld_cb = ld_idea = ld_prep = ld_aug = 0;   /* (its first
@@ -1668,6 +1673,7 @@ int en_lead_theme(int8_t *off, uint8_t *dur)
         off[i] = ld_bank[0].off[i], dur[i] = ld_bank[0].dur[i];
     return ld_bank[0].n;
 }
+int en_lead_played(void) { return (ld_bank[0].cm & LD_PLAYED) != 0; }
 #endif
 
 static int ld_audible(void) { return lead_vol > 0.0f && !(mutes & EN_M_BASS); }

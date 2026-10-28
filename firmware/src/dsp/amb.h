@@ -203,6 +203,7 @@ extern volatile uint8_t en_lead_slot, en_lead_blk, en_lead_int;
 extern volatile uint8_t en_lead_dmax;
 int en_lead_cap(void);
 int en_lead_theme(int8_t *off, uint8_t *dur);
+int en_lead_played(void);                        /* (the theme the keys played: LD_PLAYED on slot 0, 1 or 0) */
 #endif
 #define LD_REST (-128)                          /* a rest inside a motif */
 /* (host tests only, between renders) motif slot `slot` (0..3) written: n entries (1..8), each a scale degree from the
