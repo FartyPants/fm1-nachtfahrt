@@ -625,7 +625,8 @@ int main(void)
      * Timewind's first minute is to the bit what the engine without the filter motion played with Sweep 0, Emerge 0,
      * Arc 0, Motion 0, Evolve 0 (build/tmp/fmzero_old.c on fd1d378: the first render of a process, as this one;
      * af050088 then, re-recorded for the echo's x2 send and 1/4. time, which alone moved it: checked by reverting them;
-     * 1d4f1422 then, re-recorded for Timewind's own recipe: Sequence 2 at 60, Reverb 50, the user's) */
+     * 1d4f1422 then, re-recorded for Timewind's own recipe: Sequence 2 at 60, Reverb 50, the user's; f09ec04f then,
+     * re-recorded for Timewind's Length 2 at 15, the user's 16/15, the recipe alone) */
     {   /* (in a child: this process stays as it started, for the render's tests below) */
         int k, fd[2];
         pid_t pid;
@@ -659,7 +660,7 @@ int main(void)
             close(fd[0]);
             waitpid(pid, 0, 0);
         }
-        CHECK(r.h == 0xf09ec04fu, "test_fm_zero: Timewind's first minute %08x, not f09ec04f (the engine before)", r.h);
+        CHECK(r.h == 0x1cd60c54u, "test_fm_zero: Timewind's first minute %08x, not 1cd60c54 (the engine before)", r.h);
         for (k = 0; k < 5; k++)
             CHECK(r.fo[k] == 0.0f, "test_fm_zero: layer %d's offset %f", k, (double)r.fo[k]);
     }
@@ -2546,7 +2547,7 @@ int main(void)
 
     /* (BERLIN, filter motion spec 9) the pieces' moves: every piece moves some layer (a Width and a Rate above 0);
      * Timewind's Sequence comes in slowly (Intro 24+), Stratosfear's and Sunrain's straight in; Rubycon's Sequence 2
-     * after its Sequence; Wahnfried and Cyborg (no sequences) move on the Drone (Width and Rate 40+); Timewind's Bridge
+     * after its Sequence; Wahnfried and Cyborg (no Sequence 2) move on the Drone (Width and Rate 40+); Timewind's Bridge
      * moderate (30..60); the Lead's Width low everywhere (30 at most). The echo's default time 1/4. and Repeat A's
      * elsewhere (1/8.), so A no longer lands on the echo's first repeat (the user; the echo report) */
     {
@@ -2569,6 +2570,18 @@ int main(void)
               "test_pieces_move: Stratosfear/Sunrain intros %d %d / %d %d", pa[4][P_MI1], pa[4][P_MI3], pa[5][P_MI1],
               pa[5][P_MI3]);
         CHECK(pa[3][P_MI3] > pa[3][P_MI1], "test_pieces_move: Rubycon Seq2 intro %d, Seq %d", pa[3][P_MI3], pa[3][P_MI1]);
+        /* (the user, 2026-10-28) the lengths, Sequence / Sequence 2: Sunrain 8/7 ("works best"), Timewind 16/15, Mirage
+         * 12/11; Rubycon's octaves, Sequence -2, Sequence 2 0; Cyborg's Sequence at 20, Sequence 2 still silent */
+        CHECK(pa[5][P_SEQLEN] == 8 && pa[5][P_SEQ2LEN] == 7, "test_pieces_lengths: Sunrain %d/%d", pa[5][P_SEQLEN],
+              pa[5][P_SEQ2LEN]);
+        CHECK(pa[0][P_SEQLEN] == 16 && pa[0][P_SEQ2LEN] == 15, "test_pieces_lengths: Timewind %d/%d", pa[0][P_SEQLEN],
+              pa[0][P_SEQ2LEN]);
+        CHECK(pa[6][P_SEQLEN] == 12 && pa[6][P_SEQ2LEN] == 11, "test_pieces_lengths: Mirage %d/%d", pa[6][P_SEQLEN],
+              pa[6][P_SEQ2LEN]);
+        CHECK(pa[3][P_SEQOCT] == -2 && pa[3][P_SEQ2OCT] == 0, "test_pieces_octaves: Rubycon %d/%d", pa[3][P_SEQOCT],
+              pa[3][P_SEQ2OCT]);
+        CHECK(pa[7][P_SEQ] == 20 && pa[7][P_SEQ2] == 0, "test_pieces_cyborg: Sequence %d, Sequence 2 %d", pa[7][P_SEQ],
+              pa[7][P_SEQ2]);
         for (a = 1; a < EN_NPIECES; a += 6)
             CHECK(pa[a][P_MW0] >= 40 && pa[a][P_MR0] >= 40, "test_pieces_move: %s Drone width %d rate %d",
                   en_piece_name(a), pa[a][P_MW0], pa[a][P_MR0]);
@@ -2678,7 +2691,8 @@ int main(void)
         CHECK(s2_n > 0 && sq_n > 0, "test_timewind_sequences: %u Sequence 2 notes (%u Sequence)", s2_n, sq_n);
     }
 
-    /* (BERLIN) Wahnfried and Cyborg are beatless: ten minutes, no note of either sequence */
+    /* (BERLIN) Wahnfried is beatless: ten minutes, no note of either sequence; Cyborg (the user, 2026-10-28: its
+     * Sequence at 20) plays its Sequence, Sequence 2 silent */
     {
         static const int BEATLESS[2] = {1, 7};
         int k;
@@ -2687,8 +2701,11 @@ int main(void)
             piece(BEATLESS[k]);
             en_play(1);
             run(600.0f);
-            CHECK(sq_n == 0 && s2_n == 0, "test_beatless: %s: %u Sequence notes, %u Sequence 2", en_piece_name(BEATLESS[k]),
-                  sq_n, s2_n);
+            if (BEATLESS[k] == 7)
+                CHECK(sq_n > 0 && s2_n == 0, "test_cyborg_sequence: %u Sequence notes, %u Sequence 2", sq_n, s2_n);
+            else
+                CHECK(sq_n == 0 && s2_n == 0, "test_beatless: %s: %u Sequence notes, %u Sequence 2",
+                      en_piece_name(BEATLESS[k]), sq_n, s2_n);
         }
     }
 

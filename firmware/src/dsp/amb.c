@@ -82,9 +82,10 @@ const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PAR
  *  Width, Time, Rate and Intro in bars (0 Drone, 1 Sequence, 2 Lead, 3 Sequence 2, 4 Atmosphere; the Sequence's Width
  *  is Sweep); the Lead's Width kept low; Bridge the middle section's move) */
 static const int16_t PC_TIMEWIND[] = {        /* Schulze, Bayreuth Return: an organ through the phaser; Sequence 2
-                                                * at its default 60 and the reverb at 50 (the user's ear) */
+                                                * at its default 60 and the reverb at 50, the lengths 16/15 (the user's
+                                                * ear) */
     P_TEMPO, 96, P_ROOT, 2, P_MODE, MODE_AEOLIAN,
-    P_SVOICE, 0, P_SEQLEN, 16, P_SEQGRID, 1, P_DENSITY, 65, P_REVERB, 50,
+    P_SVOICE, 0, P_SEQLEN, 16, P_SEQ2LEN, 15, P_SEQGRID, 1, P_DENSITY, 65, P_REVERB, 50,
     P_TAPB, 50, P_TAPBT, 2,
     P_CVOICE, 0, P_PHASER, 60, P_DRIFT, 3, P_PMODE, EN_WALK_HOME,
     P_LVOICE, 0, P_LDIN, 32,
@@ -108,10 +109,11 @@ static const int16_t PC_PHAEDRA[] = {         /* Tangerine Dream, Phaedra: a Moo
     P_NCHAR, 5, P_CRACKLE, 25,
     P_MW0, 25, P_MW3, 30, P_MR3, 40, P_MW4, 25,
     P_MI1, 16, P_ARC, 30, P_MOTION, 55, -1};
-static const int16_t PC_RUBYCON[] = {         /* Tangerine Dream, Rubycon: dark, two sequences out of the drone */
+static const int16_t PC_RUBYCON[] = {         /* Tangerine Dream, Rubycon: dark, two sequences out of the drone (the
+                                                * octaves the user's ear: the Sequence -2, Sequence 2 0) */
     P_TEMPO, 144, P_ROOT, 5, P_MODE, MODE_AEOLIAN,
-    P_SVOICE, 2, P_SEQOCT, -1, P_SEQLEN, 8, P_CUTOFF, 32, P_SWEEP, 60,
-    P_SEQ2, 55, P_S2VOICE, 5, P_SEQ2LEN, 7, P_MI3, 32,
+    P_SVOICE, 2, P_SEQOCT, -2, P_SEQLEN, 8, P_CUTOFF, 32, P_SWEEP, 60,
+    P_SEQ2, 55, P_S2VOICE, 5, P_SEQ2OCT, 0, P_SEQ2LEN, 7, P_MI3, 32,
     P_TAPB, 40, P_TAPBT, 4,
     P_CHORD, 65, P_CVOICE, 0, P_CCOL, -20, P_PEDAL, 85, P_DRIFT, 4,
     P_LVOICE, 1, P_LDIN, 32,
@@ -125,20 +127,22 @@ static const int16_t PC_STRATOSFEAR[] = {     /* Tangerine Dream, Stratosfear: b
     P_LEAD, 52, P_LVOICE, 1, P_LDENS, 65, P_LDIN, 12,
     P_MR1, 40, P_MW3, 30, P_MR3, 40, P_BRIDGE, 35,
     P_ARC, 20, P_MOTION, 50, -1};
-static const int16_t PC_SUNRAIN[] = {         /* Ashra, New Age of Earth: major, the strongest repeats, bright strings */
+static const int16_t PC_SUNRAIN[] = {         /* Ashra, New Age of Earth: major, the strongest repeats, bright strings;
+                                                * the lengths 8/7 (the user: "works best") */
     P_TEMPO, 130, P_ROOT, 2, P_MODE, MODE_IONIAN,
     P_SVOICE, 3, P_SEQLEN, 8, P_CUTOFF, 55,
-    P_SEQ2, 50, P_S2VOICE, 4, P_SEQ2OCT, 0, P_SEQ2LEN, 6, P_MI3, 0,
+    P_SEQ2, 50, P_S2VOICE, 4, P_SEQ2OCT, 0, P_SEQ2LEN, 7, P_MI3, 0,
     P_TAPA, 100, P_TAPB, 100, P_TAPBT, 3, P_ECHO, 65, P_FEEDBACK, 65,
     P_CVOICE, 1, P_DRIFT, 3,
     P_LVOICE, 0, P_LDIN, 16,
     P_NCHAR, 2, P_CRACKLE, 25,
     P_MW3, 25, P_MW4, 25, P_BRIDGE, 35,
     P_ARC, 25, P_MOTION, 45, -1};
-static const int16_t PC_MIRAGE[] = {          /* Schulze, Mirage: icy, a glass sequence, sparse, a long reverb */
+static const int16_t PC_MIRAGE[] = {          /* Schulze, Mirage: icy, a glass sequence, sparse, a long reverb; the
+                                                * lengths 12/11 (the user's) */
     P_TEMPO, 95, P_ROOT, 6, P_MODE, MODE_AEOLIAN,
     P_SVOICE, 4, P_SEQLEN, 12, P_SEQGRID, 1, P_DENSITY, 40, P_SWEEP, 30,
-    P_SEQ2, 45, P_S2VOICE, 4, P_SEQ2OCT, 0, P_SEQ2LEN, 9, P_MI3, 24,
+    P_SEQ2, 45, P_S2VOICE, 4, P_SEQ2OCT, 0, P_SEQ2LEN, 11, P_MI3, 24,
     P_TAPB, 60, P_TAPBT, 4,
     P_CVOICE, 4, P_PHASER, 85, P_DRIFT, 4,
     P_LVOICE, 3, P_LDIN, 24,
@@ -146,9 +150,10 @@ static const int16_t PC_MIRAGE[] = {          /* Schulze, Mirage: icy, a glass s
     P_NCHAR, 3, P_CRACKLE, 25,
     P_MW0, 25, P_MR0, 20, P_MW4, 35, P_MR4, 20,
     P_MI1, 16, P_ARC, 20, P_MOTION, 40, -1};
-static const int16_t PC_CYBORG[] = {          /* Schulze, Cyborg: early, raw, deep organ drones beating, no sequence */
+static const int16_t PC_CYBORG[] = {          /* Schulze, Cyborg: early, raw, deep organ drones beating; a quiet
+                                                * Sequence (20, the user's: at its defaults), no Sequence 2 */
     P_TEMPO, 70, P_ROOT, 0, P_MODE, MODE_PHRYGIAN,
-    P_SEQ, 0, P_SEQ2, 0,
+    P_SEQ, 20, P_SEQ2, 0,
     P_CHORD, 70, P_CVOICE, 0, P_CCOL, 25, P_PEDAL, 90, P_PHASER, 20, P_DRIFT, 4, P_PMODE, EN_WALK_WANDER,
     P_LVOICE, 3, P_LDENS, 30, P_LOCT, -1, P_LDIN, 8,
     P_MW0, 50, P_MT0, 70, P_MR0, 45, P_MW2, 10, P_BRIDGE, 30,
