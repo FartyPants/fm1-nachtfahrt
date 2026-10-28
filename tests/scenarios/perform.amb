@@ -38,3 +38,39 @@ expect notes_ch2 >0
 tap ENV
 wait 300
 expect view 1
+# (BERLIN) the keys follow the meters, left to right: white 4 Sequence 2 (the 4th meter), white 5 the Atmosphere (the
+# 5th), the other untouched; a solo (black 4: Sequence 2) leaves the Atmosphere out too (Sunrain: Surf, both sequences)
+turn PRESET 1
+wait 6000
+expect piece 5
+tap SEL
+wait 300
+expect view 17
+tapkey w4
+wait 300
+said ATMOS
+expect mutes 32
+wait 3000
+expect act4 0
+expect act3 >5
+tapkey w4
+wait 300
+tapkey w3
+wait 300
+said SEQ 2
+expect mutes 24
+wait 3000
+expect act3 0
+expect act4 >5
+tapkey w3
+wait 300
+tapkey b3
+wait 300
+said SOLO
+wait 3000
+expect act3 >5
+expect act4 0
+expect act1 0
+tapkey b3
+wait 3000
+expect act4 >5

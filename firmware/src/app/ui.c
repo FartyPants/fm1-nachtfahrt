@@ -722,15 +722,18 @@ static const uint8_t PERF_KEY[PERF_N] = {0, 2, 4, 6, 7,          /* white 1-5: t
                                          1, 3, 5, 8, 10};        /* black 1-5: the solos */
 static const char *const PERF_NAME[PERF_N] = {"DRONE", "SEQ", "LEAD", "SEQ 2", "ATMOS", "SWEEP", "OPEN", "SHUT",
                                               "DROP", "ECHO", "DRONE", "SEQ", "LEAD", "SEQ 2", "ATMOS"};
+/* each layer's mute (EN_M_*), in the meters' order: Sequence 2 is two of the engine's bits (DUB-1's kick and hats) */
+static const uint32_t LAYER_MUTE[NLAYER] = {EN_M_CHORD, EN_M_PINGS, EN_M_BASS, EN_M_KICK | EN_M_HATS, EN_M_NOISE};
+#define ALL_MUTE (EN_M_CHORD | EN_M_PINGS | EN_M_BASS | EN_M_KICK | EN_M_HATS | EN_M_NOISE)
 static void perf_mutes(void)                     /* to the engine: the mutes, and with a solo, all but it */
 {
-    en_mute(ui.mutes | (ui.solo ? 0x1Fu & ~ui.solo : 0u));
+    en_mute(ui.mutes | (ui.solo ? ALL_MUTE & ~ui.solo : 0u));
 }
 static int perf_sounds(int i)                    /* layer i (0..4) heard: not muted, not soloed out */
 {
-    if (ui.solo && !(ui.solo >> i & 1u))
+    if (ui.solo && !(ui.solo & LAYER_MUTE[i]))
         return 0;
-    return !(ui.mutes >> i & 1u);
+    return (ui.mutes & LAYER_MUTE[i]) != LAYER_MUTE[i];
 }
 static void set_view(int v);
 #define PERF_SHIFT 9u                            /* white 6 (D4), held: the knobs the mix */
@@ -756,7 +759,7 @@ static void perf_key(uint32_t key, int down)
     if (i >= PERF_N)
         return;
     if (i >= 10) {                               /* a solo: on or off, a press each */
-        uint32_t m = 1u << (i - 10);
+        uint32_t m = LAYER_MUTE[i - 10];
         if (!down)
             return;
         ui.solo ^= m;
@@ -776,13 +779,16 @@ static void perf_key(uint32_t key, int down)
     if (i < 5) {                                 /* the chord, pings, bass, kick, hats: a mute (the levels kept) */
         if (!down)
             return;
-        ui.mutes ^= 1u << i;
+        if ((ui.mutes & LAYER_MUTE[i]) == LAYER_MUTE[i])   /* (Sequence 2: both its bits out, back) */
+            ui.mutes &= ~LAYER_MUTE[i];
+        else
+            ui.mutes |= LAYER_MUTE[i];
         perf_mutes();
         if (ui.view == V_MIX) {                  /* the layer's Mix knob lit (the kick and the hats: Drums) */
             ui.touched = (int8_t)(i < 3 ? i : 3);
             ui.touch_until = plat_ms() + 1200u;
         }
-        say(PERF_NAME[i], ui.mutes >> i & 1u ? "OFF" : "ON");
+        say(PERF_NAME[i], (ui.mutes & LAYER_MUTE[i]) == LAYER_MUTE[i] ? "OFF" : "ON");
         return;
     }
     if (down)
@@ -1085,7 +1091,6 @@ static void button(int b)
 #define OCT_FADE 250u
 static const uint8_t LAYER_LEVEL[NLAYER] = {P_CHORD, P_SEQ, P_LEAD, P_SEQ2, P_CRACKLE};
 static const char *const LAYER_NAME[NLAYER] = {"DRONE", "SEQ", "LEAD", "SEQ 2", "ATMOS"};
-static const uint32_t LAYER_MUTE[NLAYER] = {EN_M_CHORD, EN_M_PINGS, EN_M_BASS, EN_M_KICK | EN_M_HATS, EN_M_NOISE};
 static void oct_show(int l)                      /* the ring up (from where it was, if it was: it glides) */
 {
     uint32_t now = plat_ms();
@@ -2511,7 +2516,7 @@ static void leds(void)
                 k |= 1u << PERF_KEY[i];
             if (!(ui.moves >> i & 1u))
                 k |= 1u << PERF_KEY[5 + i];
-            if (!(ui.solo >> i & 1u) || blink)
+            if (!(ui.solo & LAYER_MUTE[i]) || blink)
                 k |= 1u << PERF_KEY[10 + i];
         }
 
