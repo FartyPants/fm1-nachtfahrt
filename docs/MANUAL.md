@@ -101,7 +101,7 @@ second.
 | Control | What it does |
 |---|---|
 | MASTER | The volume |
-| SELECT | On a layer's pages (the Drone, the Sequence, the Lead, Sequence 2, the Atmosphere, and each one's further pages), the layer's level, 1 a click: a ring in the middle of the screen shows it, and the header says it ("SEQ 64"). Elsewhere it does nothing (the pages are on their buttons, the tempo on the Key page) |
+| SELECT | On a layer's pages (the Drone, the Sequence, the Lead, Sequence 2, the Atmosphere, and each one's further pages), the layer's level, 1 a click: a ring in the middle of the screen shows it, and the header says it ("SEQ 64"). On the Nachtfahrt page it turns **Energy**, PERFORM's (the same value, 1 a click: the screen shows twice), so you can play the keys and push Energy at once: the knobs' rule shows "ENERGY 24" with a bar while you turn, and the header says it. Elsewhere it does nothing (the pages are on their buttons, the tempo on the Key page) |
 | PRESETS | The piece (eight) |
 | ALGORITHM | On a layer's page, its voice (on the Atmosphere's pages, its character). On the Chords page, the chord walk's character (Home, Wander, Free) |
 | OCT− / OCT+ | On the Sequence's, the Lead's and Sequence 2's pages, the layer's octave, a step a press (the Sequence −2 to 2, the Lead and Sequence 2 −2 to 1): the page's Octave knob shows it, the header says it ("SEQ OCTAVE −1"). OCT+ is lit while that octave is above where the piece was loaded, OCT− while it's below. On the other pages they do nothing. Both held 5 s: the update mode |
@@ -156,7 +156,8 @@ The screen is black, with a few dim stars drifting slowly left while the music p
   for each step that plays, a speck for a rest, and a white cursor on the step playing now. Two sequences of
   different lengths drift apart and meet again, and you can see them do it. On a layer's page, the other
   lane is greyed.
-- **Bottom:** the page's four knobs and their values.
+- **Bottom:** the page's four knobs and their values. While a knob turns, the rule above them says what it does;
+  while SELECT turns Energy on the Nachtfahrt page, it shows "ENERGY", its value and a bar from the middle.
 
 **The filter motion, shown.** On a layer's *sound* page (the one with its brightness knob), a small cyan
 dot sits on that knob's ring where the filter really is now: the knob's own pointer stays where you set it.

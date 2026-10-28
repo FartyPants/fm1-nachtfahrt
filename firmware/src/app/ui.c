@@ -222,6 +222,7 @@ static struct {
     uint8_t lock;                      /* Lock (SEL held): each phrase keeps what it has */
     char card_head[16], card_text[24];
     uint32_t oct_until, oct_pulse;     /* the ring: up until, then fading; its last step (a pulse) */
+    uint32_t sel_until;                /* (HOME) SELECT's Energy on the knobs' rule, up until */
     float oct_v;                       /* the ring's arc, gliding to the level */
     uint32_t prog_gen;                 /* the engine's slots, as last taken (en_prog_gen) */
     uint8_t lane;                      /* the Pattern page: the lane edited */
@@ -1128,6 +1129,15 @@ static void level_turn(int l, int32_t e)         /* SELECT on a layer's page: it
     say(LAYER_NAME[l], t);
     oct_show(l);
 }
+static void energy_turn(int32_t e)               /* (the user, 2026-10-28) SELECT on HOME: Energy, PERFORM's, 1 a
+                                                  * detent (the keys still the Lead's); held as a turn of its knob */
+{
+    char t[8];
+    knob_set(K_ENERGY, knob_get(K_ENERGY) + (int)e);
+    knob_text(K_ENERGY, t);
+    say("ENERGY", t);
+    ui.sel_until = plat_ms() + 1200u;
+}
 static void oct_step(int b)
 {
     int l = oct_layer(ui.view), k;
@@ -1435,10 +1445,12 @@ static void input(void)
     if (btn || keys || ch)
         ui.act_t = plat_ms();
     midi_in();
-    if ((e = plat_enc(EN_SELECT)) != 0) {        /* (the user, 2026-10-28) a layer's pages: its level; elsewhere
-                                                  * nothing (no pages, no tempo: one knob, one job) */
+    if ((e = plat_enc(EN_SELECT)) != 0) {        /* (the user, 2026-10-28) a layer's pages: its level; HOME: Energy;
+                                                  * elsewhere nothing (no pages, no tempo: one knob, one job) */
         if (oct_layer(ui.view) >= 0)
             level_turn(oct_layer(ui.view), e);
+        else if (ui.view == V_DUB)               /* (HOME: Energy, the user's: to play the keys and push it at once) */
+            energy_turn(e);
         ui.turn_t = plat_ms();
     }
     if ((e = plat_enc(EN_ALGO)) != 0) {         /* a layer's page: its voice; the Chords page: the walk */
@@ -2356,9 +2368,11 @@ static void draw_knobs(void)
         h = hash(h, (uint32_t)proj.par[P_NCHAR]);
     if (ui.view == V_MIX)
         h = hash(h, ui.mutes);
-    int now_touch = plat_ms() < ui.touch_until;
+    int now_touch = plat_ms() < ui.touch_until, sel_on = ui.view == V_DUB && plat_ms() < ui.sel_until;
     for (i = 0; i < 4; i++)
         h = hash(h, (uint32_t)knob_get(VIEW_KNOB[ui.view][i]));
+    if (sel_on)
+        h = hash(h, 0x53454Cu ^ (uint32_t)(knob_get(K_ENERGY) + 64) << 24);
     h = hash(h, (uint32_t)now_touch | (uint32_t)(knob_dot(ui.view) + 1000) << 1);   /* (the filter's dot moving) */
     if (h == ui.sig[2])
         return;
@@ -2385,7 +2399,22 @@ static void draw_knobs(void)
             caps(t, vn, sizeof t);
             x0 = cv_text(6, -1, &FONT_XS, t, K_DIM) + 5;
         }
-        if (now_touch && ui.touched >= 0 && ui.touched < 4) {   /* a knob turning: what it does, the rule's
+        if (sel_on) {                            /* (HOME) SELECT turning: Energy, its value and a bar from the
+                                                  * middle (as PERFORM's knob, -50..50), the rule's whole width */
+            char v[8];
+            const int en = knob_get(K_ENERGY);
+            knob_text(K_ENERGY, v);
+            cv_rect(0, 0, 240, 12, K_BG);
+            xt = cv_text(6, -1, &FONT_XS, "ENERGY", K_TEXT) + 5;
+            xt = cv_text(xt, -1, &FONT_XS, v + (v[0] == '+'), K_ACC) + 6;
+            cv_round(xt, 3, 50, 5, 2, K_LINE);
+            if (en)
+                cv_round(en > 0 ? xt + 25 : xt + 25 + en / 2, 3, (en > 0 ? en : -en) / 2 + 1, 5, 2, K_ACC);
+            cv_rect(xt + 25, 2, 1, 7, K_TEXT);
+            xt += 56;
+            if (xt < 234)
+                cv_rect(xt, 5, 234 - xt, 1, K_LINE);
+        } else if (now_touch && ui.touched >= 0 && ui.touched < 4) {   /* a knob turning: what it does, the rule's
                                                                           * whole width */
             char hp[48];
             caps(hp, KNOB_HELP[ui.view][ui.touched], sizeof hp);

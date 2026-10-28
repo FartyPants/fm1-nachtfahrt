@@ -1,0 +1,41 @@
+# (the user, 2026-10-28) SELECT on the Nachtfahrt page (HOME) is Energy, PERFORM's: 1 a detent (the screen shows
+# twice), its value and a bar on the knobs' rule while it turns, said; not the tempo, not a level; the keys still
+# play the Lead meanwhile; PERFORM's Energy knob shows the same value. Timewind (the tempo 96, the levels 60 70 40 60)
+wait 300
+listen
+expect view 0
+peakreset
+key w2 down
+wait 100
+spin SELECT 6
+wait 200
+expect mac2 6
+expect emac2 6
+said ENERGY +12
+expect par18 96
+expect par0 60
+expect par1 70
+expect par2 40
+expect par3 60
+expect view 0
+shot home_energy.png
+wait 400
+expect notes_ch3 >0
+expect lastnote_ch3 >0
+spin SELECT -10
+wait 100
+key w2 up
+key w4 down
+wait 100
+expect notes_ch3 >1
+key w4 up
+wait 200
+expect mac2 -4
+said ENERGY -8
+# the rule back to the page's after a moment
+wait 1500
+shot home_after.png
+tap SEL
+wait 300
+expect view 17
+expect mac2 -4
