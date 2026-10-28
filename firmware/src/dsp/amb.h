@@ -197,6 +197,12 @@ extern volatile uint8_t en_lead_role, en_lead_phr;
 /* (host tests only) the phrase playing's motif slot (0: the theme), a count of its blocks so far (a block begins where
  * it moves), the intensity it was planned at (0..100) */
 extern volatile uint8_t en_lead_slot, en_lead_blk, en_lead_int;
+/* (host tests only) the most motifs drawn in one tick of the grid since it was last set to 0 (the device's audio block
+ * is near its limit: never more than 1); the notes in the white keys' capture buffer now; the theme (slot 0): its
+ * entries (degrees from the chord root's, LD_REST: a rest; lengths in sixteenths) into off and dur, its count */
+extern volatile uint8_t en_lead_dmax;
+int en_lead_cap(void);
+int en_lead_theme(int8_t *off, uint8_t *dur);
 #endif
 #define LD_REST (-128)                          /* a rest inside a motif */
 /* (host tests only, between renders) motif slot `slot` (0..3) written: n entries (1..8), each a scale degree from the

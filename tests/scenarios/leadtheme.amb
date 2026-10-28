@@ -1,0 +1,43 @@
+# (BERLIN, the Lead's memory, spec 3.5 and 7.3) the white keys write the theme: Timewind (D Aeolian, 96 BPM: a
+# sixteenth 156 ms) in Emerge, its long intro, the generated Lead silent. Four white keys in a bar, a quarter each
+# (w4 w5 w3 w2: A4 Bb4 G4 F4); two beats after the last is let go the figure is the theme, and at the next bar line the
+# Lead plays it back as it was played: its call (the last note its open ending's), then after a beat or two its answer
+# (the same, the last note closed and held twice as long)
+wait 300
+expect pool 1453
+bar 2
+peakreset
+key w4 down
+wait 620
+key w4 up
+key w5 down
+wait 620
+key w5 up
+key w3 down
+wait 620
+key w3 up
+key w2 down
+wait 620
+key w2 up
+expect notes_ch3 4
+expect lastnote_ch3 65
+# the call, from bar 4's downbeat: A4, Bb4, G4, then its ending
+bar 4
+wait 300
+expect lastnote_ch3 69
+wait 625
+expect lastnote_ch3 70
+wait 625
+expect lastnote_ch3 67
+wait 625
+expect notes_ch3 8
+# the answer, after a breath of two beats (calm): the same, from A4 again
+wait 1900
+expect notes_ch3 9
+expect lastnote_ch3 69
+wait 625
+expect lastnote_ch3 70
+wait 625
+expect lastnote_ch3 67
+wait 3000
+expect notes_ch3 12

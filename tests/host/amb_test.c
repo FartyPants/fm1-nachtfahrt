@@ -589,6 +589,63 @@ static int lg_wait_block(float secs)
     }
     return 0;
 }
+/* (the white keys write the theme) played a block at a time until sixteenth s (en_bars) has been played */
+static void run_to(uint32_t s)
+{
+    while (en_bars < s)
+        run(256.0f / 44100.0f + 1e-6f);
+}
+/* a figure on the white keys at once: n keys, each degree dg[k] held du[k] sixteenths (to the tick), legato (the next
+ * pressed as the one before is let go); returns the sixteenth its last key was let go */
+static uint32_t keys_now(const int *dg, const int *du, int n)
+{
+    uint32_t s = en_bars;
+    int k;
+    for (k = 0; k < n; k++) {
+        en_lead_key(dg[k], 1);
+        s += (uint32_t)du[k];
+        run_to(s);
+        en_lead_key(dg[k], 0);
+    }
+    return s;
+}
+static void bar_next(void)                       /* (played to the next bar line, just after the tick before it) */
+{
+    run_to(en_bars + 1u);
+    run_to((en_bars + 15u) / 16u * 16u);
+}
+static uint32_t keys_play(const int *dg, const int *du, int n)   /* (the same, from the next bar line) */
+{
+    bar_next();
+    return keys_now(dg, du, n);
+}
+/* from the log: the first phrase on the theme (slot 0) with role `role` at or after entry i whose rhythm is the keys'
+ * figure (the log's entries k0 .. k0+n-1: their onsets apart the same; the last note held `last` sixteenths) and its
+ * notes the keys' but the last (the ending's), as played (note for note, same) or transposed (same 0); lg_n: none */
+static uint32_t lg_echo(uint32_t i, int role, uint32_t k0, int n, uint32_t last, int same)
+{
+    for (i = lg_find(i, role); i < lg_n; i = lg_find(i + 1u, role)) {
+        int k, ok = lg[i].slot == 0 && i + (uint32_t)n <= lg_n && lg_last(i + (uint32_t)n - 1u);
+        for (k = 0; k < n && ok; k++) {
+            ok &= lg[i + (uint32_t)k].on - lg[i].on == lg[k0 + (uint32_t)k].on - lg[k0].on;
+            if (k < n - 1)
+                ok &= same ? lg[i + (uint32_t)k].note == lg[k0 + (uint32_t)k].note
+                           : lg_deg(lg[i + (uint32_t)k].note) - lg_deg(lg[i].note) ==
+                                 lg_deg(lg[k0 + (uint32_t)k].note) - lg_deg(lg[k0].note);
+        }
+        if (ok && lg[i + (uint32_t)n - 1u].off - lg[i + (uint32_t)n - 1u].on == last)
+            return i;
+    }
+    return lg_n;
+}
+/* nothing the Lead (channel 3) sounds: no note-on without its note-off */
+static int ld_left_on(void)
+{
+    int k, c = 0;
+    for (k = 0; k < 128; k++)
+        c += sounding[2][k] > 0;
+    return c + (int)ld_on_now;
+}
 
 int main(void)
 {
@@ -2455,6 +2512,238 @@ int main(void)
         for (k = 0; k < EN_NPROG; k++)
             en_set(P_CR0 + k, 0), en_set(P_CQ0 + k, EN_CQ_EMPTY), en_set(P_CX0 + k, 0);
         en_set(P_LMEM, en_param_info(P_LMEM)->def);
+    }
+
+    /* (BERLIN, the Lead's memory, spec 3.5 and 7.3) the white keys write the theme: D Aeolian at 120, Motion 0 (Flow),
+     * the chord held, Lead in 0 (the Lead's own phrases going on). 2 keys (a gesture): nothing taken, the theme as it
+     * was. 4 keys within a bar (degrees 2 4 3 6, 4 2 2 8 sixteenths, legato): the theme the figure (its degrees from
+     * the chord's root, its lengths), and within 2 bars of the last let go, on a bar line, a call on it (its rhythm,
+     * its notes as played but the last: the open ending's; the last held 8; low, in the octave played, not lifted to
+     * the register's centre), then its answer (the same, the last 16) */
+    {
+        static const int FG[4] = {2, 4, 3, 6}, FD[4] = {4, 2, 2, 8}, GG[2] = {4, 5}, GD[2] = {4, 4};
+        const uint32_t pl = EN_MODE_POOL[MODE_AEOLIAN];
+        int8_t off0[8], off[8];
+        uint8_t dur0[8], dur[8];
+        int n0, n1, nt, r, k, inbuf, okt;
+        uint32_t s, c, a, bl;
+        fresh();
+        en_set(P_ROOT, 2);
+        en_pool(pl);
+        lg_pool = pl, lg_root = 2;
+        en_set(P_TEMPO, 120);
+        en_set(P_LEAD, 60);
+        en_set(P_LDIN, 0);
+        en_set(P_LDENS, 100);
+        en_set(P_MOTION, 0);
+        en_set(P_DRIFT, 6);                      /* (Hold: the chord stays) */
+        en_play(1);
+        run(12.0f);                              /* (the theme thought of: its 4 draws, a bar each) */
+        n0 = en_lead_theme(off0, dur0);
+        keys_play(GG, GD, 2);
+        inbuf = en_lead_cap();
+        run(16.0f);
+        n1 = en_lead_theme(off, dur);
+        CHECK(inbuf == 2 && en_lead_cap() == 0 && n0 > 0 && n1 == n0 && !memcmp(off, off0, (size_t)n0) &&
+                  !memcmp(dur, dur0, (size_t)n0),
+              "test_capture: 2 keys: %d notes in the buffer, %d after; the theme %d entries, then %d (a gesture "
+              "changes nothing)", inbuf, en_lead_cap(), n0, n1);
+        bar_next();
+        lg_n = 0, lg_open = -1;
+        s = keys_now(FG, FD, 4);
+        run_to(s + 8u * 16u);
+        nt = en_lead_theme(off, dur);
+        r = en_deg_of(pl, en_chord_root - 2);
+        okt = nt == 4;
+        for (k = 0; k < 4 && okt; k++)
+            okt &= off[k] == FG[k] - r && dur[k] == FD[k];
+        c = lg_echo(4, LR_CALL, 0, 4, 8, 1);
+        a = c < lg_n ? lg_echo(c + 4u, LR_ANSWER, 0, 4, 16, 1) : lg_n;
+        bl = c < lg_n ? lg[c].on : 0;
+        if (!okt || c >= lg_n || a != c + 4u)
+            for (k = 0; k < (int)lg_n && k < 16; k++)
+                printf("  test_capture: note %u at +%d for %d, phrase %u, role %u, slot %u\n", lg[k].note,
+                       (int)(lg[k].on - lg[0].on), (int)(lg[k].off - lg[k].on), lg[k].phr, lg[k].role, lg[k].slot);
+        CHECK(okt && c < lg_n && a == c + 4u && bl % 16u == 0u && bl > s && bl - s <= 32u,
+              "test_capture: 4 keys: the theme the figure %d (%d entries); a call on it %d (at +%d sixteenths after "
+              "the last let go: on a bar line, within 2 bars), then its answer %d", okt, nt, c < lg_n, (int)(bl - s),
+              a == c + 4u);
+        printf("  test_capture: the call %d sixteenths after the last key let go\n", (int)(bl - s));
+        {                                        /* (a player's timing: each key pressed and let go 30 ms late or 20
+                                                  * ms early, a quarter of a sixteenth: the figure on the grid all the
+                                                  * same, its lengths as meant) */
+            static const int LG[4] = {5, 4, 2, 3}, LD[4] = {2, 6, 4, 4};
+            static const float JIT[5] = {0.03f, -0.02f, 0.03f, 0.03f, -0.02f};
+            int ok;
+            bar_next();
+            s = en_bars + 16u;
+            for (k = 0; k <= 4; k++) {           /* (each key on sixteenth s: its tick + JIT[k], at 120 a sixteenth
+                                                  * 125 ms after the tick before) */
+                run_to(s);
+                run(0.125f + JIT[k]);
+                if (k)
+                    en_lead_key(LG[k - 1], 0);
+                if (k < 4) {
+                    en_lead_key(LG[k], 1);
+                    s += (uint32_t)LD[k];
+                }
+            }
+            run(16.0f);
+            nt = en_lead_theme(off, dur);
+            r = en_deg_of(pl, en_chord_root - 2);
+            ok = nt == 4;
+            for (k = 0; k < 4 && ok; k++)
+                ok &= off[k] == LG[k] - r && dur[k] == LD[k];
+            CHECK(ok, "test_capture: keys a little off the grid: the theme %d entries, lengths %d %d %d %d (2 6 4 4)", nt,
+                  dur[0], dur[1], dur[2], dur[3]);
+        }
+    }
+
+    /* (BERLIN, the Lead's memory, spec 7.3) a captured theme is answered in any section, whatever Lead in and the roll:
+     * (a) in Emerge (the Drone's Intro 24, Lead in 0): the call and its answer on the figure, both in Emerge, and no
+     * other Lead phrase in Emerge; (b) before Lead in (64 bars, Flow): the call and its answer, and the Lead's own
+     * phrases still waiting (nothing else from it in the 8 bars after) */
+    {
+        static const int FG[5] = {9, 8, 7, 8, 10}, FD[5] = {2, 2, 4, 4, 4};
+        int pass;
+        for (pass = 0; pass < 2; pass++) {
+            uint32_t s, c, a, i, other = 0, insec = 0;
+            fresh();
+            lg_pool = EN_MODE_POOL[MODE_AEOLIAN], lg_root = 2;
+            en_set(P_ROOT, 2);
+            en_pool(lg_pool);
+            en_set(P_TEMPO, 120);
+            en_set(P_LEAD, 60);
+            en_set(P_LDENS, 100);
+            en_set(P_MOTION, 0);
+            en_set(P_DRIFT, 6);
+            en_set(P_LDIN, pass ? 64 : 0);
+            en_set(P_MI0, pass ? 0 : 24);
+            en_play(1);
+            run(6.0f);
+            bar_next();
+            lg_n = 0, lg_open = -1;
+            s = keys_now(FG, FD, 5);
+            run_to(s + 8u * 16u);
+            c = lg_echo(5, LR_CALL, 0, 5, 4, 1);
+            a = c < lg_n ? lg_echo(c + 5u, LR_ANSWER, 0, 5, 8, 1) : lg_n;
+            for (i = 5; i < lg_n; i++) {
+                other += (c >= lg_n || i < c || i >= c + 10u);
+                insec += lg[i].sec == (pass ? EN_SEC_FLOW : EN_SEC_EMERGE);
+            }
+            if (c >= lg_n || a != c + 5u)
+                for (i = 0; i < lg_n && i < 16u; i++)
+                    printf("  test_capture_any_section: note %u at +%d for %d, phrase %u, role %u, slot %u\n",
+                           lg[i].note, (int)(lg[i].on - lg[0].on), (int)(lg[i].off - lg[i].on), lg[i].phr, lg[i].role,
+                           lg[i].slot);
+            CHECK(c < lg_n && a == c + 5u && !other && insec == lg_n - 5u &&
+                      en_section == (pass ? EN_SEC_FLOW : EN_SEC_EMERGE),
+                  "test_capture_any_section: %s: a call on the figure %d, its answer %d; %u other Lead notes, %u of %u "
+                  "in the section", pass ? "before Lead in" : "in Emerge", c < lg_n, a == c + 5u, other, insec,
+                  lg_n - 5u);
+        }
+    }
+
+    /* (BERLIN, the Lead's memory, spec 3.5) PANIC and a piece change clear the capture buffer, not the bank (a piece
+     * change re-seeds the bank): (a) 2 keys, PANIC, 2 keys: 2 in the buffer, nothing taken; (b) a captured call begun,
+     * PANIC: nothing left sounding, the buffer empty, the theme still the figure; (c) a captured call begun, a piece
+     * change: nothing left sounding, the buffer empty, the figure gone from the bank; (d) 2 keys, a piece change, 2
+     * keys: 2 in the buffer */
+    {
+        static const int FG[4] = {7, 9, 8, 11}, FD[4] = {4, 2, 2, 8};
+        const uint32_t pl = EN_MODE_POOL[MODE_AEOLIAN];
+        int8_t off0[8], off[8];
+        uint8_t dur0[8], dur[8];
+        int n0, n1, ca, cd, got, left, pass;
+        fresh();
+        en_set(P_ROOT, 2);
+        en_pool(pl);
+        lg_pool = pl, lg_root = 2;
+        en_set(P_TEMPO, 120);
+        en_set(P_LEAD, 60);
+        en_set(P_LDIN, 0);
+        en_set(P_MOTION, 0);
+        en_set(P_DRIFT, 6);
+        en_play(1);
+        run(12.0f);
+        n0 = en_lead_theme(off0, dur0);
+        keys_play(FG, FD, 2);                    /* (a) */
+        en_panic();
+        keys_now(FG + 2, FD + 2, 2);             /* (at once: without PANIC, one figure of 4) */
+        ca = en_lead_cap();
+        run(16.0f);
+        n1 = en_lead_theme(off, dur);
+        CHECK(ca == 2 && n1 == n0 && !memcmp(off, off0, (size_t)n0) && !memcmp(dur, dur0, (size_t)n0),
+              "test_lead_memory_panic: 2 keys, PANIC, 2 keys: %d in the buffer (2), the theme as it was %d", ca,
+              n1 == n0 && !memcmp(off, off0, (size_t)n0));
+        for (pass = 0; pass < 2; pass++) {       /* (b), (c) */
+            const uint8_t p0 = en_lead_phr;
+            int b;
+            memset(sounding[2], 0, sizeof sounding[2]);
+            ld_on_now = 0;
+            keys_play(FG, FD, 4);
+            for (got = 0, b = 0; b < 2000 && !got; b++) {
+                run(256.0f / 44100.0f + 1e-6f);
+                got = en_lead_phr != p0 && en_lead_slot == 0 && en_lead_role == LR_CALL;
+            }
+            n0 = en_lead_theme(off0, dur0);      /* (the figure, taken) */
+            run(0.3f);
+            if (pass)
+                piece(4);
+            else
+                en_panic();
+            run(0.1f);
+            cd = en_lead_cap();
+            run(20.0f);
+            en_mute(EN_M_BASS);                  /* (the Lead muted: what it sounds let go; anything left is stuck) */
+            run(0.05f);
+            left = ld_left_on();
+            en_mute(0);
+            n1 = en_lead_theme(off, dur);
+            CHECK(got && !left && !cd &&
+                      (pass ? n1 != n0 || memcmp(off, off0, (size_t)n0) : n1 == n0 && !memcmp(off, off0, (size_t)n0)),
+                  "test_lead_memory_panic: %s in the captured call (begun %d): %d left sounding, %d in the buffer; the "
+                  "theme %d entries, was %d", pass ? "a piece change" : "PANIC", got, left, cd, n1, n0);
+            if (pass) {
+                en_set(P_TEMPO, 120);
+                en_set(P_LDIN, 0);
+                en_set(P_MOTION, 0);
+            }
+        }
+        keys_play(FG, FD, 2);                    /* (d) */
+        piece(4);
+        en_set(P_TEMPO, 120);
+        keys_now(FG + 2, FD + 2, 2);
+        cd = en_lead_cap();
+        CHECK(cd == 2, "test_lead_memory_panic: 2 keys, a piece change, 2 keys: %d in the buffer (2)", cd);
+        run(4.0f);
+    }
+
+    /* (BERLIN, the Lead's memory: the device's audio block near its limit) no tick of the grid draws more than one
+     * motif: Stratosfear (no intro) 90 s, Motion 100, Lead in 0, Memory 85; a piece change in the middle of a call to
+     * Sunrain, 90 s; 4 white keys captured there, 60 s; Cyborg 60 s. (The engine counts its draws a tick, the most) */
+    {
+        static const int FG[4] = {7, 9, 8, 11}, FD[4] = {4, 2, 2, 8};
+        fresh();
+        en_lead_dmax = 0;
+        piece(4);
+        en_set(P_MOTION, 100);
+        en_set(P_LDIN, 0);
+        en_play(1);
+        run(90.0f);
+        lg_n = 0, lg_open = -1;
+        lg_wait(LR_CALL, 120.0f);
+        run(0.2f);
+        piece(5);
+        en_set(P_MOTION, 100);
+        en_set(P_LDIN, 0);
+        run(90.0f);
+        keys_play(FG, FD, 4);
+        run(60.0f);
+        piece(7);
+        en_set(P_LDIN, 0);
+        run(60.0f);
+        CHECK(en_lead_dmax == 1, "test_lead_one_draw: the most motifs drawn in one tick %u (1)", en_lead_dmax);
     }
 
     /* (BERLIN) the echo ping-pongs: one note into it alone (no repeats, no plate, no cloud, the others silent), Width

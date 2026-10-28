@@ -74,8 +74,9 @@ NACHTFAHRT starts playing as soon as it's on. A few minutes with it:
    arc. Stratosfear and Sunrain start at once with both sequences; in Wahnfried and Cyborg the
    Sequence is only a faint heartbeat under the drone.
 3. **Play the lead.** Press a white key: the lead plays that step of the scale, from the root up, and its
-   key lights while it sounds. It glides from note to note, deep in the reverb and the echo. The black keys stay lit: they play effects while you hold
-   them, dark while held (Rise opens every filter, Close shuts them, and so on: see [The effects grid](#9-the-effects-grid)).
+   key lights while it sounds. It glides from note to note, deep in the reverb and the echo. Play three notes or more
+   and pause: the lead takes them as its theme, plays them back to you at the next bar line, and brings them back
+   later. The black keys stay lit: they play effects while you hold them, dark while held (Rise opens every filter, Close shuts them, and so on: see [The effects grid](#9-the-effects-grid)).
 4. **Shape the sequence.** Press ARP: the Sequence page. KNOB 1 (Density) thins it out or fills it in;
    KNOB 3 (Length) makes it shorter or longer. Press ARP again for its sound (Cutoff opens the filter), and
    again for its **Repeats**: the notes the echo plays back, as loud as the note itself. One press more:
@@ -106,7 +107,7 @@ second.
 | ALGORITHM | On a layer's page, its voice (on the Atmosphere's pages, its character). On the Chords page, the chord walk's character (Home, Wander, Free) |
 | OCT− / OCT+ | On the Sequence's, the Lead's and Sequence 2's pages, the layer's octave, a step a press (the Sequence −2 to 2, the Lead and Sequence 2 −2 to 1): the page's Octave knob shows it, the header says it ("SEQ OCTAVE −1"). OCT+ is lit while that octave is above where the piece was loaded, OCT− while it's below. On the other pages they do nothing. Both held 5 s: the update mode |
 | KNOB 1–4 | The four values at the bottom of the page. The line above them says what the one turning does |
-| White keys | Play the Lead in the piece's scale: the first white key is the root, the next the scale's second step, and so on up. While the Lead sounds a note, that key is lit. On the Pattern page they write the steps instead; in PERFORM they mute and play moves; with REC held they're the effects |
+| White keys | Play the Lead in the piece's scale: the first white key is the root, the next the scale's second step, and so on up. While the Lead sounds a note, that key is lit. Three notes or more and a pause become the Lead's theme (see [The layers](#5-the-layers)). On the Pattern page they write the steps instead; in PERFORM they mute and play moves; with REC held they're the effects |
 | Black keys | Eleven effects, each while the key is held. They stay lit, so they stand apart from the Lead's white keys; a key goes dark while its effect is held: Take-off, Supernova, Twitter, Repeat, Swell, Freeze, Octave, Return, Rise, Close, Transpose (see [The effects grid](#9-the-effects-grid)). In PERFORM, the solos; on the Pattern page, the accents |
 | PLAY | Play / rest |
 | REC | A tap: hold (the echo and the cloud repeat what they hold). Held: the effects grid |
@@ -219,7 +220,17 @@ while. Towards the arc's peak it plays more notes, shorter and higher, and somet
 a quick run, mostly downwards, to a close. Between pairs it breathes for bars (**Phrases**: how often). Its vibrato comes in late.
 By default its reverb and echo are at 90, so it sings far away. It may start **Lead in** bars after the piece starts
 (the Arc page), plays now and then in Flow and fully in Solo. Its filter's movement is kept gentle: never more than
-three quarters of an octave either way. The white keys play it too.
+three quarters of an octave either way.
+
+The white keys play the Lead too, and **write its theme**. Play three notes or more (the last four bars of what you
+play are kept, at most eight notes and rests) and pause for two beats: at the next bar line the Lead plays them back to
+you, in the octave you played them, as its call (its last note on an open ending), then its answer (closed, held
+longer). It does this in any part of the piece, Emerge too, even before **Lead in**: you asked by playing. From
+then on your notes are the piece's theme: they come back where the theme does, over whatever chord is playing, varied
+a little at a time like any of its ideas. One or two notes are just played, nothing is kept. Your notes sound as you
+play them; the Lead counts them on the grid, to the nearest sixteenth. PANIC forgets notes you are in the middle of
+playing, and an answer not yet begun (a theme already taken stays: the Lead plays it next, in its own time); a new
+piece starts with new ideas.
 
 **The Atmosphere** (SAVE) is a background: **None**, **Wind** (a breath of noise through a narrow band, swept
 slowly), **Surf** (waves), **Space** (chirps and bursts, far away), **Air**, or **Tape** (a crackle ringing on

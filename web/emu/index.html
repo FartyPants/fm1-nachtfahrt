@@ -167,7 +167,7 @@ kbd { font: 600 .85em ui-monospace, Menlo, monospace; background: var(--card); b
       <div>
         <h3>Lead <span>LFO</span></h3>
         <dl>
-          <dt>Phrases, Octave</dt><dd>How often it plays; two octaves down to one up. The white keys play it too, in the scale.</dd><dt>Glide, Vibrato</dt><dd>1 to 150 ms; the vibrato, coming in late. LFO again: Tone, Attack, Reverb, Echo (90 and 90: far away); a third time: its Move page (its tone's wander is kept gentle). ALGORITHM: Odyssey, Mini, Flute, Theremin, Synthi.</dd>
+          <dt>Phrases, Octave</dt><dd>How often it plays; two octaves down to one up. The white keys play it too, in the scale; play three notes or more and pause, and it takes them as its theme: at the next bar line it plays them back to you, a call and its answer, and they come back later in the piece.</dd><dt>Glide, Vibrato</dt><dd>1 to 150 ms; the vibrato, coming in late. LFO again: Tone, Attack, Reverb, Echo (90 and 90: far away); a third time: its Move page (its tone's wander is kept gentle). ALGORITHM: Odyssey, Mini, Flute, Theremin, Synthi.</dd>
         </dl>
       </div>
       <div>
@@ -211,7 +211,7 @@ kbd { font: 600 .85em ui-monospace, Menlo, monospace; background: var(--card); b
   <div>
     <h2>Buttons</h2>
     <ul>
-      <li><b>White keys</b> play the Lead in the piece's scale, from the root up; the key it sounds is lit. <b>Black keys</b> (lit, dark while held) play effects while held, left to right: Take-off, Supernova, Twitter, Repeat, Swell, Freeze, Octave, Return, Rise (every filter opens), Close (every filter shuts), Transpose (both sequences up a fourth). In PERFORM, the solos. The scale is set on the Key page (HOME again), or by MIDI notes in on channel 1.</li>
+      <li><b>White keys</b> play the Lead in the piece's scale, from the root up; the key it sounds is lit. Play three notes or more and pause (two beats): the Lead takes them as its theme and answers them at the next bar line, in any part of the piece. <b>Black keys</b> (lit, dark while held) play effects while held, left to right: Take-off, Supernova, Twitter, Repeat, Swell, Freeze, Octave, Return, Rise (every filter opens), Close (every filter shuts), Transpose (both sequences up a fourth). In PERFORM, the solos. The scale is set on the Key page (HOME again), or by MIDI notes in on channel 1.</li>
       <li><b>PLAY</b> plays / rests. <b>REC</b> tapped: hold, the echo and the cloud repeat what they hold; held: the <b>effects grid</b>, sixteen effects on the white keys (echo: Repeat, Time, Tape stop, Swell; filter: Low, High, Sweep, Phaser; space: Reverb, Take-off, Freeze, Wash; moves: Octave, Return, Twitter, Supernova). <b>EDIT</b> a tap: the Chords page; held: the next chord, on the next bar; held on: new chords. Every long press says what it did on a card in the middle.</li>
       <li><b>SELECT</b> on a layer's pages its level, on the Nachtfahrt page Energy (PERFORM's; the knobs' rule shows it while it turns), elsewhere nothing; <b>OCT−</b> / <b>OCT+</b> on the Sequence's, the Lead's and Sequence 2's pages its octave. <b>ALGORITHM</b> on a layer's page its voice (the Atmosphere: its character), on the Chords page the walk (Home, Wander, Free); <b>PRESETS</b> the piece (each remembers how you left it, and starts its arc from the beginning).</li>
       <li><b>SEL</b> PERFORM: the knobs are <b>Filter</b> (as on HOME), <b>Wet</b> (the whole music dry, or drowned in the echo: every layer's send), <b>Energy</b> (sparser or busier, and the second repeat), and <b>Sweep</b> (how far the Sequence's filter wanders on its own, the piece's); with Motion, Filter, Wet and Energy move by themselves (Filter between Shut 30 and Open 30, Wet 0 to +50, Energy with the arc's rise up to +50; the knobs show it), a turn of yours holding until the next section, then gliding back; a piece change returns the three to 0; hold white 6 and they are the levels (Drone, Seq, Lead, Seq 2). White keys 1–5 mute and bring back the Drone, the Sequence, the Lead, Sequence 2 and the Atmosphere (their levels kept; a muted Lead or Drone is silent, MIDI too), black keys 1–5 solo them; white 7–11, held: Sweep, Open, Shut, Drop (both sequences out), Echo (pushed). The keys that do something are lit. A page's button leaves PERFORM. Hold SEL: <b>Lock</b>, the sequences keeping their steps (hold again: off).</li>
@@ -383,7 +383,7 @@ const keybed = document.createElement("div");
 keybed.className = "keybed";
 keybed.setAttribute("role", "group");
 keybed.setAttribute("aria-label", "Keys");
-keybed.setAttribute("aria-description", "The white keys play the Lead in the scale; the black keys play effects while held (Take-off, Supernova, Twitter, Repeat, Swell, Freeze, Octave, Return, Rise, Close, Transpose). Left and Right arrows move between them.");
+keybed.setAttribute("aria-description", "The white keys play the Lead in the scale (three notes or more, then a pause: the Lead takes them as its theme and answers them); the black keys play effects while held (Take-off, Supernova, Twitter, Repeat, Swell, Freeze, Octave, Return, Rise, Close, Transpose). Left and Right arrows move between them.");
 controls.appendChild(keybed);
 keys.forEach((k, i) => {
   const pc = (5 + i) % 12, oct = 1 + Math.floor((5 + i) / 12);
