@@ -1,0 +1,65 @@
+# (the user, 2026-10-28) Sequence 2's octave moves with Motion: Sunrain (Sequence 2 at 0) at Motion 100 moves it an
+# octave at a section change and back at the next; its page's Octave knob shows it (home + the shift), OCT- / OCT+
+# light, the reader says it; the project keeps home. The hand wins: OCT- / OCT+ on its page, or its Octave knob, make
+# what the knob shows, a step on, the new home, the shift gone (the times: this run's, deterministic)
+wait 300
+turn PRESET 5
+wait 500
+expect piece 5
+spin K3 55
+wait 300
+expect par15 100
+tap SEQ
+wait 300
+expect view 4
+listen
+# the first section change (~78 s): up an octave
+wait 84000
+expect section 3
+expect s2shift 1
+expect s2knob 1
+expect par23 0
+expect litbtn13 1
+expect litbtn12 0
+said Octave +1
+shot shifted.png
+# the next (~106 s): home
+wait 25000
+expect s2shift 0
+expect s2knob 0
+expect par23 0
+expect litbtn13 0
+expect litbtn12 0
+# a later one (~140 s): down; OCT- makes -2 home, the shift gone
+wait 40000
+expect s2shift -1
+expect s2knob -1
+expect litbtn12 1
+tap OCT-
+wait 200
+expect s2shift 0
+expect par23 -2
+expect s2knob -2
+said SEQ 2 OCTAVE -2
+expect litbtn12 1
+# the next (~166 s): up from -2 (it can't go down); the Octave knob turned up makes the 0 it then shows home
+wait 23000
+expect s2shift 1
+expect s2knob -1
+expect par23 -2
+spin K2 1
+wait 200
+expect s2shift 0
+expect par23 0
+expect s2knob 0
+expect litbtn12 0
+expect litbtn13 0
+# (~196 s: from home, so it may roll at once) shifted again; Motion to 0 (HOME's KNOB 3): home at once
+wait 30000
+expect s2shift !=0
+tap HOME
+wait 300
+spin K3 -100
+wait 200
+expect par15 0
+expect s2shift 0

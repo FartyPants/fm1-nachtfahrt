@@ -2708,6 +2708,79 @@ int main(void)
               s2_off, s1_moved);
     }
 
+    /* (the user, 2026-10-28) Sequence 2's octave moves with Motion: at each section change (not Emerge's start), with
+     * Motion/100, one octave from its home, up or down (the other way at the range's edge), back home at the next;
+     * never two away; Motion 0 never; the hand (Octave 2 set) cancels it at once. Sunrain (Sequence 2 at 0): Motion
+     * 0 for ten minutes, never; Motion 100 for fifteen, shifts that come and go at the section changes, its notes an
+     * octave away while shifted; home at the top (1) only down, at the bottom (-2) only up */
+    {
+        int k, sh, was = 0, sec, was_sec, ever = 0, back = 0, bad = 0, stuck = 0, mixed;
+        uint32_t n0;
+        long sum[3] = {0, 0, 0}, cnt[3] = {0, 0, 0};
+        fresh();
+        piece(5);
+        en_set(P_MOTION, 0);
+        en_play(1);
+        for (k = 0; k < 1200; k++) {
+            run(0.5f);
+            ever += en_s2oct_shift != 0;
+        }
+        CHECK(!ever, "test_s2oct_motion0: shifted in %d of 1200 looks at Motion 0", ever);
+        fresh();
+        piece(5);
+        en_set(P_MOTION, 100);
+        en_play(1);
+        was_sec = en_section;
+        for (k = 0; k < 1800; k++) {
+            n0 = s2_n;
+            run(0.5f);
+            sh = en_s2oct_shift;
+            sec = en_section;
+            bad += sh < -1 || sh > 1;
+            if (sec != was_sec && was != 0)
+                stuck += sh != 0;        /* (shifted, the next section change brings it home) */
+            if (sec == was_sec && sh != was)
+                bad++;                   /* (it moves only at a section change) */
+            ever += sh != 0 && was == 0;
+            back += sh == 0 && was != 0;
+            mixed = sh != was;
+            if (!mixed && sh >= -1 && sh <= 1)
+                for (; n0 < s2_n && n0 < SQN; n0++)
+                    sum[sh + 1] += s2_note[n0], cnt[sh + 1]++;
+            was = sh, was_sec = sec;
+        }
+        printf("  Sequence 2's octave at Motion 100, 15 min: %d shifts, %d back; mean notes %.1f / %.1f / %.1f\n", ever,
+               back, cnt[0] ? (double)sum[0] / (double)cnt[0] : 0.0, cnt[1] ? (double)sum[1] / (double)cnt[1] : 0.0,
+               cnt[2] ? (double)sum[2] / (double)cnt[2] : 0.0);
+        CHECK(ever >= 3 && back >= 3 && !bad && !stuck, "test_s2oct_motion100: %d shifts, %d back, %d bad, %d not home",
+              ever, back, bad, stuck);
+        for (k = 0; k < 3; k += 2)       /* (a shift's notes an octave from home's, give or take the patterns) */
+            if (cnt[k] > 20 && cnt[1] > 20) {
+                const double d = (double)sum[k] / (double)cnt[k] - (double)sum[1] / (double)cnt[1];
+                CHECK(k ? d > 8.0 && d < 16.0 : d < -8.0 && d > -16.0, "test_s2oct_notes: shift %d moved the notes %.1f",
+                      k - 1, d);
+            }
+        for (k = 0; k < 1200 && !en_s2oct_shift; k++)   /* (the hand: Octave 2 set while shifted, home at once) */
+            run(0.5f);
+        sh = en_s2oct_shift;
+        en_set(P_SEQ2OCT, 0);
+        run(0.05f);
+        CHECK(sh && !en_s2oct_shift, "test_s2oct_hand: shifted %d, then %d after Octave 2 set", sh, en_s2oct_shift);
+        {   /* (the edges: home 1 only down, home -2 only up) */
+            static const int HOME[2] = {1, -2};
+            int e;
+            for (e = 0; e < 2; e++) {
+                int up = 0, down = 0;
+                en_set(P_SEQ2OCT, HOME[e]);
+                for (k = 0; k < 900; k++) {
+                    run(0.5f);
+                    up += en_s2oct_shift > 0, down += en_s2oct_shift < 0;
+                }
+                CHECK(e ? !down && up : !up && down, "test_s2oct_edge: home %d: up %d, down %d", HOME[e], up, down);
+            }
+        }
+    }
+
     /* (BERLIN) Wahnfried is beatless: ten minutes, no note of either sequence; Cyborg (the user, 2026-10-28: its
      * Sequence at 20) plays its Sequence, Sequence 2 silent */
     {

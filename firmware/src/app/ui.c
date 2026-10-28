@@ -150,7 +150,7 @@ static const char *const KNOB_HELP[NVIEWS][4] = {   /* (BERLIN's, a row a view, 
     {"The root an octave under", "The filter's resonance", "The slow phaser's depth", "How slowly the chord swells in"},
     {"How many of the steps sound", "Two octaves down to two up", "Steps before it returns", "Eighths, or sixteenths"},
     {"How often it plays a phrase", "Two octaves down to one up", "How long it slides, note to note", "How deep the late vibrato"},
-    {"How likely each note plays", "Its octave", "Steps: a step short, it drifts", "Its level"},
+    {"How likely each note plays", "Its octave (Motion moves it a while)", "Steps: a step short, it drifts", "Its level"},
     {"How much goes into the echo", "The echo's time: 1/8 to a bar", "How long the repeats go on", "How much goes into the plate"},
     {"Fine tuning, in cents", "Notes and clock out over MIDI", "The keys' and buttons' lights", "A turn saves all eight pieces"},
     {"The Drone's level", "The Sequence's level", "The Lead's level", "Sequence 2's level"},
@@ -214,6 +214,8 @@ static struct {
     uint8_t noise_from;                /* the Noise page (SAVE): the page it was opened from */
     int8_t oct_home[NLAYER];           /* each layer's octave as its piece was loaded (OCT- / OCT+ lit away from it) */
     uint8_t oct_ring;                  /* the level ring in the middle (SELECT): its layer + 1 (0: none) */
+    uint8_t s2_hand;                   /* Sequence 2's Octave set by hand while Motion had it shifted: the shift not
+                                        * shown till the engine has dropped it (a block later) */
     uint32_t card_until, card_t0;      /* a nudge's card in the middle: up until, then fading; when it came */
     uint8_t card_shake;                /* the card a big move's (red: a shake, new chords, a reset) or not */
     uint16_t card_col;                 /* its colour */
@@ -383,10 +385,12 @@ static void slot_write(int i)                    /* a walk slot about to be edit
     knob_set(P_CX0 + i, x);
     knob_set(P_CQ0 + i, q);
 }
+static int s2_shift(void) { return ui.s2_hand ? 0 : en_s2oct_shift; }   /* (Motion's move of Sequence 2's octave) */
 static int knob_get(int k)
 {
-    if (k < P_NPARAMS)
-        return proj.par[k];
+    if (k < P_NPARAMS)                           /* (Sequence 2's Octave: its home and Motion's shift, as it plays;
+                                                  * the project keeps home) */
+        return proj.par[k] + (k == P_SEQ2OCT ? s2_shift() : 0);
     if (k == K_LEDS)
         return proj.leds;
     if (k == K_CPU)
@@ -515,10 +519,13 @@ static void knob_set(int k, int v)
         return;
     knob_range(k, &lo, &hi);
     v = v < lo ? lo : v > hi ? hi : v;
-    if (v == knob_get(k))
+    if (v == knob_get(k) && !(k == P_SEQ2OCT && s2_shift()))   /* (Sequence 2's Octave, shifted: the hand makes what
+                                                               * it shows home, even unchanged) */
         return;
     if (k < P_NPARAMS) {
         int was = proj.par[k];
+        if (k == P_SEQ2OCT && en_s2oct_shift)
+            ui.s2_hand = 1;
         proj.par[k] = (int16_t)v;
         en_set(k, v);
         if (k == P_PMODE && (was & EN_PLOOP) && !(v & EN_PLOOP))
@@ -2955,6 +2962,8 @@ void ui_init(void)
 
 void ui_frame(void)
 {
+    if (ui.s2_hand && !en_s2oct_shift)           /* (the engine has the hand's octave: its shifts shown again) */
+        ui.s2_hand = 0;
     prog_take();
     nudge_tick();
     input();

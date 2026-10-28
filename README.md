@@ -8,7 +8,8 @@ slowly evolving textures, a strong sense of space. It plays itself from the mome
 - a **Sequence** of up to 16 steps on a plucked analog-style voice (2600, Moog, Synthi, Pulse, Glass),
   its filter wandering slowly, its notes **repeated** at the echo's times (a dotted eighth by default, the
   classic Berlin School echo), so sparse notes fill in the spaces;
-- **Sequence 2**, often a step shorter, so the two drift apart and meet again;
+- **Sequence 2**, often a step shorter, so the two drift apart and meet again, and with Motion an octave up or
+  down now and then, for a section;
 - a **Drone**: a chord on two banks of voices (Organ, Strings, Choir, Saws, Glass) with a pedal under it, a
   phaser and a slow walk from chord to chord;
 - a **Lead**: one gliding voice (Odyssey, Mini, Flute, Theremin, Synthi) playing long, dreamy phrases deep in

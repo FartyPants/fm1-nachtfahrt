@@ -177,7 +177,7 @@ played on a plucked voice: **2600** (a saw), **Moog** (two saws a little apart),
 **Pulse** (a narrow pulse), **Glass** (an FM bell). Each goes through two low-passes, the second resonant,
 swept down by a short envelope. The root step is accented and the others quieter (Accent, on the Pattern
 page). Density decides how many of the steps sound, the least important dropping out first. Now and then
-(Evolve, Motion) a step changes, a note moves, an octave jumps; the sequence follows the Drone's chord
+(Evolve, Motion) a step changes, a note moves, an octave jumps, the sequence comes round early; it follows the Drone's chord
 (Transpose, on the Key page). Its cutoff wanders slowly over minutes, around the Cutoff you set (its Move page, below; its Width is the
 **Sweep**, also on PERFORM).
 
@@ -190,7 +190,12 @@ quarter (1/4.), so Repeat A, a dotted eighth, doesn't land on the echo's first r
 **Sequence 2** (SEQ; channel 4) is a second line, by default an octave down and a step shorter (7 against
 8), so the two drift apart and come back together. It has the same voices and **Sub** (a sine and its
 octave below). Chance thins it at random. Its **Intro** (Move page) opens its filter, from closed, over that many bars: in Rubycon
-it comes out of the drone after the Sequence.
+it comes out of the drone after the Sequence. Motion changes its steps and octave jumps but never its length:
+an 8 against a 7 stays 8 against 7. And with **Motion**, at a change of section, Sequence 2 may move an octave up
+or down from where its Octave knob is set (at the range's ends, the other way), and back at the next change of
+section; never more than one octave away (the chance is Motion's: at 100 every time, at 0 never). Its page's
+Octave knob shows where it is, and OCT+ or OCT− lights. Turn its Octave knob or press OCT− / OCT+ on its page and
+what you set is its octave again, the move gone; what's saved is always the octave you set.
 
 **The Drone** (ENV; channel 1) holds the chord on two banks of five voices: the chord's four notes and the
 root an octave under (the **Pedal**). Voices: **Organ**, **Strings** (through an ensemble), **Choir**, **Saws**,
@@ -259,7 +264,7 @@ dot sits at the bottom, and the section reads EMERGE.
   the two bars before Flow returns.
 
 Sections last 16 to 64 bars; **Motion** (the Nachtfahrt page) makes them shorter, and at 0 the piece stays in
-Flow.
+Flow. At a change of section, with Motion, Sequence 2 may move an octave away for that section (see Sequence 2).
 
 ### The Arc page
 

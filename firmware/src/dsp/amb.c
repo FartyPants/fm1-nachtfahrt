@@ -1006,6 +1006,7 @@ static float ar_pos;                             /* (bars into the Sequence's lo
 static float ar_push, ar_cr_env, ar_cr_f = 5000.0f, ar_cr_g = 1.0f;   /* (the swell; the grid's Take-off) */
 static uint32_t ar_rng;
 volatile uint8_t en_swell;
+static uint32_t s2o_rng;                         /* (Sequence 2's octave move: its own dice, the arc's kept as they were) */
 static int ar_len(void) { return par[P_ARC] ? 128 + 640 * par[P_ARC] / 100 : 0; }
 static int ar_sec_len(void) { return 16 + (int)(48.0f * (1.0f - motion)); }
 
@@ -1142,6 +1143,7 @@ static void ar_start(void)                       /* the arc from its start: Emer
         fo_in[i] = (int16_t)pe(FO_I[i]);
     en_swell = 0;
     ar_push = 0.0f;
+    en_s2oct_shift = 0;                          /* (Sequence 2 at its home octave) */
     if (fo_intro_max()) {
         ar_sec = EN_SEC_EMERGE;
         ar_left = fo_intro_max();
@@ -1150,6 +1152,26 @@ static void ar_start(void)                       /* the arc from its start: Emer
         ar_left = ar_sec_len();
     }
     en_section = ar_sec;
+}
+/* (the user, 2026-10-28) Sequence 2's octave, Motion's: at a section change, shifted, home; at home, with Motion/100,
+ * one octave away, up or down (the other way at the range's edge, -2..1): never two away. Lock keeps it as it is;
+ * the hand (its Octave set, apply), a new piece (ar_start) and Motion 0 bring it home. The knob keeps home: saved */
+static void s2o_section(void)
+{
+    const int h = par[P_SEQ2OCT];
+    int d;
+    if (lock)
+        return;
+    if (en_s2oct_shift) {
+        en_s2oct_shift = 0;
+        return;
+    }
+    if (motion <= 0.005f || (float)(seq_rand(&s2o_rng) >> 8) * (1.0f / 16777216.0f) >= motion)
+        return;
+    d = seq_rand(&s2o_rng) & 1u ? 1 : -1;
+    if (h + d > PARAMS[P_SEQ2OCT].hi || h + d < PARAMS[P_SEQ2OCT].lo)
+        d = -d;
+    en_s2oct_shift = (int8_t)d;
 }
 static void ar_tick_bar(void)                    /* a bar line (the first, at the start, already counted) */
 {
@@ -1160,6 +1182,7 @@ static void ar_tick_bar(void)                    /* a bar line (the first, at th
     ar_bar++;
     if (--ar_left <= 0) {
         const float r = (float)(seq_rand(&ar_rng) >> 8) * (1.0f / 16777216.0f);
+        const uint8_t was = ar_sec;
         switch (ar_sec) {
         case EN_SEC_EMERGE: ar_sec = EN_SEC_FLOW; break;
         case EN_SEC_FLOW:
@@ -1172,6 +1195,8 @@ static void ar_tick_bar(void)                    /* a bar line (the first, at th
         ar_left = ar_sec_len();
         if (ar_sec == EN_SEC_BRIDGE)
             fo_bridge();
+        if (ar_sec != was)
+            s2o_section();
     }
     en_swell = ar_sec == EN_SEC_BRIDGE && ar_left <= 2;
     en_section = ar_sec;
@@ -1198,6 +1223,7 @@ static float seq_vol, seq2_vol, sq_cut = 600.0f, sq_edec = 0.9995f, sq_adec = 0.
 static float sq2_cut = 450.0f, sq2_edec = 0.9995f, sq2_adec = 0.9997f, sq_rev[2] = {1.0f, 1.0f}, sq_echo[2] = {1.0f, 1.0f};
 volatile float en_pluck_cut[2];                  /* (each sequence's last note's cutoff, for the tests) */
 volatile uint8_t en_seq_len[2];
+volatile int8_t en_s2oct_shift;
 volatile uint16_t en_seq_lane[5], en_seq_acc[2];   /* (the Pattern page's lanes as Auto plays them: each sequence's
                                                   * steps (as Density thins them), octaves; the Sequence's skips; accents) */
 const char *const EN_SV_NAME[EN_NS2V] = {"2600", "Moog", "Synthi", "Pulse", "Glass", "Sub"};
@@ -1377,7 +1403,7 @@ static int seq_note(const seq_t *q, int l, int s)   /* step s's note, transposed
     seq_t t;
     const int root = par[P_ROOT] % 12, tr = par[P_TRANS],
               off = tr == 2 ? 0 : ((int)en_chord_root % 12 - root + 12) % 12,
-              base = 48 + root + 12 * (l ? par[P_SEQ2OCT] : par[P_SEQOCT]);
+              base = 48 + root + 12 * (l ? par[P_SEQ2OCT] + en_s2oct_shift : par[P_SEQOCT]);
     int n;
     if (mvm & EN_MV_TRANSPOSE) {                 /* (BERLIN) the black keys' Transpose: three scale steps up */
         t = *q;
@@ -2295,7 +2321,12 @@ static void apply(int p, int v)
             sq_adec = fm_expf(-6.9f / (1.5f * t * EN_SR));
         }
         break;
-    case P_MOTION: motion = (float)v * 0.01f; break;
+    case P_MOTION:
+        motion = (float)v * 0.01f;
+        if (!v)
+            en_s2oct_shift = 0;                  /* (Motion 0: Flow for ever, Sequence 2 home) */
+        break;
+    case P_SEQ2OCT: en_s2oct_shift = 0; break;   /* (the hand wins: its Octave, home, the shift gone) */
     case P_EVOLVE: evolve = (float)v * 0.01f; break;
     case P_CRACKLE:                              /* (1.3.0: straight, not squared: a bed at 15 too; 35 as before,
                                                   * 100 -9 dB; the palette widening as it turns up) */
@@ -2475,6 +2506,8 @@ void en_init(void)
     ld_rng = 0x3C6EF372u;
     atm_rng = 0xBB67AE85u;
     ar_rng = 0x510E527Fu;
+    s2o_rng = 0x9B05688Cu;
+    en_s2oct_shift = 0;
     for (i = 0; i < NFO; i++) {                  /* (the filter motion: its dice and its offsets from the top) */
         fo_rng[i] = FO_SEED[i];
         fo[i] = fo_v[i] = fo_a[i] = fo_b[i] = fo_next[i] = fo_bs[i] = 0.0f;
