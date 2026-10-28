@@ -571,6 +571,11 @@ static int expect(const char *what, const char *val)
         got = knob_get(P_SEQ2OCT);
     else if (!strncmp(what, "litbtn", 6))         /* litbtnN: button N (B_*, the order of "press": OCT- 12, OCT+ 13) lit */
         got = (int)(lit_btn >> (atoi(what + 6) % NB) & 1u);
+    else if (!strncmp(what, "mac", 3) && what[3] >= '0' && what[3] <= '3' && !what[4])   /* macN: master action N
+                                                  * as the knob shows it (0 Filter, 1 Wet, 2 Energy), -50..50 */
+        got = ui.mac[what[3] - '0'];
+    else if (!strncmp(what, "emac", 4) && what[4] >= '0' && what[4] <= '3' && !what[5])   /* emacN: as the engine hears it */
+        got = en_mac[what[4] - '0'];
     else if (!strcmp(what, "mutes"))              /* the layers muted (EN_M_*: 1 chord .. 16 hats, 32 noise) */
         got = (int)ui.mutes;
     else if (!strcmp(what, "scopepk")) {          /* the scope buffer (the ripples' outlines), its peak */

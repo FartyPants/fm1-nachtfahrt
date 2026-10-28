@@ -1,0 +1,26 @@
+# (the user, 2026-10-28) the master actions, PERFORM's Filter, Wet and Energy: a piece change returns them to 0 (the
+# knobs and the engine alike; none of the last piece's push carried into the next)
+wait 300
+turn PRESET 4
+wait 500
+expect piece 4
+tap SEL
+wait 300
+expect view 17
+spin K3 20
+spin K2 15
+spin K1 -10
+wait 300
+expect mac2 >10
+expect emac2 >10
+expect mac1 >5
+expect mac0 <-5
+turn PRESET 1
+wait 500
+expect piece 5
+expect mac0 0
+expect mac1 0
+expect mac2 0
+expect emac0 0
+expect emac1 0
+expect emac2 0

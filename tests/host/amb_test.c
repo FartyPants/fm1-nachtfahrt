@@ -1279,6 +1279,36 @@ int main(void)
         CHECK(pk[1][1] / (pk[1][0] + 1e-9f) < 1.3f * pk[0][1] / (pk[0][0] + 1e-9f),
               "test_wet_all: Sequence 2's echo not moved by Wet as the Sequence's");
     }
+    {   /* (the user, 2026-10-28) a piece change returns Filter, Wet and Energy to 0: Stratosfear pushed (Energy +50,
+         * Wet +30, Filter -20), then Sunrain: the three 0, its Density, levels and sends its recipe's */
+        static const int P[] = {P_DENSITY, P_SEQ, P_SEQ2, P_SWEEP, P_DECAY, P_TAPB, P_CUTOFF, P_SQECHO, P_ECHO, P_S2ECHO,
+                                P_LDECHO, P_DRECHO};
+        int16_t pp[P_NPARAMS];
+        uint16_t pl;
+        int k, off = 0, pushed;
+        fresh();
+        piece(4);
+        en_play(1);
+        run(2.0f);
+        en_macro(EN_MAC_ENERGY, 50);
+        en_macro(EN_MAC_DUB, 30);
+        en_macro(EN_MAC_FILTER, -20);
+        run(0.05f);
+        en_piece(4, pp, &pl);
+        pushed = en_mac[EN_MAC_ENERGY] == 50 && en_mac[EN_MAC_DUB] == 30 && en_mac[EN_MAC_FILTER] == -20 &&
+                 en_heard(P_SEQ) != pp[P_SEQ];
+        piece(5);
+        run(0.05f);
+        en_piece(5, pp, &pl);
+        for (k = 0; k < (int)(sizeof P / sizeof P[0]); k++)
+            if (en_heard(P[k]) != pp[P[k]]) {
+                printf("  after the piece change: parameter %d heard %d, its recipe %d\n", P[k], en_heard(P[k]), pp[P[k]]);
+                off++;
+            }
+        CHECK(pushed && !en_mac[EN_MAC_FILTER] && !en_mac[EN_MAC_DUB] && !en_mac[EN_MAC_ENERGY] && !off,
+              "test_piece_macros_reset: pushed %d; after the change Filter %d, Wet %d, Energy %d, %d parameters moved",
+              pushed, en_mac[EN_MAC_FILTER], en_mac[EN_MAC_DUB], en_mac[EN_MAC_ENERGY], off);
+    }
 
     /* every voice of every layer: it sounds, without NaN, under full scale */
     {

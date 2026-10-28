@@ -515,6 +515,7 @@ static int ec_pp;                               /* (BERLIN) the echo ping-pongs 
 static float ec_g = 0.6f, ec_lpc = 0.68f, ec_wide = 1.0f;   /* the echo's Blur, Tone, Width (and the chord's and the
                                                              * pings': widen) */
 static int8_t mac[EN_NMAC];                     /* the master actions, -50..50 */
+volatile int8_t en_mac[EN_NMAC];
 static int8_t pofs[P_NPARAMS];
 static float dub_up;                            /* Dub turned up, 0..1: the echo darker, feeding back past its knob */                  /* what they add to the piece's parameters */
 static int pe(int p)                            /* a parameter as heard: the piece's, moved by the master actions */
@@ -1514,6 +1515,7 @@ static void ld_reseed(void)                      /* a new piece: new ideas (the 
     ld_due = 0;
 }
 #ifdef EN_HOST
+int en_heard(int p) { return pe(p); }
 void en_lead_motif(int slot, const int8_t *off, const uint8_t *dur, int n)
 {
     ld_motif_t *m = &ld_bank[slot & 3];
@@ -2550,6 +2552,10 @@ void en_init(void)
     }
     for (i = 0; i < EN_NLOOP * EN_LOOP_MAX; i++)   /* (DUB-1's ping loops: none) */
         en_loop_note[i / EN_LOOP_MAX][i % EN_LOOP_MAX] = -1;
+    for (i = 0; i < EN_NMAC; i++)                /* (the master actions at 0) */
+        mac[i] = en_mac[i] = 0;
+    for (i = 0; i < P_NPARAMS; i++)
+        pofs[i] = 0;
     for (i = 0; i < P_NPARAMS; i++)
         apply(i, PARAMS[i].def);
     pool_set(EN_MODE_POOL[par[P_MODE]]);
@@ -2635,6 +2641,7 @@ static void macro(int i, int v)
                                  EN_MAC_ENERGY, EN_MAC_ENERGY, EN_MAC_ENERGY, EN_MAC_ENERGY};
     unsigned k;
     mac[i] = (int8_t)v;
+    en_mac[i] = (int8_t)v;
     for (k = 0; k < sizeof OF; k++)
         if (OF[k] == i) {
             int o = MOVE[k].at50 * v / 50, before = pe(MOVE[k].p);
@@ -2711,6 +2718,9 @@ static void drain(void)
             seq_hist_clear(&sq_hist[a & 1]);
             break;
         case C_REGROW:
+            for (a = 0; a < EN_NMAC; a++)        /* (the user, 2026-10-28) a piece from the master actions at 0: none
+                                                  * of the last one's push carried over */
+                macro(a, 0);
             regrow();
             if (seq_have)                        /* (a piece's own patterns, kept) */
                 seq_take();

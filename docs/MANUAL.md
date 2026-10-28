@@ -454,7 +454,8 @@ NACHTFAHRT keeps all eight pieces in the FM-1's memory, each as you left it, wit
   saves.
 - **GLO held on** (1.5 s): the piece back to its recipe ("RESET"); not saved until the next save.
 
-Lock and PERFORM's Filter, Wet and Energy aren't saved. Projects saved by DUB-1, AMB-1 or an earlier NACHTFAHRT
+Lock and PERFORM's Filter, Wet and Energy aren't saved; a piece change (or GLO's reset) returns the three to 0, so
+none of one piece's push carries into the next. Projects saved by DUB-1, AMB-1 or an earlier NACHTFAHRT
 build aren't read: NACHTFAHRT starts with its eight recipes.
 
 ---

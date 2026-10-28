@@ -694,8 +694,17 @@ static void set_voice(int p, int v)
     mark_dirty();
 }
 
+static void mac_home(void)                       /* (the user, 2026-10-28) a piece from the master actions at 0 (the
+                                                  * engine's own, at its regrow) */
+{
+    int i;
+    for (i = 0; i < EN_NMAC; i++)
+        ui.mac[i] = 0;
+}
+
 static void set_piece(int i)                    /* the piece playing kept as it is; piece i as it was left */
 {
+    mac_home();
     project_piece(i);
     project_apply();
     oct_home_take();
@@ -1462,6 +1471,7 @@ static void input(void)
         project_piece_reset();
         project_apply();
         oct_home_take();
+        mac_home();
         en_regrow();
         say("RESET", piece_name(proj.piece));
         card_show("RESET", piece_name(proj.piece), K_FROST, 1);
