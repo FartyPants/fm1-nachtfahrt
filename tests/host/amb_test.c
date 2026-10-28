@@ -1048,6 +1048,23 @@ int main(void)
         CHECK(dr_n == 0, "test_drone_mute_midi: %u channel-1 notes while muted", dr_n);
         en_mute(0);
 
+        /* (the final review) its level to 0 lets its notes go as the mute does; back up, one chord at a time (no
+         * notes left held under the new ones) */
+        fresh();
+        en_set(P_DRIFT, 0);
+        en_play(1);
+        run(3.0f);
+        en_set(P_CHORD, 0);
+        run(20.0f);
+        for (held = 0, k = 0; k < 128; k++)
+            held += sounding[0][k] > 0;
+        CHECK(held == 0, "test_drone_level0_midi: %d channel-1 notes still on at level 0", held);
+        en_set(P_CHORD, 60);
+        run(30.0f);
+        for (held = 0, k = 0; k < 128; k++)
+            held += sounding[0][k] > 0;
+        CHECK(held <= 5, "test_drone_level0_midi: %d channel-1 notes on after level back (one chord: 5)", held);
+
         fresh();
         en_set(P_TAPA, 0);
         en_set(P_TAPB, 0);
@@ -1927,6 +1944,44 @@ int main(void)
             }
         }
         CHECK(!beyond, "test_fm_restart: %d offsets beyond their range (by %f)", beyond, (double)worst);
+    }
+
+    /* (BERLIN, the final review) Rate turned up is heard within its own interval: at Rate 1 the next move is ~45+ bars
+     * away; turned to 100, the Sequence moves again within 4 bars (100's longest wait 2.5). Intro turned up mid-piece
+     * doesn't shut a filter that is already open (it is the start's: the next start takes it) */
+    {
+        float f0, most = 0.0f;
+        int k;
+        fresh();
+        en_set(P_TEMPO, 120);
+        en_set(P_MOTION, 0);
+        en_set(P_EVOLVE, 0);
+        en_set(P_ARC, 0);
+        en_set(P_BRIDGE, 0);
+        fo_all(0, 0, 0, 0);
+        en_set(P_MW1, 100);
+        en_set(P_MR1, 1);
+        en_play(1);
+        run(80.0f);                              /* (40 bars: the first move long done, the next not yet) */
+        f0 = en_fo[1];
+        en_set(P_MR1, 100);
+        for (k = 0; k < 32; k++) {               /* (4 bars) */
+            run(0.25f);
+            most = fmaxf(most, fabsf(en_fo[1] - f0));
+        }
+        CHECK(most > 0.05f, "test_fm_rate_turn: Rate 1 -> 100, the Sequence moved %f octaves in 4 bars", (double)most);
+
+        fresh();
+        en_set(P_MOTION, 0);
+        en_set(P_ARC, 0);
+        en_set(P_BRIDGE, 0);
+        fo_all(0, 0, 0, 0);
+        en_play(1);
+        run(10.0f);
+        en_set(P_MI1, 32);
+        run(1.0f);
+        CHECK(en_fo[1] > -0.5f, "test_fm_intro_turn: Intro 0 -> 32 mid-piece shut the Sequence to %f", (double)en_fo[1]);
+        en_set(P_MI1, 0);
     }
 
     /* (BERLIN) the clock: every layer Width 100, Time 10, Rate 100, Bridge 100, Motion 100, at 60 BPM, then 160 mid-move:

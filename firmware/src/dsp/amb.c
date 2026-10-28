@@ -686,16 +686,23 @@ static float dr_lvl[2], dr_up = 0.0001f, dr_down = 0.00005f, ph_depth, ph_lfo, p
 static uint32_t dr_rng = 0x6A09E667u;
 static float dr_pedal = 0.7f, dr_rev = 1.0f, dr_echo = 1.0f;   /* (the pedal's level; the sends, x1 at 50) */          /* (its own: the voices' phases leave the music's draws alone) */
 
+static uint8_t dr_midi[2];                        /* the banks whose notes went out on MIDI: their note-offs owed */
 static int dr_heard(void) { return !(mutes & EN_M_CHORD) && par[P_CHORD] > 0; }   /* (its MIDI only while heard) */
-static void drone_off(int b)                     /* a bank dies away: its notes off */
+static void dr_midi_off(int b)                   /* a bank's MIDI notes let go (muted, level 0, or dying away) */
 {
     int i;
+    if (!dr_midi[b])
+        return;
+    dr_midi[b] = 0;
+    for (i = 0; i < NDR; i++)
+        midi(0x80, drv[b][i].note, 0);
+}
+static void drone_off(int b)                     /* a bank dies away: its notes off */
+{
     if (!dr_on[b])
         return;
     dr_on[b] = 0;
-    if (dr_heard())
-        for (i = 0; i < NDR; i++)
-            midi(0x80, drv[b][i].note, 0);
+    dr_midi_off(b);
 }
 
 static void drone_chord(void)                    /* the chord as voiced (stab[].note), swelling in on the other bank */
@@ -719,6 +726,7 @@ static void drone_chord(void)                    /* the chord as voiced (stab[].
             midi(0x90, (uint32_t)n, 70);
     }
     dr_on[nb] = 1;
+    dr_midi[nb] = (uint8_t)dr_heard();
     dr_bank = (uint8_t)nb;
 }
 
@@ -1018,6 +1026,7 @@ static float fo_v[NFO], fo_a[NFO], fo_b[NFO], fo_p[NFO] = {1.0f, 1.0f, 1.0f, 1.0
                                                   * (1: arrived), bars to the next */
 static float fo_bs[NFO], fo_be;                  /* the Bridge's move by layer (-1..1 of Bridge), how far in (0..1) */
 static float fo_ib;                              /* bars since the piece started (the intros) */
+static int16_t fo_in[NFO];                       /* the intros as they were at the start (turned down: sooner) */
 static uint32_t mvm;                             /* (BERLIN) the black keys' moves held: EN_MV_* */
 static float mv_rise, mv_close;                  /* Rise and Close, eased (0..1) */
 static uint32_t fo_rng[NFO], fo_pulses, fo_pp;   /* (the clock: pulses so far, the last counted, how far through the */
@@ -1079,13 +1088,14 @@ static void fo_step(uint32_t n)                  /* once a chunk: the clock on, 
         mv_close = mvm & EN_MV_CLOSE ? fm_minf(mv_close + up, 1.0f) : fm_maxf(mv_close - dn, 0.0f);
     }
     for (l = 0; l < NFO; l++) {
-        const int lead = l == FO_LEAD, r = pe(FO_R[l]), in = pe(FO_I[l]);
+        const int lead = l == FO_LEAD, r = pe(FO_R[l]), in = pe(FO_I[l]) < fo_in[l] ? pe(FO_I[l]) : fo_in[l];
         const float t = fm_maxf(fm_exp2f((float)pe(FO_T[l]) * 0.05f), lead ? 4.0f : 1.0f);   /* 1 .. 32 bars */
         float o;
         if (d > 0.0f) {
             if (fo_p[l] < 1.0f)
                 fo_p[l] = fm_minf(fo_p[l] + d / t, 1.0f);
-            if (r > 0 && (fo_next[l] -= d) <= 0.0f) {   /* a new move, from where it is */
+            if (r > 0 && (fo_next[l] = fm_minf(fo_next[l], 2.5f * fm_exp2f((float)(100 - r) * 0.05f)) - d) <= 0.0f) {
+                /* a new move, from where it is (the wait never longer than the Rate now allows: turned up, soon) */
                 const float u = 2.0f * fo_u(l) - 1.0f;
                 fo_a[l] = fo_v[l];
                 fo_b[l] = u * (0.6f + 0.4f * fm_fabsf(u));   /* (nearer 0 a little more likely) */
@@ -1118,9 +1128,12 @@ static void fo_step(uint32_t n)                  /* once a chunk: the clock on, 
 static void ar_start(void)                       /* the arc from its start: Emerge (an Intro opening), or Flow at once;
                                                   * the intros and the long rise from their start */
 {
+    int i;
     ar_bar = 0;
     ar_pos = 0.0f;
     fo_ib = 0.0f;
+    for (i = 0; i < NFO; i++)
+        fo_in[i] = (int16_t)pe(FO_I[i]);
     en_swell = 0;
     ar_push = 0.0f;
     if (fo_intro_max()) {
@@ -1961,7 +1974,11 @@ static void apply(int p, int v)
     par[p] = (int16_t)v;
     v = pe(p);                                   /* (as the master actions move it) */
     switch (p) {
-    case P_CHORD: chord_vol = (float)(v * v) * 0.0001f; break;
+    case P_CHORD:
+        chord_vol = (float)(v * v) * 0.0001f;
+        if (!v)                                  /* (at 0, as muted: its MIDI notes let go) */
+            dr_midi_off(0), dr_midi_off(1);
+        break;
     case P_SEQ: seq_vol = (float)(v * v) * 0.0001f; break;
     case P_LEAD: lead_vol = (float)(v * v) * 0.0001f; break;
     case P_GLIDE: ld_gk = 1.0f - fm_expf(-1.0f / ((0.001f + 0.0015f * (float)v) * EN_SR)); break;   /* ~1 .. 150 ms (the
@@ -2178,7 +2195,7 @@ void en_init(void)
     memset(pluck, 0, sizeof pluck);              /* (BERLIN's voices from rest: none sounding, none to let go) */
     memset(&lead, 0, sizeof lead);
     ld_key = -1;
-    dr_on[0] = dr_on[1] = 0;
+    dr_on[0] = dr_on[1] = dr_midi[0] = dr_midi[1] = 0;
     dr_lvl[0] = dr_lvl[1] = 0.0f;
     plate_init();
     for (i = 0; i < TAPE_N; i++)
@@ -2377,13 +2394,8 @@ static void drain(void)
         case C_MUTE:
             if (a & ~mutes & EN_M_BASS)          /* (BERLIN) the Lead muted: its note let go now (a key's too) */
                 lead_off();
-            if (a & ~mutes & EN_M_CHORD) {       /* the Drone muted: its notes off on MIDI (its voices ring on, silent) */
-                int b, i;
-                for (b = 0; b < 2; b++)
-                    if (dr_on[b])
-                        for (i = 0; i < NDR; i++)
-                            midi(0x80, drv[b][i].note, 0);
-            }
+            if (a & ~mutes & EN_M_CHORD)         /* the Drone muted: its notes off on MIDI (its voices ring on, silent) */
+                dr_midi_off(0), dr_midi_off(1);
             mutes = (uint32_t)a;
             break;
         case C_PERF: perf = (uint32_t)a; break;

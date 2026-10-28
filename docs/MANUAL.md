@@ -237,7 +237,9 @@ its own (see [The pieces](#7-the-pieces)). The clock is the transport's bars, so
 while the music rests, and follows an external MIDI clock. The Atmosphere's colour is kept within about an
 octave either way, whatever its Width.
 
-The Intro happens once, when the piece starts (PLAY, or the piece changed or set back to its recipe). A filter
+The Intro happens once, when the piece starts (PLAY, or the piece changed or set back to its recipe). Turned up
+while the piece plays, it waits for the next start (an open filter is never shut by it); turned down, the filter
+opens sooner. A filter
 at the start of its Intro is closed, so its layer is quiet for a while: the meter's tick sits low, the knob's
 dot sits at the bottom, and the section reads EMERGE.
 
