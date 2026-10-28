@@ -30,7 +30,7 @@ const char *const EN_SEC_NAME[EN_NSEC] = {"Emerge", "Flow", "Solo", "Bridge"};  
 static const en_param_t PARAMS[P_NPARAMS] = {
     {"Chord", 0, 100, 60},    {"Sequence", 0, 100, 70},    {"Lead", 0, 100, 40},     {"Sequence 2", 0, 100, 60},
     {"Density", 0, 100, 60},  {"Evolve", 0, 100, 40},   {"Drift", 0, 6, 4},       {"Repeat A", 0, 100, 100},
-    {"Echo", 0, 100, 55},     {"Echo time", 0, 5, 1},   {"Reverb", 0, 100, 35},   {"Feedback", 0, 100, 60},
+    {"Echo", 0, 100, 55},     {"Echo time", 0, 5, 3},   {"Reverb", 0, 100, 35},   {"Feedback", 0, 100, 60},
     {"Cutoff", 0, 100, 45},   {"Decay", 0, 100, 35},    {"Sweep", 0, 100, 50}, {"Motion", 0, 100, 50},
     {"Tune", -50, 50, 0},     {"MIDI out", 0, 1, 1},    {"Tempo", 60, 160, 96},  {"Root", 0, 11, 5},
     {"Mode", 0, EN_NMODES - 1, MODE_DORIAN}, {"Seq oct", -2, 2, 0}, {"Chord voice", 0, EN_NCV - 1, 0},
@@ -78,8 +78,9 @@ const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PAR
  * (Voices: the Sequence's 2600 Moog Synthi Pulse Glass, Sequence 2's and Sub; the Drone's Organ Strings Choir Saws
  *  Glass; the Lead's Odyssey Mini Flute Theremin Synthi. Modes: 0 Ionian, 1 Dorian, 2 Phrygian, 5 Aeolian. Repeat
  *  times: 1/8 1/8. 1/4 1/4. 1/2 1 bar. Drift: 2 4 8 16 32 64 bars, Hold. Play: the walk Home, Wander, Free. Grid:
- *  8ths, 16ths. Atmosphere: None Wind Surf Space Air Tape. Intros (the filter motion's, bars): the old Emerge's and
- *  Seq2 in's, for now: their own in Task 7) */
+ *  8ths, 16ths. Atmosphere: None Wind Surf Space Air Tape. The moves (filter motion spec 9): MW/MT/MR/MI a layer's
+ *  Width, Time, Rate and Intro in bars (0 Drone, 1 Sequence, 2 Lead, 3 Sequence 2, 4 Atmosphere; the Sequence's Width
+ *  is Sweep); the Lead's Width kept low; Bridge the middle section's move) */
 static const int16_t PC_TIMEWIND[] = {        /* Schulze, Bayreuth Return: one sequence, an organ through the phaser */
     P_TEMPO, 96, P_ROOT, 2, P_MODE, MODE_AEOLIAN,
     P_SVOICE, 0, P_SEQLEN, 16, P_SEQGRID, 1, P_DENSITY, 65, P_SEQ2, 0,
@@ -87,6 +88,7 @@ static const int16_t PC_TIMEWIND[] = {        /* Schulze, Bayreuth Return: one s
     P_CVOICE, 0, P_PHASER, 60, P_DRIFT, 3, P_PMODE, EN_WALK_HOME,
     P_LVOICE, 0, P_LDIN, 32,
     P_NCHAR, 1, P_CRACKLE, 30,
+    P_MW0, 30, P_MR0, 25, P_MW2, 15, P_MW4, 30, P_BRIDGE, 45,
     P_MI1, 32, P_ARC, 25, P_MOTION, 45, -1};
 static const int16_t PC_WAHNFRIED[] = {       /* Schulze, Wahnfried 1883: beatless, roots walking with no home */
     P_TEMPO, 80, P_ROOT, 10, P_MODE, MODE_DORIAN,
@@ -94,6 +96,7 @@ static const int16_t PC_WAHNFRIED[] = {       /* Schulze, Wahnfried 1883: beatle
     P_CHORD, 60, P_CVOICE, 2, P_PEDAL, 85, P_PHASER, 50, P_CRES, 25, P_DRIFT, 2, P_PMODE, EN_WALK_FREE,
     P_LEAD, 45, P_LVOICE, 4, P_LTONE, 75, P_VIB, 55, P_LDENS, 60, P_LDIN, 8,
     P_FEEDBACK, 75, P_REVERB, 45,
+    P_MW0, 45, P_MT0, 60, P_MR0, 45, P_MW2, 15, P_BRIDGE, 30,
     P_ARC, 20, P_MOTION, 55, -1};
 static const int16_t PC_PHAEDRA[] = {         /* Tangerine Dream, Phaedra: a Moog bass line, Mellotron flutes */
     P_TEMPO, 149, P_ROOT, 2, P_MODE, MODE_AEOLIAN,
@@ -102,6 +105,7 @@ static const int16_t PC_PHAEDRA[] = {         /* Tangerine Dream, Phaedra: a Moo
     P_CVOICE, 2, P_DRIFT, 4,
     P_LVOICE, 2, P_LDIN, 24,
     P_NCHAR, 5, P_CRACKLE, 25,
+    P_MW0, 25, P_MW3, 30, P_MR3, 40, P_MW4, 25,
     P_MI1, 16, P_ARC, 30, P_MOTION, 55, -1};
 static const int16_t PC_RUBYCON[] = {         /* Tangerine Dream, Rubycon: dark, two sequences out of the drone */
     P_TEMPO, 144, P_ROOT, 5, P_MODE, MODE_AEOLIAN,
@@ -110,6 +114,7 @@ static const int16_t PC_RUBYCON[] = {         /* Tangerine Dream, Rubycon: dark,
     P_TAPB, 40, P_TAPBT, 4,
     P_CHORD, 65, P_CVOICE, 0, P_CCOL, -20, P_PEDAL, 85, P_DRIFT, 4,
     P_LVOICE, 1, P_LDIN, 32,
+    P_MW0, 35, P_MR0, 25, P_MW3, 30, P_BRIDGE, 50,
     P_MI1, 16, P_ARC, 40, P_MOTION, 65, -1};
 static const int16_t PC_STRATOSFEAR[] = {     /* Tangerine Dream, Stratosfear: brighter, driving, the Lead forward */
     P_TEMPO, 138, P_ROOT, 4, P_MODE, MODE_AEOLIAN,
@@ -117,6 +122,7 @@ static const int16_t PC_STRATOSFEAR[] = {     /* Tangerine Dream, Stratosfear: b
     P_SEQ2, 60, P_S2VOICE, 0, P_SEQ2LEN, 15, P_MI3, 0,
     P_CVOICE, 1, P_DRIFT, 3,
     P_LEAD, 52, P_LVOICE, 1, P_LDENS, 65, P_LDIN, 12,
+    P_MR1, 40, P_MW3, 30, P_MR3, 40, P_BRIDGE, 35,
     P_ARC, 20, P_MOTION, 50, -1};
 static const int16_t PC_SUNRAIN[] = {         /* Ashra, New Age of Earth: major, the strongest repeats, bright strings */
     P_TEMPO, 130, P_ROOT, 2, P_MODE, MODE_IONIAN,
@@ -126,6 +132,7 @@ static const int16_t PC_SUNRAIN[] = {         /* Ashra, New Age of Earth: major,
     P_CVOICE, 1, P_DRIFT, 3,
     P_LVOICE, 0, P_LDIN, 16,
     P_NCHAR, 2, P_CRACKLE, 25,
+    P_MW3, 25, P_MW4, 25, P_BRIDGE, 35,
     P_ARC, 25, P_MOTION, 45, -1};
 static const int16_t PC_MIRAGE[] = {          /* Schulze, Mirage: icy, a glass sequence, sparse, a long reverb */
     P_TEMPO, 95, P_ROOT, 6, P_MODE, MODE_AEOLIAN,
@@ -136,12 +143,14 @@ static const int16_t PC_MIRAGE[] = {          /* Schulze, Mirage: icy, a glass s
     P_LVOICE, 3, P_LDIN, 24,
     P_REVERB, 55, P_SIZE, 90,
     P_NCHAR, 3, P_CRACKLE, 25,
+    P_MW0, 25, P_MR0, 20, P_MW4, 35, P_MR4, 20,
     P_MI1, 16, P_ARC, 20, P_MOTION, 40, -1};
 static const int16_t PC_CYBORG[] = {          /* Schulze, Cyborg: early, raw, deep organ drones beating, no sequence */
     P_TEMPO, 70, P_ROOT, 0, P_MODE, MODE_PHRYGIAN,
     P_SEQ, 0, P_SEQ2, 0,
     P_CHORD, 70, P_CVOICE, 0, P_CCOL, 25, P_PEDAL, 90, P_PHASER, 20, P_DRIFT, 4, P_PMODE, EN_WALK_WANDER,
     P_LVOICE, 3, P_LDENS, 30, P_LOCT, -1, P_LDIN, 8,
+    P_MW0, 50, P_MT0, 70, P_MR0, 45, P_MW2, 10, P_BRIDGE, 30,
     P_ARC, 15, P_MOTION, 35, -1};
 static const struct {
     const char *name;
@@ -3045,7 +3054,8 @@ static void render_plucks(uint32_t n)
         pluck_t *v = &pluck[i];
         float amp = v->amp, env = v->env, att = v->att, ph = v->ph, ph2 = v->ph2;
         const float g = v->layer ? g1 : g0, dt = v->dt, dt2 = v->dt2, adec = v->adec, edec = v->edec,
-                    es = 0.6f * (sq_echo[v->layer] + fx_rep * (2.5f - sq_echo[v->layer]));   /* (Repeat: thrown in) */
+                    /* (x2 since the echo report: the Sequences' repeats were barely heard against their dry) */
+                    es = 1.2f * (sq_echo[v->layer] + fx_rep * (2.5f - sq_echo[v->layer]));   /* (Repeat: thrown in) */
         uint32_t j;
         if (!v->on)
             continue;

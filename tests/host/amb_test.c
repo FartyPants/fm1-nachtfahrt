@@ -448,7 +448,8 @@ int main(void)
 
     /* (BERLIN, spec 3) the filter motion at rest: Width, Rate, Intro and Bridge 0 (and Motion 0, Arc 0, Evolve 0),
      * Timewind's first minute is to the bit what the engine without the filter motion played with Sweep 0, Emerge 0,
-     * Arc 0, Motion 0, Evolve 0 (build/tmp/fmzero_old.c on fd1d378: the first render of a process, as this one) */
+     * Arc 0, Motion 0, Evolve 0 (build/tmp/fmzero_old.c on fd1d378: the first render of a process, as this one;
+     * af050088 then, re-recorded for the echo's x2 send and 1/4. time, which alone moved it: checked by reverting them) */
     {   /* (in a child: this process stays as it started, for the render's tests below) */
         int k, fd[2];
         pid_t pid;
@@ -482,7 +483,7 @@ int main(void)
             close(fd[0]);
             waitpid(pid, 0, 0);
         }
-        CHECK(r.h == 0xaf050088u, "test_fm_zero: Timewind's first minute %08x, not af050088 (the engine before)", r.h);
+        CHECK(r.h == 0x1d4f1422u, "test_fm_zero: Timewind's first minute %08x, not 1d4f1422 (the engine before)", r.h);
         for (k = 0; k < 5; k++)
             CHECK(r.fo[k] == 0.0f, "test_fm_zero: layer %d's offset %f", k, (double)r.fo[k]);
     }
@@ -904,7 +905,7 @@ int main(void)
             for (k = 0; k < 5; k++)
                 en_set(OFF[k], 0);
             en_play(1);
-            run(1.0f);                           /* (the short lines' last quarter second gone) */
+            run(2.0f);                           /* (the start's tail gone: the echo's default 1/4. is long) */
             peak = 0.0f;
             run(1.0f);
             p0 = peak;
@@ -2005,7 +2006,7 @@ int main(void)
     {
         static const char *const NAME[EN_NPIECES] = {"Timewind", "Wahnfried", "Phaedra", "Rubycon", "Stratosfear",
                                                      "Sunrain", "Mirage", "Cyborg"};
-        static const int KEY[] = {P_TEMPO, P_ROOT, P_MODE, P_SVOICE, P_CVOICE, P_LVOICE, P_NCHAR};
+        static const int KEY[] = {P_TEMPO, P_ROOT, P_MODE, P_SVOICE, P_CVOICE, P_LVOICE, P_NCHAR, P_MI1, P_MI3};
         int16_t pa[EN_NPIECES][P_NPARAMS];
         uint16_t pl;
         int a, b, k, none = 0, worst = 99, wa = 0, wb = 0, dreamy = 1;
@@ -2028,6 +2029,37 @@ int main(void)
               worst);
         CHECK(none >= 3, "test_pieces_atmos_none: %d pieces without an Atmosphere", none);
         CHECK(dreamy, "test_pieces_lead_dreamy: a piece's Lead reverb or echo not 90");
+    }
+
+    /* (BERLIN, filter motion spec 9) the pieces' moves: every piece moves some layer (a Width and a Rate above 0);
+     * Timewind's Sequence comes in slowly (Intro 24+), Stratosfear's and Sunrain's straight in; Rubycon's Sequence 2
+     * after its Sequence; Wahnfried and Cyborg (no sequences) move on the Drone (Width and Rate 40+); Timewind's Bridge
+     * moderate (30..60); the Lead's Width low everywhere (30 at most). The echo's default time 1/4. and Repeat A's
+     * elsewhere (1/8.), so A no longer lands on the echo's first repeat (the user; the echo report) */
+    {
+        static const int MW[5] = {P_MW0, P_MW1, P_MW2, P_MW3, P_MW4}, MR[5] = {P_MR0, P_MR1, P_MR2, P_MR3, P_MR4};
+        int16_t pa[EN_NPIECES][P_NPARAMS];
+        uint16_t pl;
+        int a, l, moves;
+        for (a = 0; a < EN_NPIECES; a++) {
+            en_piece(a, pa[a], &pl);
+            for (moves = 0, l = 0; l < 5; l++)
+                moves += pa[a][MW[l]] > 0 && pa[a][MR[l]] > 0;
+            CHECK(moves, "test_pieces_move: %s moves no layer", en_piece_name(a));
+            CHECK(pa[a][P_MW2] <= 30, "test_pieces_move: %s Lead width %d", en_piece_name(a), pa[a][P_MW2]);
+        }
+        CHECK(pa[0][P_MI1] >= 24, "test_pieces_move: Timewind Seq intro %d", pa[0][P_MI1]);
+        CHECK(pa[0][P_BRIDGE] >= 30 && pa[0][P_BRIDGE] <= 60, "test_pieces_move: Timewind Bridge %d", pa[0][P_BRIDGE]);
+        CHECK(!pa[4][P_MI1] && !pa[4][P_MI3] && !pa[5][P_MI1] && !pa[5][P_MI3],
+              "test_pieces_move: Stratosfear/Sunrain intros %d %d / %d %d", pa[4][P_MI1], pa[4][P_MI3], pa[5][P_MI1],
+              pa[5][P_MI3]);
+        CHECK(pa[3][P_MI3] > pa[3][P_MI1], "test_pieces_move: Rubycon Seq2 intro %d, Seq %d", pa[3][P_MI3], pa[3][P_MI1]);
+        for (a = 1; a < EN_NPIECES; a += 6)
+            CHECK(pa[a][P_MW0] >= 40 && pa[a][P_MR0] >= 40, "test_pieces_move: %s Drone width %d rate %d",
+                  en_piece_name(a), pa[a][P_MW0], pa[a][P_MR0]);
+        CHECK(en_param_info(P_ETIME)->def == 3 && en_param_info(P_TAPAT)->def == 1,
+              "test_echo_defaults: Echo time %d, Repeat A time %d", en_param_info(P_ETIME)->def,
+              en_param_info(P_TAPAT)->def);
     }
 
     /* (BERLIN) every piece, three minutes from its start: nothing broken, below clipping (-0.5 dBFS) and heard (RMS

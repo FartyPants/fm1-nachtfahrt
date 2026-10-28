@@ -96,7 +96,7 @@ said Setup page: Tune 0, MIDI out On
 tap GLO
 wait 300
 expect view 22
-said Arc page: Lead in 32, Bridge 40, Arc 25
+said Arc page: Lead in 32, Bridge 45, Arc 25
 # a knob on the Arc page: its help line shown as it turns (the review: the Arc's row was missing, NULL)
 turn K1 1
 wait 300
