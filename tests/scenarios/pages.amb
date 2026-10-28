@@ -57,7 +57,7 @@ said Lead move page, voice Odyssey: Width
 tap SEQ
 wait 300
 expect view 4
-said Sequence 2 page, voice Moog: Chance 100, Octave -1, Length 7, Level 0
+said Sequence 2 page, voice Moog: Chance 100, Octave -1, Length 7, Level 60
 tap SEQ
 wait 300
 expect view 11

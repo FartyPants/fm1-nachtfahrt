@@ -596,7 +596,8 @@ int main(void)
     /* (BERLIN, spec 3) the filter motion at rest: Width, Rate, Intro and Bridge 0 (and Motion 0, Arc 0, Evolve 0),
      * Timewind's first minute is to the bit what the engine without the filter motion played with Sweep 0, Emerge 0,
      * Arc 0, Motion 0, Evolve 0 (build/tmp/fmzero_old.c on fd1d378: the first render of a process, as this one;
-     * af050088 then, re-recorded for the echo's x2 send and 1/4. time, which alone moved it: checked by reverting them) */
+     * af050088 then, re-recorded for the echo's x2 send and 1/4. time, which alone moved it: checked by reverting them;
+     * 1d4f1422 then, re-recorded for Timewind's own recipe: Sequence 2 at 60, Reverb 50, the user's) */
     {   /* (in a child: this process stays as it started, for the render's tests below) */
         int k, fd[2];
         pid_t pid;
@@ -630,7 +631,7 @@ int main(void)
             close(fd[0]);
             waitpid(pid, 0, 0);
         }
-        CHECK(r.h == 0x1d4f1422u, "test_fm_zero: Timewind's first minute %08x, not 1d4f1422 (the engine before)", r.h);
+        CHECK(r.h == 0xf09ec04fu, "test_fm_zero: Timewind's first minute %08x, not f09ec04f (the engine before)", r.h);
         for (k = 0; k < 5; k++)
             CHECK(r.fo[k] == 0.0f, "test_fm_zero: layer %d's offset %f", k, (double)r.fo[k]);
     }
@@ -2438,6 +2439,8 @@ int main(void)
             CHECK(pa[a][P_MW2] <= 30, "test_pieces_move: %s Lead width %d", en_piece_name(a), pa[a][P_MW2]);
         }
         CHECK(pa[0][P_MI1] >= 24, "test_pieces_move: Timewind Seq intro %d", pa[0][P_MI1]);
+        CHECK(pa[0][P_SEQ2] == 60 && pa[0][P_REVERB] == 50, "test_pieces_timewind: Seq 2 %d, Reverb %d (the user: 60, 50)",
+              pa[0][P_SEQ2], pa[0][P_REVERB]);
         CHECK(pa[0][P_BRIDGE] >= 30 && pa[0][P_BRIDGE] <= 60, "test_pieces_move: Timewind Bridge %d", pa[0][P_BRIDGE]);
         CHECK(!pa[4][P_MI1] && !pa[4][P_MI3] && !pa[5][P_MI1] && !pa[5][P_MI3],
               "test_pieces_move: Stratosfear/Sunrain intros %d %d / %d %d", pa[4][P_MI1], pa[4][P_MI3], pa[5][P_MI1],
@@ -2543,13 +2546,13 @@ int main(void)
               en_section);
     }
 
-    /* (BERLIN) Timewind has one sequence (Schulze's): ten minutes, no Sequence 2 note */
+    /* (BERLIN) Timewind plays both sequences (the user: Sequence 2 at 60): ten minutes, notes from each */
     {
         fresh();
         piece(0);
         en_play(1);
         run(600.0f);
-        CHECK(s2_n == 0 && sq_n > 0, "test_timewind_one_sequence: %u Sequence 2 notes (%u Sequence)", s2_n, sq_n);
+        CHECK(s2_n > 0 && sq_n > 0, "test_timewind_sequences: %u Sequence 2 notes (%u Sequence)", s2_n, sq_n);
     }
 
     /* (BERLIN) Wahnfried and Cyborg are beatless: ten minutes, no note of either sequence */

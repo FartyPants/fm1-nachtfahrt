@@ -81,9 +81,10 @@ const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PAR
  *  8ths, 16ths. Atmosphere: None Wind Surf Space Air Tape. The moves (filter motion spec 9): MW/MT/MR/MI a layer's
  *  Width, Time, Rate and Intro in bars (0 Drone, 1 Sequence, 2 Lead, 3 Sequence 2, 4 Atmosphere; the Sequence's Width
  *  is Sweep); the Lead's Width kept low; Bridge the middle section's move) */
-static const int16_t PC_TIMEWIND[] = {        /* Schulze, Bayreuth Return: one sequence, an organ through the phaser */
+static const int16_t PC_TIMEWIND[] = {        /* Schulze, Bayreuth Return: an organ through the phaser; Sequence 2
+                                                * at its default 60 and the reverb at 50 (the user's ear) */
     P_TEMPO, 96, P_ROOT, 2, P_MODE, MODE_AEOLIAN,
-    P_SVOICE, 0, P_SEQLEN, 16, P_SEQGRID, 1, P_DENSITY, 65, P_SEQ2, 0,
+    P_SVOICE, 0, P_SEQLEN, 16, P_SEQGRID, 1, P_DENSITY, 65, P_REVERB, 50,
     P_TAPB, 50, P_TAPBT, 2,
     P_CVOICE, 0, P_PHASER, 60, P_DRIFT, 3, P_PMODE, EN_WALK_HOME,
     P_LVOICE, 0, P_LDIN, 32,

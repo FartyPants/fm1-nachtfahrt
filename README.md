@@ -33,7 +33,7 @@ built for or run on an FM-1 yet (see [PLAN.md](PLAN.md)).
 
 | # | Piece | After | Key, tempo | |
 |---|---|---|---|---|
-| 1 | Timewind | Schulze, *Bayreuth Return* | D minor, 96 | One sequence, an organ through the phaser, a long opening (the Sequence's filter takes 32 bars to open) |
+| 1 | Timewind | Schulze, *Bayreuth Return* | D minor, 96 | Two sequences, an organ through the phaser, a long opening (the Sequence's filter takes 32 bars to open), a wider reverb |
 | 2 | Wahnfried | Schulze, *Wahnfried 1883* | B♭ Dorian, beatless | Drifting layers, the roots walking with no home, a screaming lead; the Drone's filter is the main movement |
 | 3 | Phaedra | Tangerine Dream, *Phaedra* | D minor, 149 | A Moog bass line of 16 over a second line of 15, flutes, much filter movement; the Sequence opens over 16 bars, Sequence 2 is straight in |
 | 4 | Rubycon | Tangerine Dream, *Rubycon* | F minor, 144 | Dark organ, two sequences of 8 and 7 rising out of the drone: the Sequence opens over 16 bars, Sequence 2 after it, over 32 |

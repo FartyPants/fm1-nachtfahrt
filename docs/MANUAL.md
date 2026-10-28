@@ -277,7 +277,7 @@ filter's usable range.
 
 | # | Piece | After | Key, tempo | Sequence | Drone, Lead | Atmosphere | Moves |
 |---|---|---|---|---|---|---|---|
-| 1 | **Timewind** | Schulze, *Bayreuth Return* | D minor, 96 | One, 2600, 16 steps in 16ths, Repeat B | Organ + phaser, Odyssey | Wind | A slow opening: the Sequence's Intro is 32 bars. A gentle wander on every layer; Bridge 45 |
+| 1 | **Timewind** | Schulze, *Bayreuth Return* | D minor, 96 | Two: 2600, 16 steps in 16ths, Repeat B; Sequence 2 Moog, 7 steps, an octave down; Reverb 50 | Organ + phaser, Odyssey | Wind | A slow opening: the Sequence's Intro is 32 bars. A gentle wander on every layer; Bridge 45 |
 | 2 | **Wahnfried** | Schulze, *Wahnfried 1883* | B♭ Dorian, 80 | None (beatless) | Choir, the roots walking free; Synthi, bright | None | The Drone's filter is the main movement: Width 45, with long moves; Bridge 30 |
 | 3 | **Phaedra** | Tangerine Dream, *Phaedra* | D minor, 149 | Moog bass 16, a Moog line of 15 over it, much sweep | Choir, Flute | Tape | The Sequence opens over 16 bars (Sweep 85, wide); Sequence 2 straight in, sweeping often |
 | 4 | **Rubycon** | Tangerine Dream, *Rubycon* | F minor, 144 | Synthi 8 and Sub 7, dark | Organ, low and dark, Mini | None | The Sequence opens over 16 bars, then Sequence 2 over 32: it comes out of the drone after it; Bridge 50 |
