@@ -576,6 +576,38 @@ static int expect(const char *what, const char *val)
         got = ui.mac[what[3] - '0'];
     else if (!strncmp(what, "emac", 4) && what[4] >= '0' && what[4] <= '3' && !what[5])   /* emacN: as the engine hears it */
         got = en_mac[what[4] - '0'];
+    else if (!strcmp(what, "layoutclash")) {      /* (the user, 2026-10-28) the orbits round the chord (and its ring)
+                                                  * against what is round them, in the main canvas: the page's name,
+                                                  * its dots and CRANKY MAN (top right, the widest name), the section,
+                                                  * hold and lock (top left), the meters, the ECHO meter and its word,
+                                                  * the lanes; the places a dot would touch (0: none) */
+        int v, k;
+        int32_t pw = 0;
+        char pn[16];
+        static const float RX[] = {ORB_RX0, ORB_RX1, RING_RX}, RY[] = {ORB_RX0 * ORB_RY, ORB_RX1 * ORB_RY, RING_RY};
+        for (v = 0; v < NVIEWS; v++) {
+            caps(pn, VIEW_NAME[v], sizeof pn);
+            pw = text_w(&FONT_B, pn) > pw ? text_w(&FONT_B, pn) : pw;
+        }
+        got = 0;
+        for (v = 0; v < (int)(sizeof RX / sizeof RX[0]); v++)
+            for (k = 0; k < 720; k++) {
+                const double a = 6.283185307 * k / 720.0;
+                const int32_t x = CX + (int32_t)lrint(RX[v] * cos(a)), y = CY + (int32_t)lrint(RY[v] * sin(a));
+                const int32_t x0 = x - 2, x1 = x + 2, y0 = y - 2, y1 = y + 2;   /* (a dot, 3 px, and a pixel clear) */
+                int bad = (x1 >= 232 - pw - 6 - text_w(&FONT_XS, "SOLO") && y0 <= 12 + FONT_B.h)   /* the page's name,
+                                                                       * SOLO, CRANKY MAN */
+                    || (x1 >= 212 - NROUND * 6 && y0 <= 36)            /* the page's dots */
+                    || (x0 <= 8 + text_w(&FONT_XS, "EMERGE") + 6 + text_w(&FONT_XS, "hold") + 6 + text_w(&FONT_XS, "lock")
+                        && y0 <= 2 + FONT_XS.h)                        /* the section, hold, lock */
+                    || (x0 <= 52 && y0 <= 90)                          /* the meters, the bars under the section */
+                    || (x1 >= 216 - text_w(&FONT_XS, "ECHO") - 2 && y0 <= 90 && y1 >= 30)   /* ECHO */
+                    || y1 >= 104;                                      /* the lanes */
+                if (bad && !got)
+                    printf("  layoutclash: ellipse %d at (%d, %d)\n", v, (int)x, (int)y);
+                got += bad;
+            }
+    }
     else if (!strcmp(what, "mutes"))              /* the layers muted (EN_M_*: 1 chord .. 16 hats, 32 noise) */
         got = (int)ui.mutes;
     else if (!strcmp(what, "scopepk")) {          /* the scope buffer (the ripples' outlines), its peak */

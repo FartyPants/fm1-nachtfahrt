@@ -1,0 +1,4 @@
+# (the user, 2026-10-28) the chord, its orbits and its ring clear of what is round them: the top bar, the page's name,
+# its dots and CRANKY MAN (top right), the section (top left), the meters, the ECHO meter, the two lanes
+wait 300
+expect layoutclash 0

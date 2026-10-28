@@ -1801,7 +1801,15 @@ static void draw_header(void)
  * fading trail. Around it: the section and its bars (top left), the page (top right), the five layers' meters (left),
  * the echo's level (right), and the two sequences' lanes (below), each with its own step */
 #define CX 120
-#define CY 48
+#define CY 67                                    /* (the user, 2026-10-28: down from 48, the chord, its orbits and
+                                                  * its ring clear of the top bar, the page's name and CRANKY MAN, the
+                                                  * meters, ECHO and the lanes: the layout scenario checks it) */
+#define ORB_RX0 28.0f                            /* the orbits: the Sequence's across, Sequence 2's (31, 44 before the
+                                                  * ring); their height */
+#define ORB_RX1 40.0f
+#define ORB_RY 0.68f
+#define RING_RX 50.0f                            /* the chord's ring (its progress), outside them */
+#define RING_RY 34.0f
 /* the echo's output, as measured: its peak each frame, the last few frames (a repeat's level is the peak around
  * when it's due) */
 #define EPK_N 16
@@ -1906,7 +1914,7 @@ static int draw_orbits(void)                     /* 1: one still moves */
 {
     int i, k, any = 0;
     for (i = 0; i < ORB_N; i++) {
-        const float rx = orb[i].layer ? 44.0f : 31.0f, ry = rx * 0.68f;
+        const float rx = orb[i].layer ? ORB_RX1 : ORB_RX0, ry = rx * ORB_RY;
         const uint16_t c = en_frozen ? K_FROST : orb[i].layer ? K_PULSE : K_BELL;
         if (!orb[i].on)
             continue;
@@ -2153,7 +2161,7 @@ static void draw_oct(uint32_t now)
  * and what changed; it fades out CARD_SHOW after */
 static void draw_card(uint32_t now)
 {
-    const int32_t w = 196, h = 50, x = CX - w / 2, y = 34;
+    const int32_t w = 196, h = 50, x = CX - w / 2, y = CY - 25;   /* (on the chord) */
     int f;
     uint16_t edge, hc, tc;
     if (!card_on(now))
