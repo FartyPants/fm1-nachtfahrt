@@ -2959,6 +2959,48 @@ int main(void)
         ld_pool = 0xFFFu;
     }
 
+    /* (the final review, 2026-10-28) a MIDI Start while playing: the Lead's note let go at once (it used to sound on
+     * through the whole intro, the Lead silent in Emerge: 105 s in Timewind); and the scale changed in the middle of
+     * a phrase: the rest of it isn't played in the old scale */
+    {
+        const uint32_t P0 = EN_MODE_POOL[0], P1 = EN_MODE_POOL[2];   /* (D Ionian, D Phrygian: four degrees apart) */
+        int b, k, sw = 0, held;
+        fresh();
+        en_set(P_ROOT, 2);
+        en_set(P_ARC, 0);
+        en_set(P_LDIN, 0);
+        en_set(P_LDENS, 100);
+        en_set(P_MOTION, 70);
+        en_pool(P0);
+        ld_pool = P0;
+        en_play(1);
+        for (k = 0; k < 6; k++) {                /* (six calls, each caught at its first note, the scale turned) */
+            for (b = 0; b < 40000 && !(ld_on_now && en_lead_role == LR_CALL && en_section != EN_SEC_EMERGE); b++)
+                run(256.0f / 44100.0f + 1e-6f);
+            if (!ld_on_now)
+                break;
+            ld_pool = (k & 1) ? P0 : P1;
+            en_pool(ld_pool);
+            run(256.0f / 44100.0f + 1e-6f);
+            ld_outscale = 0;                     /* (the turn's own block: the note sounding is the old scale's) */
+            run(4.0f);
+            sw += (int)ld_outscale;
+            for (b = 0; b < 4000 && en_lead_role == LR_CALL; b++)
+                run(256.0f / 44100.0f + 1e-6f);
+        }
+        CHECK(k == 6 && !sw, "test_lead_scale_turn: %d calls caught, %d notes after the turn in the old scale", k, sw);
+        for (b = 0; b < 40000 && !(ld_on_now && en_section != EN_SEC_EMERGE); b++)
+            run(256.0f / 44100.0f + 1e-6f);
+        held = (int)ld_on_now;
+        en_clock(EN_CLK_START);                  /* (a DAW's Start, the FM-1 already playing) */
+        run(2.0f * 256.0f / 44100.0f + 1e-6f);
+        CHECK(held && !ld_on_now && !ld_left_on(), "test_lead_start: a Lead note %d before Start, %d after",
+              held, (int)ld_on_now);
+        en_clock(EN_CLK_STOP);
+        run(1.0f);                               /* (the external clock let go: 100 blocks without its ticks) */
+        ld_pool = 0xFFFu;
+    }
+
     /* (BERLIN) Pattern: the Octaves lane puts its step an octave up */
     {
         int n0 = 0, n1 = 0, v;

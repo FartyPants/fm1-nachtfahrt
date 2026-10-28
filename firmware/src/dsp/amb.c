@@ -2543,6 +2543,18 @@ static void lead_tick(void)                      /* a sixteenth: the phrase goes
         ld_rest = (uint8_t)(ld_due ? g : g + 1 + (int)(seq_rand(&ld_rng) & 1u));
     }
 }
+/* the phrase in flight ended now (the scale or the key turned: its notes were rendered in the old one): the note let
+ * go (not a key's), the rest not played; on the next tick the phrase is done as usual (after a call, its answer, in
+ * the new scale) */
+static void ld_cut(void)
+{
+    if (ld_key < 0)
+        lead_off();
+    if (ld_i < ld_n || ld_left) {
+        ld_n = ld_i;
+        ld_left = (uint8_t)(ld_left ? 1 : 0);
+    }
+}
 
 /* ------------------------------------------------------- the bar line --- */
 static void bar_start(void)
@@ -3082,6 +3094,7 @@ static void apply(int p, int v)
     case P_ROOT:
         if (nsteps)
             voice_chord();
+        ld_cut();                                /* (the Lead's phrase in flight was in the old key) */
         break;
     case P_MIDI:                                 /* off: every channel's notes off (the chord, pings, bass, drums) */
         if (!v) {
@@ -3105,6 +3118,7 @@ static void pool_set(uint32_t p)
     int k, prev = 0, moved = 0;
     pool = (p | 1u) & 0xFFFu;
     scale_set();
+    ld_cut();                                    /* (the Lead's phrase in flight was in the old scale) */
     /* the walk's slots follow the scale, as degrees; one the new scale has no room for, or that lands on a
      * diminished chord (which the walk never plays), or repeats the slot before, is walked again from that one */
     for (k = 0; k < EN_NPROG && nsteps; k++)
@@ -3294,6 +3308,9 @@ static void play_start(int from_top)
     tick_wait = 0;
     en_playing = 1;
     drone_chord();
+    if (ld_key < 0)                              /* (a Start while playing: the note let go, not sounding on through
+                                                  * the intro, where the Lead is silent; a key held stays) */
+        lead_off();
     ld_n = ld_i = 0;                             /* (the Lead: a breath before its first phrase) */
     ld_rest = 2;
     ld_due = 0;
