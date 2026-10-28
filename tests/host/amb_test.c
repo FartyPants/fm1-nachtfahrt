@@ -646,6 +646,87 @@ static int ld_left_on(void)
         c += sounding[2][k] > 0;
     return c + (int)ld_on_now;
 }
+/* (the Lead's offspring) how much motif (o, d, n entries) shares with a theme (to, td, tn), 0..100: the mean of its
+ * rhythm's share (the longest run of its entries with the theme's lengths, rests where its rests are, over the theme's
+ * entries) and its line's (the longest run of its intervals, in degrees, the theme's in a row: as they are, mirrored,
+ * or the theme's backwards; over the theme's intervals) */
+static int kin_of(const int8_t *o, const uint8_t *d, int n, const int8_t *to, const uint8_t *td, int tn)
+{
+    int a, b, k, rr = 0, ir = 0, na = 0, nb = 0, v, w;
+    int ia[32], ib[32];                          /* (room for any motif: a played theme may grow) */
+    for (a = 0; a < n; a++)
+        for (b = 0; b < tn; b++) {
+            for (k = 0; a + k < n && b + k < tn && d[a + k] == td[b + k] &&
+                        (o[a + k] == LD_REST) == (to[b + k] == LD_REST); k++)
+                ;
+            rr = k > rr ? k : rr;
+        }
+    for (a = 0, v = -999; a < n; a++)            /* (the intervals between notes, rests passed over) */
+        if (o[a] != LD_REST) {
+            if (v > -999)
+                ia[na++] = o[a] - v;
+            v = o[a];
+        }
+    for (b = 0, v = -999; b < tn; b++)
+        if (to[b] != LD_REST) {
+            if (v > -999)
+                ib[nb++] = to[b] - v;
+            v = to[b];
+        }
+    for (w = 0; w < 3; w++)                      /* (as they are, mirrored, backwards) */
+        for (a = 0; a < na; a++)
+            for (b = 0; b < nb; b++) {
+                for (k = 0; a + k < na && b + k < nb &&
+                            ia[a + k] == (w == 0 ? ib[b + k] : w == 1 ? -ib[b + k] : -ib[nb - 1 - b - k]); k++)
+                    ;
+                ir = k > ir ? k : ir;
+            }
+    return (100 * rr / (tn ? tn : 1) + (nb ? 100 * ir / nb : 0)) / 2;
+}
+/* played a block at a time for secs: each fresh idea a block takes (en_lead_ideas moves), its sixteenth into at[], its
+ * kinship with the theme (to, td, tn: kin_of) into kv[] and how it was made into kd[] (at most max); the kinship
+ * (en_lead_kin) when it was first seen at 0 into *k0 (~0u: never), the most seen into *kmax; returns the count */
+static int ideas_log(float secs, const int8_t *to, const uint8_t *td, int tn, uint32_t *at, int *kv, int *kd, int max,
+                     uint32_t *k0, int *kmax)
+{
+    const int blocks = (int)(secs * 44100.0f / 256.0f);
+    uint8_t seen = en_lead_ideas;
+    int b, c = 0;
+    *k0 = 0xFFFFFFFFu, *kmax = 0;
+    for (b = 0; b < blocks; b++) {
+        const int kn = (run(256.0f / 44100.0f + 1e-6f), en_lead_kin());
+        *kmax = kn > *kmax ? kn : *kmax;
+        if (!kn && *kmax && *k0 == 0xFFFFFFFFu)   /* (ended, after it began) */
+            *k0 = en_bars;
+        if (en_lead_ideas != seen) {
+            int8_t o[32];
+            uint8_t d[32];
+            const int n = en_lead_idea(o, d);
+            seen = en_lead_ideas;
+            if (c < max)
+                at[c] = en_bars, kv[c] = kin_of(o, d, n, to, td, tn), kd[c] = en_lead_kind, c++;
+        }
+    }
+    return c;
+}
+/* (the Lead's offspring) a new engine playing D Aeolian at 160 in Flow, the chord held, Lead in 0, Phrases 100, Memory
+ * mem: the Lead's own pairs going on, a fresh idea every block at Memory 0 (at 160: three or so in the 30 bars of
+ * the kinship there) */
+static void off_setup(int mem)
+{
+    fresh();
+    lg_pool = EN_MODE_POOL[MODE_AEOLIAN], lg_root = 2;
+    en_set(P_ROOT, 2);
+    en_pool(lg_pool);
+    en_set(P_TEMPO, 160);
+    en_set(P_LEAD, 60);
+    en_set(P_LDIN, 0);
+    en_set(P_LDENS, 100);
+    en_set(P_MOTION, 0);
+    en_set(P_DRIFT, 6);
+    en_set(P_LMEM, mem);
+    en_play(1);
+}
 
 int main(void)
 {
@@ -2852,11 +2933,108 @@ int main(void)
                 ok &= dur[k] == FD[k] && (!k || off[k] - off[k - 1] == FG[k] - FG[k - 1]);
             CHECK(ok, "test_lead_one_draw: the keys' figure not taken in Sunrain (the theme %d entries)", nt);
         }
-        run(56.0f);
+        {                                        /* (the offspring drawn: the line's ideas from the keys' theme) */
+            static const int8_t TO[4] = {7, 9, 8, 11};
+            static const uint8_t TD[4] = {4, 2, 2, 8};
+            uint32_t at[32], k0;
+            int kv[32], kd[32], km, c = ideas_log(56.0f, TO, TD, 4, at, kv, kd, 32, &k0, &km), k, offs = 0;
+            for (k = 0; k < c; k++)
+                offs += kd[k] != LK_PLAIN;
+            CHECK(offs >= 1, "test_lead_one_draw: no offspring of the keys' theme in Sunrain (%d ideas)", c);
+        }
         piece(7);
         en_set(P_LDIN, 0);
         run(60.0f);
         CHECK(en_lead_dmax == 1, "test_lead_one_draw: the most motifs drawn in one tick %u (1)", en_lead_dmax);
+    }
+
+    /* (BERLIN, the Lead's offspring: the user, "at some point the melody should diverge and start going its own way")
+     * off_setup at Memory 0 (a fresh idea every block). A figure on the keys (5 notes, a dotted rhythm no template has):
+     * the line's next fresh ideas grow out of it and stray further. Kinship (kin_of: its rhythm, its intervals as they
+     * are, mirrored or backwards) of the first 3 ideas taken while the kinship lasts (the figure played twice, a
+     * minute apart: in Flow at Memory 0 the Lead takes one or two in its 45 s) well over that of the same run's ideas
+     * without the keys; those taken 16 bars or more after it's ended (45 s at Memory 0) the generator's own (made
+     * plain) and sharing no more than those (+ 10: a few ideas each). Without the keys no kinship, ever (the rest: the
+     * goldens). A new figure: kinship again, the next idea its offspring */
+    {
+        static const int FG[5] = {7, 11, 10, 8, 9}, FD[5] = {3, 3, 2, 6, 10}, F2[5] = {9, 8, 6, 7, 4},
+                         D2[5] = {6, 2, 2, 4, 12};
+        int8_t to[5], t2[5];
+        uint8_t td[5], d2[5];
+        uint32_t at[64], k0, kb0;
+        int kv[64], kd[64], nb, na, k, kmax, kmb, kmin = 100, rep, ce = 0, cl = 0, early_plain = 0, late_off = 0,
+            base_off = 0;
+        long sb = 0, se = 0, sl = 0;
+        for (k = 0; k < 5; k++)
+            to[k] = (int8_t)FG[k], td[k] = (uint8_t)FD[k], t2[k] = (int8_t)F2[k], d2[k] = (uint8_t)D2[k];
+        off_setup(0);                            /* (without the keys: the baseline) */
+        run(12.0f);
+        bar_next();
+        nb = ideas_log(130.0f, to, td, 5, at, kv, kd, 64, &kb0, &kmb);
+        for (k = 0; k < nb; k++)
+            sb += kv[k], base_off += kd[k] != LK_PLAIN;
+        CHECK(nb >= 6 && kmb == 0 && !base_off,
+              "test_offspring_none_without_keys: %d ideas, the most kinship %d, %d not the generator's own (0, 0)", nb,
+              kmb, base_off);
+        off_setup(0);                            /* (with them: the figure twice, a minute apart, then 130 s) */
+        run(12.0f);
+        for (rep = 0; rep < 2; rep++) {
+            keys_play(FG, FD, 5);
+            na = ideas_log(rep ? 130.0f : 60.0f, to, td, 5, at, kv, kd, 64, &k0, &kmax);
+            for (k = 0; k < na; k++) {
+                printf("  test_offspring_kin: figure %d, idea %d at bar %u: kinship %d, made %d%s\n", rep + 1, k,
+                       at[k] / 16u, kv[k], kd[k], k0 != 0xFFFFFFFFu && at[k] >= k0 ? " (the kinship ended)" : "");
+                if (at[k] < k0 && ce < 3)
+                    se += kv[k], ce++, early_plain += kd[k] == LK_PLAIN;
+                else if (rep && k0 != 0xFFFFFFFFu && at[k] >= k0 + 16u * 16u)
+                    sl += kv[k], cl++, late_off += kd[k] != LK_PLAIN;
+            }
+            kmin = kmax < kmin ? kmax : kmin;
+        }
+        printf("  test_offspring_kin: kinship with the figure: the first %d ideas %ld, the last %d %ld, without the keys "
+               "%ld (%d ideas)\n", ce, ce ? se / ce : 0, cl, cl ? sl / cl : 0, nb ? sb / nb : 0, nb);
+        CHECK(kmin >= 95 && ce >= 2 && !early_plain && nb && se * nb >= (sb + 25L * nb) * ce,
+              "test_offspring_kin: the kinship at most %d (>= 95); the first %d ideas (>= 2, %d plain) %ld, without the "
+              "keys %ld (+ 25 wanted)", kmin, ce, early_plain, ce ? se / ce : 0, nb ? sb / nb : 0);
+        CHECK(k0 != 0xFFFFFFFFu && cl >= 2 && !late_off && sl * nb <= (sb + 10L * nb) * cl,
+              "test_offspring_kin: after the kinship's end, %d ideas (>= 2, %d offspring) %ld, without the keys %ld (+ 10 "
+              "at most)", cl, late_off, cl ? sl / cl : 0, nb ? sb / nb : 0);
+        keys_play(F2, D2, 5);                    /* (a new figure: the kinship again) */
+        na = ideas_log(40.0f, t2, d2, 5, at, kv, kd, 64, &k0, &kmax);
+        printf("  test_offspring_kin: a new figure: the next idea's kinship with it %d, made %d\n", na ? kv[0] : -1,
+               na ? kd[0] : -1);
+        CHECK(kmax >= 95 && na >= 1 && kd[0] != LK_PLAIN && kv[0] * nb >= sb + 25L * nb,
+              "test_offspring_kin: a new figure: the kinship at most %d (>= 95); its next idea (%d) made %d, kinship %d "
+              "(without the keys %ld, + 25 wanted)", kmax, na, na ? kd[0] : -1, na ? kv[0] : -1, nb ? sb / nb : 0);
+    }
+
+    /* (BERLIN, the Lead's offspring: its pace, the controller's ruling) off_setup at Memory 0, 50 and 100, the same
+     * figure: the kinship falls with the bars after it's taken, ending 45 s after it at Memory 0 (30 bars at 160), 90 s
+     * at 50 (60), 150 s at 100 (100): 40 bars on, 0, 34, 60 (+-3) */
+    {
+        static const int FG[5] = {7, 11, 10, 8, 9}, FD[5] = {3, 3, 2, 6, 10}, MEM[3] = {0, 50, 100}, WANT[3] = {0, 34, 60};
+        int k, kn[3], ok = 1;
+        uint32_t s, end = 0;
+        for (k = 0; k < 3; k++) {
+            off_setup(MEM[k]);
+            run(12.0f);
+            s = keys_play(FG, FD, 5) + 8u;       /* (taken two beats after the last let go) */
+            run_to(s + 1u);
+            if (!k) {                            /* (Memory 0: the bar it ends) */
+                while (en_lead_kin() && en_bars < s + 50u * 16u)
+                    run(256.0f / 44100.0f + 1e-6f);
+                end = (en_bars - s) / 16u;
+            }
+            run_to(s + 40u * 16u + 1u);
+            kn[k] = en_lead_kin();
+            ok &= kn[k] >= WANT[k] - 3 && kn[k] <= WANT[k] + 3;
+        }
+        printf("  test_offspring_pace: 40 bars on, the kinship %d %d %d at Memory 0 50 100; ended at Memory 0 %u bars "
+               "on\n", kn[0], kn[1], kn[2], end);
+        CHECK(ok && kn[0] < kn[1] && kn[1] < kn[2] && end >= 29u && end <= 31u,
+              "test_offspring_pace: 40 bars on, the kinship %d %d %d (0 34 60), at Memory 0 ended %u bars on (30)", kn[0],
+              kn[1], kn[2], end);
+        en_set(P_LMEM, en_param_info(P_LMEM)->def);
     }
 
     /* (BERLIN) the echo ping-pongs: one note into it alone (no repeats, no plate, no cloud, the others silent), Width

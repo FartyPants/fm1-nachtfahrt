@@ -235,6 +235,13 @@ notes sound as you play them; the Lead counts them on the grid, to the nearest s
 forgets notes you are in the middle of playing; PANIC also drops an answer not yet begun (a theme already taken stays:
 the Lead plays it next, in its own time). A new piece starts with new ideas.
 
+After your theme, the Lead's own ideas **grow out of it**. The next one starts from it: its first notes carried on in a
+new way, or its first notes and then the same again from another note of the chord, or its shape turned upside down.
+The ones after stray further: your notes backwards, its last notes carried on, then only its rhythm with new notes.
+After a while its ideas are its own again: about 45 seconds at Memory 0, a minute and a half at 50, two and a half
+minutes at 100. Your theme itself keeps coming back where the theme does, and a new figure on the keys starts it all
+again from that one.
+
 **The Atmosphere** (SAVE) is a background: **None**, **Wind** (a breath of noise through a narrow band, swept
 slowly), **Surf** (waves), **Space** (chirps and bursts, far away), **Air**, or **Tape** (a crackle ringing on
 the chord, DUB-1's).

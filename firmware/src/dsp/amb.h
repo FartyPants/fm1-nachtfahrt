@@ -204,7 +204,17 @@ extern volatile uint8_t en_lead_dmax;
 int en_lead_cap(void);
 int en_lead_theme(int8_t *off, uint8_t *dur);
 int en_lead_played(void);                        /* (the theme the keys played: LD_PLAYED on slot 0, 1 or 0) */
+/* (host tests only, the Lead's offspring) the kinship its next fresh idea has with a theme the keys played, 0..100 (0:
+ * none, the generator's own); a count of the fresh ideas its blocks took (an idea begins where it moves) and how the
+ * last was made (LK_*); the line's idea now: its entries into off and dur, its count (0: none yet) */
+int en_lead_kin(void);
+extern volatile uint8_t en_lead_ideas, en_lead_kind;
+int en_lead_idea(int8_t *off, uint8_t *dur);
 #endif
+/* (the Lead's offspring) how a fresh idea was made: the generator's own; from a theme the keys played, its head (2-4
+ * notes) continued; its head and the head again on another chord tone (a sequence); its contour mirrored; its notes
+ * backwards; its tail continued; its rhythm with new notes */
+enum { LK_PLAIN, LK_HEAD, LK_SEQ, LK_MIRROR, LK_BACK, LK_TAIL, LK_RHY };
 #define LD_REST (-128)                          /* a rest inside a motif */
 /* (host tests only, between renders) motif slot `slot` (0..3) written: n entries (1..8), each a scale degree from the
  * chord root's degree (LD_REST: a rest) and its length in sixteenths; the Lead's next pair plays it */
