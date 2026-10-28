@@ -130,14 +130,14 @@ A long press says what it did on a card in the middle of the screen.
 
 ## 4. The screen
 
-![Stratosfear playing: the piece, its key and tempo at the top, FLOW and its bars on the left over five level meters, the chord Em7 in white in the middle with the sequences' notes circling it, CRANKY MANS and the page's name at the top right, the echo's level on the right, two lanes of steps below, the Nachtfahrt page's four knobs at the bottom](img/screen-main.png "The main screen, Stratosfear")
+![Stratosfear playing: the piece, its key and tempo at the top, FLOW and its bars on the left over five level meters, the chord Em7 in white in the middle with the sequences' notes circling it, CRANKY MAN and the page's name at the top right, the echo's level on the right, two lanes of steps below, the Nachtfahrt page's four knobs at the bottom](img/screen-main.png "The main screen, Stratosfear")
 
 The screen is black, with a few dim stars drifting slowly left while the music plays.
 
 - **Top:** the piece, its key and mode, the tempo (EXT under MIDI clock). A dot means unsaved changes.
 - **Top left:** the section of the arc (EMERGE, FLOW, SOLO, BRIDGE), with **hold** and **lock** after it in red
   while they're on, and under it the eight bars of the phrase.
-- **Top right:** "CRANKY MANS", small, and under it the page's name (with SOLO beside it while a solo is on).
+- **Top right:** "CRANKY MAN", small, and under it the page's name (with SOLO beside it while a solo is on).
 - **Left:** five **meters**, one for each layer in its own colour: the Drone (violet), the Sequence (pink), the
   Lead (gold), Sequence 2 (cyan), the Atmosphere (grey). Each rises with what its layer is playing. Across each
   one, a white **tick** shows where that layer's filter has moved to: above the middle, brighter; below,
@@ -164,9 +164,9 @@ moving darker, about -1 octave").
 ![The Sequence's sound page: Cutoff, Decay, Reverb and Echo, with MOVING DARKER, -0.5 OCT under the lanes](img/screen-seqsound.png "A sound page: the cyan dot on Cutoff's ring, and the words under the lanes")
 
 **The launch screen.** Every time the FM-1 starts, NACHTFAHRT comes up large on black among a few stars, with
-"by CRANKY MANS" under it and the version at the foot, for a moment. The music starts as always, under it.
+"by CRANKY MAN" under it and the version at the foot, for a moment. The music starts as always, under it.
 
-![The launch screen: NACHTFAHRT, by CRANKY MANS, and the version](img/screen-launch.png "The launch screen")
+![The launch screen: NACHTFAHRT, by CRANKY MAN, and the version](img/screen-launch.png "The launch screen")
 
 ---
 

@@ -2141,7 +2141,7 @@ static void draw_card(uint32_t now)
     text_c(CX, y + 28, &FONT_XS, ui.card_text, tc);
 }
 
-#define BERLIN_BY "CRANKY MANS"                  /* (the user's name, on the main screen and the launch screen) */
+#define BERLIN_BY "CRANKY MAN"                   /* (the user's name, on the main screen and the launch screen) */
 static void draw_main(void)
 {
     uint32_t now = plat_ms(), h = hash(2166136261u, (uint32_t)en_frozen << 16 | proj.piece << 24 | (uint32_t)en_playing << 17), i;
@@ -2976,7 +2976,7 @@ void ui_frame(void)
 
 void ui_input_only(void) { input(); }
 
-/* (BERLIN) the launch screen, the user's: NACHTFAHRT large (BERLIN's new name, the user's), "by CRANKY MANS" under
+/* (BERLIN) the launch screen, the user's: NACHTFAHRT large (BERLIN's new name, the user's), "by CRANKY MAN" under
  * it, on black among a few stars, fading in; the version small at the foot. Frame f of UI_SPLASH_N, drawn whole (two
  * bands of 240 x 120) */
 static void splash_band(int f, int32_t oy)

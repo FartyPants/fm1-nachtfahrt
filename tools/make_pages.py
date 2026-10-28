@@ -84,7 +84,7 @@ into a tape echo, a sub bass, a steady kick, vinyl crackle, eight-bar phrases th
 it back with a fill. Leave it running for hours, or play it: the mix and dub moves on the keys, sixteen effects on REC,
 your own chords and drum patterns.</p>
 <div class="shots">
-  <img src="img/screen-launch.png" width="240" height="240" alt="NACHTFAHRT's launch screen: the name, by CRANKY MANS, the version">
+  <img src="img/screen-launch.png" width="240" height="240" alt="NACHTFAHRT's launch screen: the name, by CRANKY MAN, the version">
   <img src="img/screen-main.png" width="240" height="240" alt="DUB-1's main screen: the stabs' ripples round the chord Fm7, the layers' meters, the lanes of the bar">
   <img src="img/screen-perform.png" width="240" height="240" alt="PERFORM, throwing every stab into the echo: double rings">
 </div>

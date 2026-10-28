@@ -30,7 +30,7 @@ Done, with the whole suite passing (`tests/run_tests.sh`, gate `tools/suite_gate
 - **PERFORM finished**: a muted Lead and a muted Drone are silent (MIDI too); Energy drives Repeat B; Wet moves
   every layer's echo send.
 - **The screen**: Cosmic on black (starfield, orbits round the chord, five meters, two sequence lanes, "CRANKY
-  MANS"), the launch screen "NACHTFAHRT / by CRANKY MANS"; DUB-1's leftovers (drum and rhythm pages, the scrolling
+  MAN"), the launch screen "NACHTFAHRT / by CRANKY MAN"; DUB-1's leftovers (drum and rhythm pages, the scrolling
   display, the spectrum and wave displays) and its dead engine code are gone.
 - **The echo**: its default time is 1/4. (a dotted quarter), Repeat A stays 1/8.; the Sequences' echo sends are
   louder.
