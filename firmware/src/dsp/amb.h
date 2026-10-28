@@ -170,6 +170,7 @@ void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2);
 #define EN_NSV 5                        /* (BERLIN) the Sequence's voices: 2600, Moog, Synthi, Pulse, Glass */
 #define EN_NS2V 6                       /* Sequence 2's: the same, and Sub */
 extern const char *const EN_SV_NAME[EN_NS2V];
+extern volatile uint8_t en_seq_len[2];          /* each sequence's return point as it plays (the performer's moves) */
 extern volatile uint16_t en_seq_lane[5], en_seq_acc[2];   /* the Pattern page's lanes as Auto plays them: the
                                                           * Sequence's and Sequence 2's steps, their octaves, the
                                                           * Sequence's skips; their accents */

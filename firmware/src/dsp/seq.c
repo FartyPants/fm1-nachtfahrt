@@ -124,9 +124,10 @@ void seq_grow(seq_t *s, uint32_t *rng, int nscale, int density, int len)
             s->oct |= (uint16_t)(1u << last[i]);
 }
 
-/* the performer: one structural move (return point, a skip or an octave) with probability motion/100, and
- * independently a note change with probability evolve/100 x 1/8. step 0 is never touched, acc never changes */
-void seq_vary(seq_t *s, uint32_t *rng, int nscale, int motion, int evolve)
+/* the performer: one structural move (return point, a skip or an octave; without len_moves a skip or an octave)
+ * with probability motion/100, and independently a note change with probability evolve/100 x 1/8. step 0 is never
+ * touched, acc never changes */
+void seq_vary(seq_t *s, uint32_t *rng, int nscale, int motion, int evolve, int len_moves)
 {
     int cand[SEQ_MAX], n = 0, i, len = s->len, base = s->base_len;
     if (evolve > 100)
@@ -135,7 +136,7 @@ void seq_vary(seq_t *s, uint32_t *rng, int nscale, int motion, int evolve)
         len = SEQ_MAX;
 
     if (motion > 0 && seq_rand(rng) % 100u < (uint32_t)motion) {
-        switch (seq_rand(rng) % 3u) {
+        switch (len_moves ? seq_rand(rng) % 3u : 1u + seq_rand(rng) % 2u) {
         case 0:   /* return point: away from base_len by 1..3 (not below 3), home, or away again */
             if (base >= 3) {
                 int lo = base - 3 < 3 ? 3 : base - 3, to;

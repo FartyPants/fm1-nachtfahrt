@@ -222,7 +222,7 @@ static void test_vary_still(void)
     seq_t s = grown(7, 8), o = s;
     int i;
     for (i = 0; i < 1000; i++)
-        seq_vary(&s, &rng, 7, 0, 0);
+        seq_vary(&s, &rng, 7, 0, 0, 1);
     CHECK(memcmp(&s, &o, sizeof s) == 0, "motion 0 evolve 0 changes nothing");
 }
 
@@ -233,7 +233,7 @@ static void test_vary_notes_rare(void)
     int i, changed = 0;
     for (i = 0; i < 800; i++) {
         seq_t o = s;
-        seq_vary(&s, &rng, 7, 0, 100);
+        seq_vary(&s, &rng, 7, 0, 100, 1);
         CHECK(memcmp(&o.gate, &s.gate, sizeof s.gate) == 0 && o.len == s.len && o.skip == s.skip && o.oct == s.oct,
               "evolve alone moves only notes");
         changed += memcmp(o.deg, s.deg, sizeof o.deg) != 0;
@@ -247,7 +247,7 @@ static void test_vary_return_point(void)
     seq_t s = grown(3, 8);
     int i, seen[SEQ_MAX + 1] = {0}, kinds = 0, home = 0;
     for (i = 0; i < 400; i++) {
-        seq_vary(&s, &rng, 7, 100, 0);
+        seq_vary(&s, &rng, 7, 100, 0, 1);
         CHECK(s.len >= 3 && s.len <= 8, "len %d out of 3..8", s.len);
         seen[s.len] = 1;
         home += s.len == 8;
@@ -257,6 +257,22 @@ static void test_vary_return_point(void)
     CHECK(kinds >= 3, "len took %d different values", kinds);
     CHECK(home * 10 >= 400 * 3, "back at base_len %d of 400 calls", home);
     CHECK(s.base_len == 8, "base_len kept");
+}
+
+/* (the user, 2026-10-28) Sequence 2's performer moves no return point: its 8/7 against the Sequence stays 8/7 (no
+ * drift to 8/6, 8/5); its skips and octaves still move */
+static void test_vary_no_len(void)
+{
+    uint32_t rng = 31337;
+    seq_t s = grown(3, 7);
+    int i, moved = 0;
+    for (i = 0; i < 400; i++) {
+        seq_t o = s;
+        seq_vary(&s, &rng, 7, 100, 0, 0);
+        CHECK(s.len == 7 && s.base_len == 7, "len %d (base %d): no return-point move", s.len, s.base_len);
+        moved += o.skip != s.skip || o.oct != s.oct;
+    }
+    CHECK(moved >= 300, "skips and octaves moved in %d of 400 calls", moved);
 }
 
 static void test_vary_root_kept(void)
@@ -269,7 +285,7 @@ static void test_vary_root_kept(void)
             seq_t s = grown(5u + (uint32_t)a, 12);
             uint16_t acc = s.acc;
             for (i = 0; i < 1000; i++) {
-                seq_vary(&s, &rng, 7, mo[a], ev[b]);
+                seq_vary(&s, &rng, 7, mo[a], ev[b], 1);
                 CHECK(s.deg[0] == 0 && (s.gate & 1u), "root lost");
                 CHECK(!(s.skip & 1u) && !(s.oct & 1u), "step 0 skipped or octaved");
                 CHECK(s.acc == acc, "acc changed");
@@ -385,6 +401,7 @@ int main(void)
     test_vary_still();
     test_vary_notes_rare();
     test_vary_return_point();
+    test_vary_no_len();
     test_vary_root_kept();
     test_pitch_root();
     test_pitch_parallel();

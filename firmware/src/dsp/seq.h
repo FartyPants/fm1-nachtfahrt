@@ -23,8 +23,9 @@ uint32_t seq_rand(uint32_t *rng);   /* xorshift32; a zero state is seeded first,
 /* grow a pattern from the root: nscale notes in the scale (1..12), density 0..100 of the len steps play, len 1..SEQ_MAX */
 void seq_grow(seq_t *s, uint32_t *rng, int nscale, int density, int len);
 /* the performer, called at most once per 4 bars: one structural move (return point, a skip or an octave) with
- * probability motion/100, and a note change with probability evolve/100 x 1/8. deg[0] and gate bit 0 never change */
-void seq_vary(seq_t *s, uint32_t *rng, int nscale, int motion, int evolve);
+ * probability motion/100, and a note change with probability evolve/100 x 1/8. deg[0] and gate bit 0 never change.
+ * len_moves 0: no return-point moves, a skip or an octave only (Sequence 2's: its length stays the knob's) */
+void seq_vary(seq_t *s, uint32_t *rng, int nscale, int motion, int evolve, int len_moves);
 
 /* the MIDI note of step i. steps: the scale's semitones from the root, ascending from 0 (en_scale's output), nscale
  * of them; root_note: the piece's root as a MIDI note in the voice's register; chord_off: the chord walk's root in

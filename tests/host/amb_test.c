@@ -2691,6 +2691,23 @@ int main(void)
         CHECK(s2_n > 0 && sq_n > 0, "test_timewind_sequences: %u Sequence 2 notes (%u Sequence)", s2_n, sq_n);
     }
 
+    /* (the user, 2026-10-28) Motion moves only the Sequence's return point: Sunrain (8/7) at Motion 100, ten minutes,
+     * Sequence 2 always 7 steps (no drift to 8/6, 8/5), the Sequence's length moving */
+    {
+        int k, s2_off = 0, s1_moved = 0;
+        fresh();
+        piece(5);
+        en_set(P_MOTION, 100);
+        en_play(1);
+        for (k = 0; k < 1200; k++) {
+            run(0.5f);
+            s2_off += en_seq_len[1] != 7;
+            s1_moved += en_seq_len[0] != 8;
+        }
+        CHECK(!s2_off && s1_moved, "test_seq2_length: Sequence 2 off its 7 in %d of 1200 looks; the Sequence's moved in %d",
+              s2_off, s1_moved);
+    }
+
     /* (BERLIN) Wahnfried is beatless: ten minutes, no note of either sequence; Cyborg (the user, 2026-10-28: its
      * Sequence at 20) plays its Sequence, Sequence 2 silent */
     {

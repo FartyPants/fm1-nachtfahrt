@@ -1197,6 +1197,7 @@ static uint32_t sq_rng = 0x2545F491u;
 static float seq_vol, seq2_vol, sq_cut = 600.0f, sq_edec = 0.9995f, sq_adec = 0.9997f;
 static float sq2_cut = 450.0f, sq2_edec = 0.9995f, sq2_adec = 0.9997f, sq_rev[2] = {1.0f, 1.0f}, sq_echo[2] = {1.0f, 1.0f};
 volatile float en_pluck_cut[2];                  /* (each sequence's last note's cutoff, for the tests) */
+volatile uint8_t en_seq_len[2];
 volatile uint16_t en_seq_lane[5], en_seq_acc[2];   /* (the Pattern page's lanes as Auto plays them: each sequence's
                                                   * steps (as Density thins them), octaves; the Sequence's skips; accents) */
 const char *const EN_SV_NAME[EN_NS2V] = {"2600", "Moog", "Synthi", "Pulse", "Glass", "Sub"};
@@ -1297,6 +1298,7 @@ static void seq_publish(void)                    /* the lanes as Auto plays them
         en_seq_lane[l] = g;
         en_seq_lane[2 + l] = sq[l].oct;
         en_seq_acc[l] = sq[l].acc;
+        en_seq_len[l] = sq[l].len;
     }
     en_seq_lane[4] = sq[0].skip;
 }
@@ -1400,7 +1402,8 @@ static void seq_tick(void)                       /* a sixteenth: the sequences' 
         for (l = 0; l < 2; l++)
             if (++sq_bars[l] >= 16u || (sq_wrap[l] && sq_bars[l] >= 4u)) {
                 if (!lock && !sq_written[l] && !par[P_SMODE])
-                    seq_vary(&sq[l], &sq_rng, nsteps ? nsteps : 7, pe(P_MOTION), pe(P_EVOLVE));
+                    seq_vary(&sq[l], &sq_rng, nsteps ? nsteps : 7, pe(P_MOTION), pe(P_EVOLVE), !l);   /* (Sequence
+                                                  * 2's length stays the knob's: the user, 2026-10-28) */
                 sq_bars[l] = 0;
             }
     for (l = 0; l < 2; l++) {
