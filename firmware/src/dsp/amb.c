@@ -92,11 +92,12 @@ static const int16_t PC_TIMEWIND[] = {        /* Schulze, Bayreuth Return: an or
     P_NCHAR, 1, P_CRACKLE, 7,
     P_MW0, 30, P_MR0, 25, P_MW2, 15, P_MW4, 30, P_BRIDGE, 45,
     P_MI1, 32, P_ARC, 25, P_MOTION, 45, -1};
-static const int16_t PC_WAHNFRIED[] = {       /* Schulze, Wahnfried 1883: beatless, roots walking with no home */
+static const int16_t PC_WAHNFRIED[] = {       /* Schulze, Wahnfried 1883: roots walking with no home, strings, the
+                                                * Sequence a faint heartbeat under them (the user's ear) */
     P_TEMPO, 80, P_ROOT, 10, P_MODE, MODE_DORIAN,
-    P_SEQ, 0, P_SEQ2, 0,
-    P_CHORD, 60, P_CVOICE, 2, P_PEDAL, 85, P_PHASER, 50, P_CRES, 25, P_DRIFT, 2, P_PMODE, EN_WALK_FREE,
-    P_LEAD, 45, P_LVOICE, 4, P_LTONE, 75, P_VIB, 55, P_LDENS, 60, P_LDIN, 8,
+    P_SEQ, 30, P_MI1, 16, P_SEQ2, 50, P_SEQ2OCT, -1,
+    P_CHORD, 95, P_CVOICE, 1, P_PEDAL, 85, P_PHASER, 50, P_CRES, -5, P_DRIFT, 2, P_PMODE, EN_WALK_FREE,
+    P_LEAD, 54, P_LVOICE, 3, P_LTONE, 75, P_VIB, 55, P_LDENS, 60, P_LDIN, 8,
     P_FEEDBACK, 75, P_REVERB, 45,
     P_MW0, 45, P_MT0, 60, P_MR0, 45, P_MW2, 15, P_BRIDGE, 30,
     P_ARC, 20, P_MOTION, 55, -1};

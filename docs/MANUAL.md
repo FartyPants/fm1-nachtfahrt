@@ -71,8 +71,8 @@ NACHTFAHRT starts playing as soon as it's on. A few minutes with it:
    lead comes in. Nothing is hidden: no layer is turned down behind your back, only filters move. Turn
    MASTER for the volume.
 2. **Try another piece.** Turn PRESETS. Each of the eight has its own key, tempo, voices, sequences and
-   arc. Stratosfear and Sunrain start at once with both sequences; Wahnfried has no sequence at all, Cyborg only a quiet
-   one.
+   arc. Stratosfear and Sunrain start at once with both sequences; in Wahnfried and Cyborg the
+   Sequence is only a faint heartbeat under the drone.
 3. **Play the lead.** Press a white key: the lead plays that step of the scale, from the root up, and its
    key lights while it sounds. It glides from note to note, deep in the reverb and the echo. The black keys stay lit: they play effects while you hold
    them, dark while held (Rise opens every filter, Close shuts them, and so on: see [The effects grid](#9-the-effects-grid)).
@@ -289,7 +289,7 @@ filter's usable range.
 | # | Piece | After | Key, tempo | Sequence | Drone, Lead | Atmosphere | Moves |
 |---|---|---|---|---|---|---|---|
 | 1 | **Timewind** | Schulze, *Bayreuth Return* | D minor, 96 | Two: 2600, 16 steps in 16ths, Repeat B; Sequence 2 Moog, 15 steps, an octave down; Reverb 50 | Organ + phaser, Odyssey | Wind | A slow opening: the Sequence's Intro is 32 bars. A gentle wander on every layer; Bridge 45 |
-| 2 | **Wahnfried** | Schulze, *Wahnfried 1883* | B♭ Dorian, 80 | None (beatless) | Choir, the roots walking free; Synthi, bright | None | The Drone's filter is the main movement: Width 45, with long moves; Bridge 30 |
+| 2 | **Wahnfried** | Schulze, *Wahnfried 1883* | B♭ Dorian, 80 | A faint heartbeat: the Sequence at 30 (opening over 16 bars), Sequence 2 at 50, an octave down | Strings at 95, the roots walking free; Theremin | None | The Drone's filter is the main movement: Width 45, with long moves; Bridge 30 |
 | 3 | **Phaedra** | Tangerine Dream, *Phaedra* | D minor, 149 | Moog bass 16, a Moog line of 15 over it, much sweep | Choir, Flute | Tape | The Sequence opens over 16 bars (Sweep 85, wide); Sequence 2 straight in, sweeping often |
 | 4 | **Rubycon** | Tangerine Dream, *Rubycon* | F minor, 144 | 2600 8, two octaves down, and Sub 7 at octave 0, dark | Organ, low and dark, Synthi | None | The Sequence opens over 16 bars, then Sequence 2 over 32: it comes out of the drone after it; Bridge 50 |
 | 5 | **Stratosfear** | Tangerine Dream, *Stratosfear* | E minor, 138 | Pulse 16 and 2600 15, together from the start | Strings, Mini forward | None | Straight in, no Intros; both sequences' filters move often |

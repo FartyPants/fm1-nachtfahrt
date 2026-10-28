@@ -2594,6 +2594,13 @@ int main(void)
               pa[6][P_SEQ2LEN]);
         CHECK(pa[3][P_SEQOCT] == -2 && pa[3][P_SEQ2OCT] == 0, "test_pieces_octaves: Rubycon %d/%d", pa[3][P_SEQOCT],
               pa[3][P_SEQ2OCT]);
+        CHECK(pa[1][P_SEQ] == 30 && pa[1][P_MI1] == 16 && pa[1][P_SEQ2] == 50 && pa[1][P_SEQ2OCT] == -1 &&
+                  pa[1][P_LVOICE] == 3 && pa[1][P_LEAD] == 54 && pa[1][P_CVOICE] == 1 && pa[1][P_CHORD] == 95 &&
+                  pa[1][P_CRES] == -5,
+              "test_pieces_wahnfried: Seq %d intro %d, Seq 2 %d oct %d, Lead voice %d level %d, Drone voice %d level %d "
+              "reso %d (the user's: 30 16, 50 -1, Theremin 54, Strings 95 -5)", pa[1][P_SEQ], pa[1][P_MI1],
+              pa[1][P_SEQ2], pa[1][P_SEQ2OCT], pa[1][P_LVOICE], pa[1][P_LEAD], pa[1][P_CVOICE], pa[1][P_CHORD],
+              pa[1][P_CRES]);
         CHECK(pa[3][P_SVOICE] == 0 && pa[3][P_LVOICE] == 4, "test_pieces_voices: Rubycon Sequence %d (2600: 0), Lead %d "
               "(Synthi: 4) (the user's ear)", pa[3][P_SVOICE], pa[3][P_LVOICE]);
         CHECK(pa[7][P_SEQ] == 20 && pa[7][P_SEQ2] == 0, "test_pieces_cyborg: Sequence %d, Sequence 2 %d", pa[7][P_SEQ],
@@ -2797,21 +2804,19 @@ int main(void)
         }
     }
 
-    /* (BERLIN) Wahnfried is beatless: ten minutes, no note of either sequence; Cyborg (the user, 2026-10-28: its
-     * Sequence at 20) plays its Sequence, Sequence 2 silent */
+    /* (BERLIN) Wahnfried (the user, 2026-10-28: its Sequence at 30, Sequence 2 at 50) and Cyborg (its Sequence at 20)
+     * play their sequences now: ten minutes, Wahnfried both, Cyborg its Sequence and Sequence 2 silent */
     {
-        static const int BEATLESS[2] = {1, 7};
         int k;
-        for (k = 0; k < 2; k++) {
+        for (k = 1; k < 8; k += 6) {
             fresh();
-            piece(BEATLESS[k]);
+            piece(k);
             en_play(1);
             run(600.0f);
-            if (BEATLESS[k] == 7)
+            if (k == 7)
                 CHECK(sq_n > 0 && s2_n == 0, "test_cyborg_sequence: %u Sequence notes, %u Sequence 2", sq_n, s2_n);
             else
-                CHECK(sq_n == 0 && s2_n == 0, "test_beatless: %s: %u Sequence notes, %u Sequence 2",
-                      en_piece_name(BEATLESS[k]), sq_n, s2_n);
+                CHECK(sq_n > 0 && s2_n > 0, "test_wahnfried_sequences: %u Sequence notes, %u Sequence 2", sq_n, s2_n);
         }
     }
 
