@@ -61,21 +61,12 @@ the Arc page's fourth knob (not built yet: the knob is empty until then).
 
 ## To do
 
-1. **The device build** (needs the user's go-ahead to download the JieLi toolchain and the AC79 SDK into WSL):
-   `tools/get_toolchain.sh`, `./build.sh` → `build/amb.fwsc`; `tools/build.py`'s notes must show RAM ≤ 96 KB and
-   pool headroom ≥ 8192 B (if not: the ensemble's buffer first). Then install and read the Setup page's CPU
-   now/peak and dropouts per piece:
-
-   | Piece | CPU now / peak | Dropouts |
-   |---|---|---|
-   | Timewind | | |
-   | Wahnfried | | |
-   | Phaedra | | |
-   | Rubycon | | |
-   | Stratosfear | | |
-   | Sunrain | | |
-   | Mirage | | |
-   | Cyborg | | |
+1. **On the device: done for 0.9.0** (2026-10-28). `./build.sh --release 0.9.0` (JieLi toolchain, AC79 SDK in
+   WSL): image 198,788 B, RAM 72,004 of 98,304 B, pool 268,368 of 344,064 B. Installed from the web installer
+   and running on the user's FM-1, behaving as in the emulator. The Setup page's CPU: about 48% now / 65% peak
+   at its heaviest; **Sunrain** peaks at 73% and settles under 60% (no dropouts reported). For scale, DUB-1:
+   20/50% (Basic), 30/67% (Night Drive), 50/72% stressed. Roughly 50× the host proxy's figure (one reading).
+   Still to read: each piece's own numbers, and whether Sunrain's peak returns at every chord change.
 
 2. **Tuning the pieces by ear** (the user): tempos, keys, levels, each piece's Moves (the Intros, Widths and Bridge) and Arc lengths. Three-minute renders
    of each: `tests/listen/pieces.amb`.
