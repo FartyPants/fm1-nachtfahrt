@@ -52,9 +52,9 @@ Done, with the whole suite passing (`tests/run_tests.sh`, gate `tools/suite_gate
 ## CPU (host proxy)
 
 Budget: **1.10%** of real time (DUB-1's heaviest piece × 1.10; [docs/BASELINE.md](docs/BASELINE.md)).
-`tests/listen/baseline.sh`, three runs, medians (measured before the filter motion; to be measured again): Timewind 0.69, Wahnfried 0.64, Phaedra 0.71, Rubycon 0.60,
-Stratosfear 0.74, Sunrain 0.83, Mirage 0.79, Cyborg 0.58; stressed (Sunrain, Density, both repeats, Sequence 2,
-Phaser and Phrases at 100) 0.85; the effects scenario, with all sixteen held at once in it, 0.98. All within the
+`tests/listen/baseline.sh`, three runs, medians (2026-10-28, after the user's batch): Timewind 0.74, Wahnfried 0.60,
+Phaedra 0.77, Rubycon 0.68, Stratosfear 0.78, Sunrain 0.85, Mirage 0.93, Cyborg 0.58; stressed (Sunrain, Density,
+both repeats, Sequence 2, Phaser and Phrases at 100) 0.86 (before the filter motion: 0.58 .. 0.83, stressed 0.85); the effects scenario, with all sixteen held at once in it, 0.98. All within the
 budget, so nothing was cut.
 
 ## Next
