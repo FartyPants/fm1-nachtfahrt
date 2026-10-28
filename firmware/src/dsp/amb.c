@@ -67,7 +67,7 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Width", 0, 100, 50},    {"Ring", 0, 100, 50},
     {"Noise width", 0, 100, 50}, {"Noise plate", 0, 100, 50}, {"Noise echo", 0, 100, 50}, {"Atmos width", 0, 100, 20},
     {"Noise LFO", 0, 100, 0}, {"Arc", 0, 100, 0},
-    {"Atmos rate", 0, 100, 30}, {"Atmos intro", 0, 64, 0}, {"Bridge", 0, 100, 40},
+    {"Atmos rate", 0, 100, 30}, {"Atmos intro", 0, 64, 0}, {"Bridge", 0, 100, 40}, {"Memory", 0, 100, 50},
 };
 const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PARAMS[i] : &PARAMS[0]; }
 
@@ -1014,6 +1014,10 @@ static void chord_change(void)
 static uint8_t ar_sec = EN_SEC_FLOW, ar_first;
 static int ar_left = 64, ar_bar;
 static float ar_pos;                             /* (bars into the Sequence's long rise: the filter motion's clock) */
+static float ar_rise = 0.5f;                     /* (the long rise as the Lead's intensity reads it, 0..1: 0.5 with no
+                                                  * Arc) */
+static uint8_t ar_cue;                           /* (a moment for the Lead's theme: Solo entered, a Bridge begun, the
+                                                  * rise past its peak; the Lead takes it) */
 static float ar_push, ar_cr_env, ar_cr_f = 5000.0f, ar_cr_g = 1.0f;   /* (the swell; the grid's Take-off) */
 static uint32_t ar_rng;
 volatile uint8_t en_swell;
@@ -1133,15 +1137,18 @@ static void fo_step(uint32_t n)                  /* once a chunk: the clock on, 
     if (fo_ib < 4096.0f)
         fo_ib += d;
     if (ar_len()) {                              /* the Sequence's long rise: up to a peak at 80%, back, again */
-        const float L = (float)ar_len();
+        const float L = (float)ar_len(), was = ar_pos;
         float x;
         ar_pos += d;
         while (ar_pos >= L)
             ar_pos -= L;
         x = ar_pos / L;
         rise = 2.0f * (x < 0.8f ? x * 1.25f : (1.0f - x) * 5.0f) - 1.0f;
+        if (was < 0.8f * L && ar_pos >= 0.8f * L)   /* (past its peak: the Lead's theme, spec 3.2) */
+            ar_cue = 1;
     }
     am_step(d, ar_len() ? 0.5f * (rise + 1.0f) : 0.0f);
+    ar_rise = ar_len() ? 0.5f * (rise + 1.0f) : 0.5f;
     be = ar_sec == EN_SEC_BRIDGE && ar_left > 4 ? 1.0f : 0.0f;   /* the Bridge: in over four bars, out over its last */
     fo_be = be > fo_be ? fm_minf(fo_be + 0.25f * d, 1.0f) : fm_maxf(fo_be - 0.25f * d, 0.0f);
     be = fo_ease(fo_be) * 3.0f * (float)pe(P_BRIDGE) * 0.01f;
@@ -1194,6 +1201,7 @@ static void ar_start(void)                       /* the arc from its start: Emer
     int i;
     ar_bar = 0;
     ar_pos = 0.0f;
+    ar_cue = 0;
     fo_ib = 0.0f;
     for (i = 0; i < NFO; i++)
         fo_in[i] = (int16_t)pe(FO_I[i]);
@@ -1256,6 +1264,8 @@ static void ar_tick_bar(void)                    /* a bar line (the first, at th
         if (ar_sec != was) {
             s2o_section();
             am_held = 0;                         /* (the hand lets go of the master actions) */
+            if (ar_sec == EN_SEC_SOLO || ar_sec == EN_SEC_BRIDGE)
+                ar_cue = 1;                      /* (the Lead's theme back: Solo entered, a Bridge begun) */
         }
     }
     en_swell = ar_sec == EN_SEC_BRIDGE && ar_left <= 2;
@@ -1547,20 +1557,38 @@ static uint32_t ld_rng = 0x3C6EF372u;
  * from the chord root's degree (LD_REST: a rest) and its length in sixteenths; slot 0 the theme (never a fresh draw's).
  * Rendered at a phrase's start from the chord then (a motif again over a new chord: transposed; a note in flight never
  * moves). Played in pairs: a call, its last note an open ending (a chord tone not the root, now and then the 9th),
- * then at the next bar line (a bar later when calm) its answer, the same rhythm with a closed ending (the root, or 30%
- * the fifth) held twice as long. Each pair a fresh motif (Memory's blocks come later), drawn into the oldest of slots
- * 1..3 */
+ * then after a breath of a beat or two (on a beat; the user: an answer two bars late "feels unsatisfying") its answer,
+ * the same rhythm with a closed ending (the root, or 30% the fifth) held twice as long. The pairs come in blocks on one
+ * motif (spec 7.1): 1 pair at Memory under 20, else 2 (calm) or 3 (busy), a breath of bars between them. A block plays
+ * the line's own idea (one of slots 1..3): at a block's start it's kept (Memory's chance), else half the time varied
+ * once (not before it's been heard twice), half the time a fresh one drawn into the oldest of slots 1..3; from its third
+ * hearing any pass may vary it once (1 - Memory a pass). A busy block of 3 half the time a sentence instead: the motif,
+ * again shifted a degree or two, its first half twice, then the run (the cadence) down (or 30% up) into a closed
+ * ending. The theme (slot 0, the piece's first idea) breaks in when Solo begins, after the rise's peak, when a Bridge
+ * begins (cutting a block short at its next pair; not before Lead in, nor while the theme plays on) and after 6 blocks
+ * without it; then the idea goes on. Under Memory 20 no theme comes back: a fresh motif every pair. Intensity (spec
+ * 3.1, from the arc): Flow and Bridge 0.2, Solo 0.4 + 0.6 the rise; more notes and shorter values in a fresh motif, a
+ * shorter breath, the register's centre up to 5 degrees higher (walking a degree a pair) */
 typedef struct {
     int8_t off[8];
     uint8_t dur[8];
     uint8_t n, heard;                            /* (entries, 1..8; passes played) */
+    uint16_t cm;                                 /* (the chord it was made on: its tones over the root, ld_cmask; over
+                                                  * another kind of chord its held notes are fitted) */
 } ld_motif_t;
 static ld_motif_t ld_bank[4];
-static uint8_t ld_slot, ld_fresh = 1, ld_role, ld_due;   /* the pair's motif; the next fresh draw's slot; the phrase's
-                                                  * role; an answer due */
+static uint8_t ld_slot, ld_fresh = 1, ld_role, ld_due;   /* the block's motif; the next fresh draw's slot; the phrase's
+                                                  * role; the next phrase due (1: the group's, after a breath of beats;
+                                                  * 2: the block's next pair, after a breath of bars) */
+static uint8_t ld_blen, ld_pair, ld_step, ld_sent, ld_since, ld_cb, ld_gap;   /* the block: its pairs (0: none yet),
+                                                  * pairs begun, the phrase's place in its pair or sentence, a sentence;
+                                                  * blocks since the theme, the theme due; sixteenths to the breath's end */
+static uint8_t ld_idea;                          /* (the line's own idea: its slot, 1..3; 0 none yet) */
 static int8_t ld_next = -1;                      /* (a slot the next pair plays; -1: a fresh draw) */
-static float ld_int;                             /* intensity 0..1 (from the section) */
-volatile uint8_t en_lead_role, en_lead_phr;
+static int8_t ld_reg, ld_shift, ld_end;          /* the register's centre (degrees over its home); a sentence's
+                                                  * shift; the degree the last phrase ended on */
+static float ld_int;                             /* intensity 0..1 (from the arc) */
+volatile uint8_t en_lead_role, en_lead_phr, en_lead_slot, en_lead_blk, en_lead_int;
 
 static void ld_reseed(void)                      /* a new piece: new ideas (the bank drawn again as it's needed) */
 {
@@ -1569,8 +1597,10 @@ static void ld_reseed(void)                      /* a new piece: new ideas (the 
         ld_bank[k].n = 0;
     ld_fresh = 1;
     ld_next = -1;
-    ld_due = 0;
+    ld_due = ld_blen = ld_pair = ld_step = ld_sent = ld_since = ld_cb = ld_idea = 0;   /* (its first block the theme) */
+    ld_reg = 0;
 }
+static uint32_t ld_cmask(void);
 #ifdef EN_HOST
 int en_heard(int p) { return pe(p); }
 void en_lead_motif(int slot, const int8_t *off, const uint8_t *dur, int n)
@@ -1582,6 +1612,7 @@ void en_lead_motif(int slot, const int8_t *off, const uint8_t *dur, int n)
         m->off[i] = off[i], m->dur[i] = dur[i];
     m->n = (uint8_t)n;
     m->heard = 0;
+    m->cm = (uint16_t)ld_cmask();
     ld_next = (int8_t)(slot & 3);
 }
 #endif
@@ -1615,6 +1646,33 @@ static int ld_near(int d, int c)                 /* degree c (0..ns-1) in the oc
     const int ns = nsteps ? nsteps : 7, k = ((c - d) % ns + ns) % ns;
     return d + (2 * k > ns ? k - ns : k);
 }
+static uint32_t ld_cmask(void)                   /* the chord's tones as degrees over its root (bit k: k up; the root's
+                                                  * always) */
+{
+    const int ns = nsteps ? nsteps : 7, r = ld_cdeg(0);
+    uint32_t cm = 1u;
+    int k;
+    for (k = 0; k < chord_nt; k++)
+        cm |= 1u << ((ld_cdeg(k) - r + ns) % ns);
+    return cm;
+}
+static int ld_on(int d, uint32_t cm)             /* degree d over the chord's root a chord tone */
+{
+    const int ns = nsteps ? nsteps : 7;
+    return (int)(cm >> (((d % ns) + ns) % ns) & 1u);
+}
+static int ld_snap(int d, uint32_t cm)           /* the chord tone nearest degree d over the root (the lower if two) */
+{
+    const int ns = nsteps ? nsteps : 7;
+    int k;
+    for (k = 0; k < ns; k++) {
+        if (ld_on(d - k, cm))
+            return d - k;
+        if (ld_on(d + k, cm))
+            return d + k;
+    }
+    return d;
+}
 
 /* a fresh motif, as a player shapes one (the report's "new motifs"): its rhythm first, from the templates below (1, 2
  * or 4 bars, the long values on beats 1 and 3; about 2 + 4 intensity notes: whole and half notes when calm, a run of
@@ -1624,7 +1682,7 @@ static int ld_near(int d, int c)                 /* degree c (0..ns-1) in the oc
  * (or 5 semitones) the next note turns back; a note held a dotted quarter or longer is a chord tone, but for the
  * tension note (0.2 + 0.4 intensity of the motifs): a tone off the chord a degree above a chord tone (the 6th first,
  * then the 4th), held half as long again, the next note the chord tone under it. Offsets from the chord root's
- * degree; the register's centre an octave and a half over the Lead's root */
+ * degree; the register's centre an octave and a half over the Lead's root (and ld_reg higher: intensity's) */
 #define LD_RST 0x80u                             /* (in a template: a rest, its length below) */
 #define LD_HELD 6                                /* (sixteenths: a held note) */
 static const uint8_t LD_RHY[][7] = {
@@ -1651,15 +1709,13 @@ static int ld_rhy_n(int j)                       /* a template's notes (its rest
 static void ld_motif_new(ld_motif_t *m, float intensity, int role)
 {
     static const uint8_t W[3] = {6, 3, 1};       /* (a template's weight, by its notes' distance from the target) */
-    const int ns = nsteps ? nsteps : 7, r = ld_cdeg(0), w = ns < 6 ? ns : 6, c0 = ns + ns / 2 - r;
+    const int ns = nsteps ? nsteps : 7, r = ld_cdeg(0), w = ns < 6 ? ns : 6, c0 = ns + ns / 2 - r + ld_reg;
     const float amp = ns < 7 ? (float)ns / 7.0f : 1.0f;
+    const uint32_t cm = ld_cmask();              /* (the chord's tones, as degrees over its root) */
     int i, j, k, n = 0, nn, p = 0, at = 0, shape, tp = -1, tc = -1, tx = 0, prev = 0, pd = 0, ps = 0;
-    uint32_t cm = 0, tot = 0, x;
+    uint32_t tot = 0, x;
     const uint8_t *t;
     intensity = intensity < 0.0f ? 0.0f : intensity > 1.0f ? 1.0f : intensity;
-    for (k = 0; k < chord_nt; k++)               /* (the chord's tones, as degrees over its root) */
-        cm |= 1u << ((ld_cdeg(k) - r + ns) % ns);
-    cm |= 1u;
     {                                            /* the rhythm */
         const int tgt = (int)(2.0f + 4.0f * intensity + 0.5f);
         for (j = 0; j < LD_NRHY; j++) {
@@ -1765,6 +1821,42 @@ static void ld_motif_new(ld_motif_t *m, float intensity, int role)
     }
     m->n = (uint8_t)n;
     m->heard = 0;
+    m->cm = (uint16_t)cm;
+}
+static int ld_smooth(const ld_motif_t *m)        /* how smooth: fewer leaps (5 semitones or more) first, then more
+                                                  * steps (2 or less) for its intervals ((steps + 1) / (intervals + 2), in
+                                                  * 1/64ths: a short one not smooth for its shortness alone); +1024: no
+                                                  * leap and steps at least half its intervals, smooth enough */
+{
+    const int r = ld_cdeg(0);
+    int i, p = -1, lp = 0, st = 0, iv = 0;
+    for (i = 0; i < m->n; i++)
+        if (m->off[i] != LD_REST) {
+            if (p >= 0) {
+                const int d = ld_deg_raw(r + m->off[i]) - ld_deg_raw(r + m->off[p]);
+                lp += d >= 5 || d <= -5;
+                st += d <= 2 && d >= -2;
+                iv++;
+            }
+            p = i;
+        }
+    return 64 * (8 - lp) + 64 * (st + 1) / (iv + 2) + (!lp && 2 * st >= iv ? 1024 : 0);
+}
+static void ld_draw(ld_motif_t *m, float intensity, int tries, int all)   /* a fresh motif to remember: the first
+                                                  * smooth enough of a few draws, else the smoothest (the first of
+                                                  * equals; all: the smoothest of them all, for the theme, once a piece).
+                                                  * Heard again and again, a rare draw of leaps would set the whole line's
+                                                  * way. (Mostly one draw: a tick's planning kept short, the device's
+                                                  * audio block near its limit in the busiest pieces) */
+{
+    ld_motif_t b;
+    int sa, sb;
+    ld_motif_new(m, intensity, LR_CALL);
+    for (sa = ld_smooth(m); --tries > 0 && (sa < 1024 || all);) {
+        ld_motif_new(&b, intensity, LR_CALL);
+        if ((sb = ld_smooth(&b)) > sa)
+            *m = b, sa = sb;
+    }
 }
 
 static int ld_fold(int d)                        /* (a note an octave down or up if the register would clip it: its
@@ -1777,12 +1869,13 @@ static int ld_fold(int d)                        /* (a note an octave down or up
         d += ns;
     return d;
 }
-static int ld_ending(int d, int closed)          /* the phrase's last degree d moved to the role's ending, nearest d */
+static int ld_ending1(int d, int closed, int nine)   /* the role's ending nearest degree d (the closed one's tone, nine:
+                                                  * the fifth's; the open one's, nine: the 9th) */
 {
     const int r = ld_cdeg(0);
     int k, best = 99, e = r, c;
-    if (closed) {                                /* the root, or 30% the chord tone nearest a fifth above it */
-        if (chord_nt > 1 && seq_rand(&ld_rng) % 100u < 30u) {
+    if (closed) {                                /* the root, or the chord tone nearest a fifth above it */
+        if (nine) {
             int bk = 1;
             for (k = 1; k < chord_nt; k++) {
                 const int iv = (chord_pcs[k] - chord_pcs[0] + 12) % 12, x = iv > 7 ? iv - 7 : 7 - iv;
@@ -1793,7 +1886,7 @@ static int ld_ending(int d, int closed)          /* the phrase's last degree d m
         }
         return ld_near(d, e);
     }
-    if (seq_rand(&ld_rng) % 100u >= (uint32_t)(5.0f + 20.0f * ld_int))   /* open: another chord tone (the nearest) */
+    if (!nine)                                   /* open: another chord tone (the nearest) */
         for (k = 1; k < chord_nt; k++)
             if ((c = ld_cdeg(k)) != r) {
                 const int t = ld_near(d, c), x = t > d ? t - d : d - t;
@@ -1802,43 +1895,339 @@ static int ld_ending(int d, int closed)          /* the phrase's last degree d m
             }
     return best < 99 ? e : ld_near(d, (r + 1) % (nsteps ? nsteps : 7));   /* (or the 9th) */
 }
+static int ld_ending(int d, int closed, int pen, int turn)   /* the phrase's last degree d moved to the role's ending
+                                                  * (closed: the root, or 30% the fifth; open: another chord tone, or 5 +
+                                                  * 20 intensity % the 9th), nearest d; but nearest the note before it
+                                                  * (pen) if that's more than two degrees from it (an ending reached, not
+                                                  * leapt to), unless a leap into pen must turn (turn: +1 up, -1 down) and
+                                                  * that one wouldn't */
+{
+    const int nine = closed ? chord_nt > 1 && seq_rand(&ld_rng) % 100u < 30u
+                            : seq_rand(&ld_rng) % 100u < (uint32_t)(5.0f + 20.0f * ld_int);
+    const int e = ld_ending1(d, closed, nine);
+    int f;
+    if (e - pen <= 2 && pen - e <= 2)
+        return e;
+    f = ld_ending1(pen, closed, nine);
+    return turn && (turn > 0 ? f <= pen : f >= pen) ? e : f;
+}
 
-static void lead_plan(void)                      /* the next phrase: the answer due, or a new pair's call */
+/* the variations (the report's table but its two free ones, the exact repeat and the chord move: every pass has those):
+ * a passing note nudged a degree; the ending moved a third (the re-fit then lands on another tone); the tail (1..3
+ * notes) redrawn by steps, a held note a chord tone; the first half twice; the motif an octave up (busy) or its values
+ * doubled (calm, and the Bridge's first choice). One of them, tried in turn till one can; none makes a leap (a motif
+ * remembered is heard again and again: one varied into leaps would set the whole line's way). On the motif's own
+ * chord (cm: as it was made) */
+static int ld_frag(ld_motif_t *m)                /* the first half, twice (its half not ending on a held tone off the
+                                                  * chord, nor a rest: a tension's resolution, the line, kept whole) */
+{
+    const uint32_t cm = m->cm;                    /* (the chord it was made on) */
+    int h = (m->n + 1) / 2, i;
+    while (h > 1 && (m->off[h - 1] == LD_REST || (m->dur[h - 1] >= LD_HELD && !ld_on(m->off[h - 1], cm))))
+        h--;
+    if (m->n < 2 || m->off[0] == LD_REST || m->off[h - 1] - m->off[0] > 2 || m->off[0] - m->off[h - 1] > 2)
+        return 0;                                /* (its halves joined by a step or a third: no leap made) */
+    for (i = 0; i < h; i++)
+        m->off[h + i] = m->off[i], m->dur[h + i] = m->dur[i];
+    m->n = (uint8_t)(2 * h);
+    return 1;
+}
+static int ld_bad(const ld_motif_t *m)          /* its held tones off the chord (as made) not resolved a step down onto
+                                                  * it before the last note (the last is re-fitted: no resolution) */
+{
+    int i, j, last = -1, n = 0;
+    for (i = 0; i < m->n; i++)
+        if (m->off[i] != LD_REST)
+            last = i;
+    for (i = 0; i < last; i++) {
+        if (m->off[i] == LD_REST || m->dur[i] < LD_HELD || ld_on(m->off[i], m->cm))
+            continue;
+        for (j = i + 1; m->off[j] == LD_REST; j++)
+            ;
+        n += !(j != last && m->off[j] == m->off[i] - 1 && ld_on(m->off[j], m->cm));
+    }
+    return n;
+}
+static int ld_turn(const ld_motif_t *m, int i)   /* the way note i must go after a leap into the note before it (a
+                                                  * leap: 3 degrees or more, or 5 semitones; +1 up, -1 down; 0 free) */
+{
+    const int r = ld_cdeg(0);
+    int pv, pp, dd, ds;
+    for (pv = i - 1; pv >= 0 && m->off[pv] == LD_REST; pv--)
+        ;
+    for (pp = pv - 1; pp >= 0 && m->off[pp] == LD_REST; pp--)
+        ;
+    if (pp < 0)
+        return 0;
+    dd = m->off[pv] - m->off[pp];
+    ds = ld_deg_raw(r + m->off[pv]) - ld_deg_raw(r + m->off[pp]);
+    return dd >= 3 || dd <= -3 || ds >= 5 || ds <= -5 ? (dd > 0 ? -1 : 1) : 0;
+}
+static int ld_op(ld_motif_t *m, int op, int last, int hi, int tot)   /* variation op tried on m: 1 if made */
+{
+    const int ns = nsteps ? nsteps : 7, r = ld_cdeg(0);
+    const uint32_t cm = m->cm;
+    int i;
+    if (op == 0) {                               /* a passing note (short, not after a held one: a tension's
+                                                  * resolution kept) a degree up or down, a step or a third from the
+                                                  * notes either side (no leap made) */
+        int c = 0, pick = -1, pv = -1, nv = 0, nx, s;
+        for (i = 0; i < last; pv = m->off[i] == LD_REST ? pv : i, i++) {
+            if (m->off[i] == LD_REST || m->dur[i] >= LD_HELD || (pv >= 0 && m->dur[pv] >= LD_HELD))
+                continue;
+            for (nx = i + 1; m->off[nx] == LD_REST; nx++)
+                ;
+            for (s = -1; s <= 1; s += 2) {
+                const int v = m->off[i] + s;
+                if ((pv < 0 || (v - m->off[pv] <= 2 && m->off[pv] - v <= 2)) && v - m->off[nx] <= 2 &&
+                    m->off[nx] - v <= 2 && seq_rand(&ld_rng) % (uint32_t)++c == 0u)
+                    pick = i, nv = v;
+            }
+        }
+        if (pick < 0)
+            return 0;
+        m->off[pick] = (int8_t)nv;
+        return 1;
+    }
+    if (op == 1) {                               /* the ending moved a third (back the other way still, after a leap
+                                                  * into the note before it) */
+        const int s = seq_rand(&ld_rng) & 1u ? 2 : -2, t = ld_turn(m, last);
+        int v = m->off[last] + s, pv;
+        for (pv = last - 1; pv >= 0 && m->off[pv] == LD_REST; pv--)
+            ;
+        if (t && pv >= 0 && (t > 0 ? v <= m->off[pv] : v >= m->off[pv]))
+            v = m->off[last] - s;
+        if (t && pv >= 0 && (t > 0 ? v <= m->off[pv] : v >= m->off[pv]))
+            return 0;
+        m->off[last] = (int8_t)v;
+        return 1;
+    }
+    if (op == 2) {                               /* the tail redrawn by steps (a step 4, a third 1, the note again 1;
+                                                  * turning after a leap; a held note on the chord; after a held tone off
+                                                  * it, its resolution a step down) */
+        int k = 1 + (int)(seq_rand(&ld_rng) % 3u), from = last, prev, pp = -99, j, first = 1;
+        for (j = 1; j < k && from > 0; ) {   /* (from: the tail's first note; a note left before it) */
+            from--;
+            j += m->off[from] != LD_REST;
+        }
+        for (j = from - 1; j >= 0 && m->off[j] == LD_REST; j--)
+            ;
+        if (j < 0)
+            return 0;
+        prev = m->off[j];
+        for (i = j - 1; i >= 0 && m->off[i] == LD_REST; i--)
+            ;
+        if (i >= 0)
+            pp = m->off[i];
+        for (i = from; i <= last; i++) {
+            int d, s;
+            if (m->off[i] == LD_REST)
+                continue;
+            if (first && m->dur[j] >= LD_HELD && !ld_on(prev, cm))
+                d = prev - 1;
+            else {
+                const int ds = pp > -99 ? ld_deg_raw(r + prev) - ld_deg_raw(r + pp) : 0;
+                const int turn = pp > -99 && (prev - pp >= 3 || pp - prev >= 3 || ds >= 5 || ds <= -5) ?
+                                 (prev > pp ? -1 : 1) : 0;
+                uint32_t wt[5], tw = 0, y;
+                for (s = -2; s <= 2; s++) {
+                    uint32_t w = s == 1 || s == -1 ? 4u : 1u;
+                    if ((m->dur[i] >= LD_HELD && !ld_on(prev + s, cm)) || (turn && s * turn <= 0))
+                        w = 0u;
+                    tw += wt[s + 2] = w;
+                }
+                if (!tw)
+                    d = ld_snap(prev, cm);
+                else {
+                    y = seq_rand(&ld_rng) % tw;
+                    for (s = 0; s < 4 && y >= wt[s]; s++)
+                        y -= wt[s];
+                    d = prev + s - 2;
+                }
+            }
+            pp = prev;
+            prev = d;
+            first = 0;
+            m->off[i] = (int8_t)d;
+        }
+        return 1;
+    }
+    if (op == 3)
+        return ld_frag(m);
+    if (ld_int >= 0.5f && ar_sec != EN_SEC_BRIDGE && ld_deg_raw(ld_cdeg(0) + hi + ns) <= 100) {
+        for (i = 0; i < m->n; i++)              /* an octave up (busy) */
+            if (m->off[i] != LD_REST)
+                m->off[i] = (int8_t)(m->off[i] + ns);
+        return 1;
+    }
+    if (tot <= 32) {                             /* its values doubled (calm; a note held now a chord tone, but a
+                                                  * tension resolved a step down, not onto the last: it's re-fitted) */
+        for (i = 0; i < m->n; i++)
+            m->dur[i] = (uint8_t)(m->dur[i] < 16 ? 2 * m->dur[i] : 32);
+        for (i = 0; i < last; i++) {
+            int j;
+            if (m->off[i] == LD_REST || m->dur[i] < LD_HELD || ld_on(m->off[i], cm))
+                continue;
+            for (j = i + 1; j < m->n && m->off[j] == LD_REST; j++)
+                ;
+            if (!(j < m->n && j != last && m->off[j] == m->off[i] - 1 && ld_on(m->off[j], cm)))
+                m->off[i] = (int8_t)ld_snap(m->off[i], cm);
+        }
+        return 1;
+    }
+    return 0;
+}
+static void ld_vary(ld_motif_t *m)
+{
+    const uint32_t x = seq_rand(&ld_rng) % 100u;
+    int op, tries, i, last = -1, hi = -99, tot = 0;
+    for (i = 0; i < m->n; i++)
+        if (m->off[i] != LD_REST) {
+            last = i;
+            hi = m->off[i] > hi ? m->off[i] : hi;
+        }
+    for (i = 0; i < m->n; i++)
+        tot += m->dur[i];
+    if (last < 0)
+        return;
+    op = ar_sec == EN_SEC_BRIDGE ? (x < 50u ? 4 : x < 70u ? 0 : x < 85u ? 2 : x < 95u ? 1 : 3)   /* (calm: doubled) */
+                                 : (x < 30u ? 0 : x < 45u ? 1 : x < 70u ? 2 : x < 80u ? 3 : 4);
+    for (tries = 0; tries < 5; tries++, op = (op + 1) % 5) {   /* (one that leaves no more held tones off the
+                                                  * chord unresolved than there were: else undone, the next tried) */
+        const ld_motif_t was = *m;
+        const int bad = ld_bad(m);
+        if (ld_op(m, op, last, hi, tot) && ld_bad(m) <= bad)
+            return;
+        *m = was;
+    }
+}
+/* the sentence's cadence (the old Lead's slow run, kept for this): 3..6 steps down (30% up) from where the line is,
+ * into a closed ending (the root or the fifth) held, a quarter first; eighths, or sixteenths at its busiest */
+static void ld_cadence(ld_motif_t *m)
+{
+    const int k = 3 + (int)(seq_rand(&ld_rng) % 4u), dn = seq_rand(&ld_rng) % 100u < 70u ? 1 : -1, r = ld_cdeg(0);
+    const int e = ld_ending(ld_end - dn * k, 1, ld_end - dn * k, 0);
+    int i;
+    for (i = 0; i <= k; i++) {
+        m->off[i] = (int8_t)(e + dn * (k - i) - r);
+        m->dur[i] = (uint8_t)(!i ? 4 : i == k ? 8 : ld_int >= 0.85f ? 1 : 2);
+    }
+    m->n = (uint8_t)(k + 1);
+}
+/* a new block (spec 7.1): its motif (the slot asked for; the theme when it's due, at a piece's first, or after 6 blocks
+ * without it at Memory 20 or more; else the line's own idea, one of slots 1..3, as it was: kept, Memory's chance, or
+ * varied once, or a fresh one; the theme's returns come and go, the idea they broke into goes on after them), its
+ * pairs (Memory and intensity as they are now: kept for the whole block), a sentence or not. Returns 1 if the motif is
+ * as it was (kept, or the theme back: this pass may still vary it) */
+static int ld_block(void)
+{
+    const int mem = par[P_LMEM];
+    const int asked = ld_next >= 0;
+    int same = 1;
+    if (asked) {
+        ld_slot = (uint8_t)ld_next;
+        ld_next = -1;
+        same = 0;
+        if (ld_slot)
+            ld_idea = ld_slot;
+    } else if (ld_cb || (ld_since >= 6 && mem >= 20) || !ld_blen) {
+        ld_slot = 0;
+    } else {
+        ld_slot = ld_idea;
+        if (!ld_idea || seq_rand(&ld_rng) % 100u >= (uint32_t)mem) {
+            same = 0;
+            if (ld_idea && ld_bank[ld_idea].heard >= 2 && seq_rand(&ld_rng) & 1u) {
+                ld_vary(&ld_bank[ld_idea]);
+            } else {                             /* (a fresh one: and before it's been heard twice, never varied) */
+                ld_slot = ld_idea = ld_fresh;
+                ld_fresh = (uint8_t)(ld_fresh % 3 + 1);
+                ld_draw(&ld_bank[ld_slot], ld_int, 3, 0);
+            }
+        }
+    }
+    if (!ld_bank[ld_slot].n)
+        ld_draw(&ld_bank[ld_slot], ld_int, 3, 0);
+    ld_cb = 0;
+    ld_since = ld_slot ? (uint8_t)(ld_since < 255 ? ld_since + 1 : 255) : 0;
+    ld_blen = (uint8_t)(mem < 20 ? 1 : ld_int < 0.5f ? 2 : 3);
+    ld_sent = (uint8_t)(!asked && ld_blen == 3 && seq_rand(&ld_rng) % 100u < 50u);
+    ld_pair = (uint8_t)(ld_sent ? ld_blen - 1 : 0);   /* (a sentence the whole block) */
+    if (ld_sent) {
+        const uint32_t s = seq_rand(&ld_rng) % 4u;
+        ld_shift = (int8_t)(s < 2u ? (int)s - 2 : (int)s - 1);   /* (-2, -1, 1, 2) */
+    }
+    en_lead_blk++;
+    return same;
+}
+
+static void lead_plan(void)                      /* the next phrase: the group's next (an answer, a sentence's next), or
+                                                  * a pair's call (the block's next, or a new block's first) */
 {
     const int r = ld_cdeg(0), ns = nsteps ? nsteps : 7;
-    const ld_motif_t *m;
+    const uint32_t cm = ld_cmask();
+    ld_motif_t t;
     int i, last = -1, lo = 999, hi = -999, sh = 0;
-    ld_int = ar_sec == EN_SEC_SOLO ? 0.7f : ar_sec == EN_SEC_EMERGE ? 0.0f : 0.2f;   /* (Solo: the arc's rise later) */
+    ld_int = ar_sec == EN_SEC_SOLO ? 0.4f + 0.6f * ar_rise : ar_sec == EN_SEC_EMERGE ? 0.0f : 0.2f;
     if (!ld_bank[0].n)
-        ld_motif_new(&ld_bank[0], ld_int, LR_CALL);   /* (the theme, a piece's first idea) */
-    if (ld_due) {
-        ld_role = LR_ANSWER;
-        ld_due = 0;
+        ld_draw(&ld_bank[0], 0.5f, 4, 1);       /* (the theme, a piece's first idea: a figure of about 4 notes,
+                                                  * whatever the section it's first heard in; the smoothest of 4) */
+    if (ld_due == 1) {
+        ld_step++;
     } else {
-        ld_role = LR_CALL;
-        if (ld_next >= 0) {
-            ld_slot = (uint8_t)ld_next;
-            ld_next = -1;
-        } else {
-            ld_slot = ld_fresh;
-            ld_fresh = (uint8_t)(ld_fresh % 3 + 1);
-            ld_motif_new(&ld_bank[ld_slot], ld_int, LR_CALL);
-        }
+        const int tg = ld_int > 0.4f ? (int)((ld_int - 0.4f) * (5.0f / 0.6f) + 0.5f) : 0;
+        ld_reg = (int8_t)(ld_reg + (tg > ld_reg) - (tg < ld_reg));   /* (the register walking to intensity's) */
+        if ((ld_next >= 0 || ld_cb || ld_pair >= ld_blen ? ld_block() : 1) && ld_bank[ld_slot].heard >= 2 &&
+            seq_rand(&ld_rng) % 100u >= (uint32_t)par[P_LMEM])
+            ld_vary(&ld_bank[ld_slot]);         /* (a pass, from its third: 1 - Memory a pass, one variation) */
+        ld_pair++;
+        ld_step = 0;
         if (ld_bank[ld_slot].heard < 255)
             ld_bank[ld_slot].heard++;
     }
-    m = &ld_bank[ld_slot];
-    ld_n = m->n;
+    ld_due = 0;
+    ld_role = (uint8_t)(ld_sent ? (ld_step < 2 ? LR_SEQ : ld_step == 2 ? LR_FRAG : LR_CADENCE)
+                                : ld_step ? LR_ANSWER : LR_CALL);
+    t = ld_bank[ld_slot];
+    if (ld_role == LR_FRAG) {                    /* (the first half twice, if it can: no leap, no tension left hanging) */
+        ld_motif_t f = t;
+        if (ld_frag(&f) && ld_bad(&f) <= ld_bad(&t))
+            t = f;
+    } else if (ld_role == LR_CADENCE)
+        ld_cadence(&t);
+    ld_n = t.n;
     for (i = 0; i < ld_n; i++) {
-        ld_dur[i] = m->dur[i];
-        ld_dg[i] = m->off[i] == LD_REST ? (int8_t)LD_REST : (int8_t)(r + m->off[i]);
-        if (m->off[i] != LD_REST)
+        ld_dur[i] = t.dur[i];
+        ld_dg[i] = t.off[i] == LD_REST ? (int8_t)LD_REST
+                                       : (int8_t)(r + t.off[i] + (ld_role == LR_SEQ && ld_step ? ld_shift : 0));
+        if (t.off[i] != LD_REST)
             last = i;
     }
     if (last >= 0) {
-        ld_dg[last] = (int8_t)ld_ending(ld_dg[last], ld_role == LR_ANSWER);
-        if (ld_role == LR_ANSWER)
+        int pv = last - 1, pp, turn = 0;
+        while (pv >= 0 && ld_dg[pv] == LD_REST)
+            pv--;
+        for (pp = pv - 1; pp >= 0 && ld_dg[pp] == LD_REST; pp--)
+            ;
+        if (pp >= 0) {                           /* (a leap into the note before the ending: the ending turns back) */
+            const int dd = ld_dg[pv] - ld_dg[pp], ds = ld_deg_raw(ld_dg[pv]) - ld_deg_raw(ld_dg[pp]);
+            turn = dd >= 3 || dd <= -3 || ds >= 5 || ds <= -5 ? (dd > 0 ? -1 : 1) : 0;
+        }
+        if (ld_role != LR_CADENCE)              /* (the cadence's ending its own) */
+            ld_dg[last] = (int8_t)ld_ending(ld_dg[last], ld_role == LR_ANSWER, pv >= 0 ? ld_dg[pv] : ld_dg[last], turn);
+        if (ld_role == LR_ANSWER || ld_role == LR_CADENCE)
             ld_dur[last] = (uint8_t)(ld_dur[last] < 16 ? 2 * ld_dur[last] : 32);
+    }
+    for (i = 0; i < last && (cm != t.cm || (ld_role == LR_SEQ && ld_step)); i++) {   /* a held note a chord tone (a
+                                                  * tension excepted: resolved a step down onto one), the motif over
+                                                  * another kind of chord than it was made on, or shifted */
+        int j;
+        if (ld_dg[i] == LD_REST || ld_dur[i] < LD_HELD || ld_on(ld_dg[i] - r, cm))
+            continue;
+        for (j = i + 1; j < ld_n && ld_dg[j] == LD_REST; j++)
+            ;
+        if (j < ld_n && ld_dg[j] == ld_dg[i] - 1 && ld_on(ld_dg[j] - r, cm))
+            continue;
+        ld_dg[i] = (int8_t)(r + ld_snap(ld_dg[i] - r, cm));
     }
     for (i = 0; i < ld_n; i++)                   /* (its range) */
         if (ld_dg[i] != LD_REST) {
@@ -1857,9 +2246,13 @@ static void lead_plan(void)                      /* the next phrase: the answer 
             ld_dg[i] = (int8_t)ld_fold(ld_dg[i] + sh / 12 * ns);
         ld_note[i] = (uint8_t)(ld_dg[i] == LD_REST ? 0 : ld_deg_raw(ld_dg[i]));
     }
+    if (last >= 0)
+        ld_end = ld_dg[last];
     ld_i = 0;
     ld_left = 0;
     en_lead_role = ld_role;
+    en_lead_slot = ld_slot;
+    en_lead_int = (uint8_t)(ld_int * 100.0f + 0.5f);
     en_lead_phr++;
 }
 
@@ -1881,17 +2274,32 @@ static void lead_note(int n)                     /* the next note: legato (it gl
 
 static void lead_tick(void)                      /* a sixteenth: the phrase goes on, or the breath */
 {
+    if (ar_cue) {                                /* the arc's moment for the theme (dropped, not kept, before Lead in; under
+                                                  * Memory 20, the wandering end: a fresh motif every pair; and while the
+                                                  * theme plays on, a phrase of it still to come) */
+        ar_cue = 0;
+        if (ar_sec != EN_SEC_EMERGE && ar_bar >= par[P_LDIN] && par[P_LMEM] >= 20 &&
+            !(ld_slot == 0 && ld_blen &&
+              (ld_pair < ld_blen || ld_due == 1 || (ld_n && ld_role != LR_ANSWER && ld_role != LR_CADENCE))))
+            ld_cb = 1;
+    }
     if (ld_key >= 0)                             /* (the keys play it: its own phrases wait) */
         return;
-    if (!(sixteenth & 15u) && !ld_n) {           /* a bar line, between phrases */
+    if (!ld_n && ld_due == 1) {                  /* inside a pair (or a sentence): the next phrase on the first beat
+                                                  * after its breath */
+        if (ld_gap)
+            ld_gap--;
+        else if (!(sixteenth & 3u))
+            lead_plan();
+    } else if (!(sixteenth & 15u) && !ld_n) {    /* a bar line, between pairs */
         if (ld_rest)
             ld_rest--;
         else if (ar_sec != EN_SEC_EMERGE && ar_bar >= par[P_LDIN] &&
-                 (ld_due || seq_rand(&ld_rng) % 100u < (uint32_t)(20 + 6 * pe(P_LDENS) / 10) /
-                                                          (ar_sec == EN_SEC_FLOW ? 3u : 1u)))
-            lead_plan();                         /* (an answer due at once; a pair not before Lead in bars from the
-                                                  * piece's start, never in Emerge; Solo and Bridge its own, Flow now and
-                                                  * then) */
+                 (ld_due || ld_cb || seq_rand(&ld_rng) % 100u < (uint32_t)(20 + 6 * pe(P_LDENS) / 10) /
+                                                                   (ar_sec == EN_SEC_FLOW ? 3u : 1u)))
+            lead_plan();                         /* (the block's next pair, or the theme due, at once; a block not
+                                                  * before Lead in bars from the piece's start, never in Emerge; Solo and
+                                                  * Bridge its own, Flow now and then) */
     }
     if (!ld_n)
         return;
@@ -1910,16 +2318,20 @@ static void lead_tick(void)                      /* a sixteenth: the phrase goes
         ld_left = ld_dur[ld_i++];
         return;
     }
-    lead_off();                                  /* the phrase done: after a call its answer (the next bar line, a bar
-                                                  * later when calm); after an answer a breath, (1 + 4 (1 - intensity))
-                                                  * (1.5 - Phrases) bars and 1 or 2 more, then the roll */
+    lead_off();                                  /* the phrase done: after a call its answer, after a sentence's phrase
+                                                  * its next, on the first beat a beat on (a little more when calm: 1 to
+                                                  * 2 beats of breath, at every tempo); after an answer or the cadence a
+                                                  * breath of (1 + 4 (1 - intensity)) (1.5 - Phrases) bars, then the
+                                                  * block's next pair (or the theme due); after a block's last, 1 or 2
+                                                  * bars more, then the roll */
     ld_n = 0;
-    if (ld_role == LR_CALL) {
+    if (ld_role == LR_CALL || ld_role == LR_SEQ || ld_role == LR_FRAG) {
         ld_due = 1;
-        ld_rest = (uint8_t)(ld_int < 0.3f);
+        ld_gap = (uint8_t)(ld_int < 0.3f ? 4 : 3);
     } else {
-        ld_rest = (uint8_t)((int)((1.0f + 4.0f * (1.0f - ld_int)) * (1.5f - (float)pe(P_LDENS) * 0.01f) + 0.5f) + 1 +
-                            (int)(seq_rand(&ld_rng) & 1u));
+        const int g = (int)((1.0f + 4.0f * (1.0f - ld_int)) * (1.5f - (float)pe(P_LDENS) * 0.01f) + 0.5f);
+        ld_due = (uint8_t)(ld_pair < ld_blen || ld_cb ? 2 : 0);
+        ld_rest = (uint8_t)(ld_due ? g : g + 1 + (int)(seq_rand(&ld_rng) & 1u));
     }
 }
 

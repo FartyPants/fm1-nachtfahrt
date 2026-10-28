@@ -211,10 +211,15 @@ root an octave under (the **Pedal**). Voices: **Organ**, **Strings** (through an
 (the Nachtfahrt page), or follows the eight slots of the Chords page.
 
 **The Lead** (LFO; channel 3) is one voice, gliding: **Odyssey**, **Mini**, **Flute**, **Theremin**, **Synthi**. It plays
-phrases, long notes or a slow run ending long, starting on a chord tone, with a breath of bars between
-(**Phrases**: how often). Its vibrato comes in late. By default its reverb and echo are at 90, so it sings far
-away. It may start **Lead in** bars after the piece starts (the Arc page), plays now and then in Flow and fully in
-Solo. Its filter's movement is kept gentle: never more than three quarters of an octave either way. The white keys play it too.
+in pairs: a call that ends open, then, a beat or two later, its answer, the same rhythm ending on the chord's root or
+fifth, held longer. It remembers its motifs: it plays one for a few pairs, then keeps it, varies it a little (a note
+moved, a new tail, its first half twice, slower) or finds a new one. Its first idea is the piece's theme, and the theme
+comes back when Solo begins, after the arc's rise peaks, when a Bridge begins, and when it hasn't been heard for a
+while. Towards the arc's peak it plays more notes, shorter and higher, and sometimes builds a longer phrase that ends in
+a quick run, mostly downwards, to a close. Between pairs it breathes for bars (**Phrases**: how often). Its vibrato comes in late.
+By default its reverb and echo are at 90, so it sings far away. It may start **Lead in** bars after the piece starts
+(the Arc page), plays now and then in Flow and fully in Solo. Its filter's movement is kept gentle: never more than
+three quarters of an octave either way. The white keys play it too.
 
 **The Atmosphere** (SAVE) is a background: **None**, **Wind** (a breath of noise through a narrow band, swept
 slowly), **Surf** (waves), **Space** (chirps and bursts, far away), **Air**, or **Tape** (a crackle ringing on

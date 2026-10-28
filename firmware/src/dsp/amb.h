@@ -106,6 +106,8 @@ enum {
     P_ARC,                                         /* (BERLIN) the Sequence's long rise, its bars (repeating; 0 none) */
     P_MR4, P_MI4,                                  /* (BERLIN, format 7) the Atmosphere's Rate and Intro */
     P_BRIDGE,                                      /* (format 7) the bridge's move on every filter, 0..100 (+-3 octaves) */
+    P_LMEM,                                        /* (format 8) Memory: how much the Lead keeps its ideas, 0..100 (the
+                                                    * chance a block's motif is kept; 0 a fresh one every pair) */
     P_NPARAMS
 };
 #define P_MW1 P_SWEEP                              /* (the Sequence's Width is its Sweep: one parameter) */
@@ -191,6 +193,9 @@ extern volatile int8_t en_lead_deg;             /* the degree the Lead sounds (p
  * tests: a phrase begins where the count moves) */
 enum { LR_CALL, LR_ANSWER, LR_SEQ, LR_FRAG, LR_CADENCE };
 extern volatile uint8_t en_lead_role, en_lead_phr;
+/* (for tests too) the phrase playing's motif slot (0: the theme), a count of its blocks so far (a block begins where it
+ * moves), the intensity it was planned at (0..100) */
+extern volatile uint8_t en_lead_slot, en_lead_blk, en_lead_int;
 #define LD_REST (-128)                          /* a rest inside a motif */
 /* (host tests only, between renders) motif slot `slot` (0..3) written: n entries (1..8), each a scale degree from the
  * chord root's degree (LD_REST: a rest) and its length in sixteenths; the Lead's next pair plays it */
