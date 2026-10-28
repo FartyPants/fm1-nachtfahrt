@@ -2906,7 +2906,8 @@ int main(void)
 
     /* (BERLIN, the Lead's memory: the device's audio block near its limit) no tick of the grid draws more than one
      * motif: Stratosfear (no intro) 90 s, Motion 100, Lead in 0, Memory 85; a piece change in the middle of a call to
-     * Sunrain, 90 s; 4 white keys captured there, 60 s; Cyborg 60 s. (The engine counts its draws a tick, the most) */
+     * Sunrain, 90 s; 4 white keys captured there, 60 s (an offspring of them drawn); Cyborg 60 s, its Lead
+     * made to forget half way (FORGET). (The engine counts its draws a tick, the most) */
     {
         static const int FG[4] = {7, 9, 8, 11}, FD[4] = {4, 2, 2, 8};
         fresh();
@@ -2944,7 +2945,9 @@ int main(void)
         }
         piece(7);
         en_set(P_LDIN, 0);
-        run(60.0f);
+        run(30.0f);
+        en_lead_forget();                        /* (the Lead's FORGET: new ideas, its theme's draws again) */
+        run(30.0f);
         CHECK(en_lead_dmax == 1, "test_lead_one_draw: the most motifs drawn in one tick %u (1)", en_lead_dmax);
     }
 
@@ -3034,6 +3037,74 @@ int main(void)
         CHECK(ok && kn[0] < kn[1] && kn[1] < kn[2] && end >= 29u && end <= 31u,
               "test_offspring_pace: 40 bars on, the kinship %d %d %d (0 34 60), at Memory 0 ended %u bars on (30)", kn[0],
               kn[1], kn[2], end);
+        en_set(P_LMEM, en_param_info(P_LMEM)->def);
+    }
+
+    /* (BERLIN, the Lead's FORGET: the user's design, PERFORM's top key) en_lead_forget(): the Lead forgets everything it
+     * remembers. off_setup at Memory 50, a figure taken (its offspring due), forgotten in the middle of its call: the
+     * note let go at once, the theme gone (no entries, not the keys'), no kinship, the keys' buffer empty; then new
+     * ideas as at a piece's start: a theme thought of within a bar or two (not the figure), the Lead's next call on it
+     * (slot 0), the line's first idea the generator's own. 2 keys of a figure, forgotten, then 2 more: 2 in the buffer,
+     * nothing taken. At most one draw a tick throughout */
+    {
+        static const int FG[5] = {7, 11, 10, 8, 9}, FD[5] = {3, 3, 2, 6, 10};
+        int8_t off[32];
+        uint8_t dur[32];
+        int got = 0, b, nt, n0, pl, kn, cp, left, same, call, idea, kind = -1, at = -1;
+        uint8_t p0, id0;
+        uint32_t f;
+        off_setup(50);
+        en_lead_dmax = 0;
+        run(12.0f);
+        memset(sounding[2], 0, sizeof sounding[2]);
+        ld_on_now = 0;
+        p0 = en_lead_phr;
+        keys_play(FG, FD, 5);
+        for (b = 0; b < 2000 && !got; b++) {
+            run(256.0f / 44100.0f + 1e-6f);
+            got = en_lead_phr != p0 && en_lead_slot == 0 && en_lead_role == LR_CALL;
+        }
+        run(0.2f);
+        en_lead_forget();
+        run(256.0f / 44100.0f + 1e-6f);          /* (a block: taken) */
+        f = en_bars;
+        left = ld_left_on();
+        nt = en_lead_theme(off, dur), pl = en_lead_played(), kn = en_lead_kin(), cp = en_lead_cap();
+        CHECK(got && !left && !nt && !pl && !kn && !cp,
+              "test_lead_forget: forgotten in the keys' call (begun %d): %d left sounding; the theme %d entries, the "
+              "keys' %d, kinship %d, %d in the buffer (all 0)", got, left, nt, pl, kn, cp);
+        while (at < 0 && en_bars < f + 8u * 16u) {   /* (the theme thought of again: its first draw, at a bar line) */
+            run(256.0f / 44100.0f + 1e-6f);
+            if (en_lead_theme(off, dur) > 0)
+                at = (int)((en_bars - f) / 16u);
+        }
+        id0 = en_lead_ideas;
+        lg_n = 0, lg_open = -1;
+        call = lg_wait(LR_CALL, 40.0f) && en_lead_slot == 0;
+        nt = en_lead_theme(off, dur);
+        for (b = 0, same = nt == 5; b < 5 && same; b++)
+            same = dur[b] == FD[b];
+        for (b = 0, idea = 0; b < (int)(60.0f * 44100.0f / 256.0f) && !idea; b++) {
+            run(256.0f / 44100.0f + 1e-6f);
+            if (en_lead_ideas != id0)
+                idea = 1, kind = en_lead_kind;
+        }
+        printf("  test_lead_forget: a theme thought of %d bars after, %d entries; its call %d; the next idea made %d\n",
+               at, nt, call, kind);
+        CHECK(at >= 0 && at <= 2 && !same && call && idea && kind == LK_PLAIN && !en_lead_played(),
+              "test_lead_forget: after it: a theme thought of %d bars on (<= 2), the figure %d (0); a call on it %d; the "
+              "next idea %d, made %d (plain: 0); the keys' theme %d (0)", at, same, call, idea, kind, en_lead_played());
+        keys_play(FG, FD, 2);                    /* (a figure in the middle of being played) */
+        en_lead_forget();
+        run(256.0f / 44100.0f + 1e-6f);
+        cp = en_lead_cap();
+        keys_now(FG + 2, FD + 2, 2);
+        n0 = en_lead_cap();
+        run(4.0f);
+        CHECK(!cp && n0 == 2 && !en_lead_played(),
+              "test_lead_forget: 2 keys, FORGET, 2 keys: %d in the buffer after it (0), %d after them (2); the keys' "
+              "theme %d (0: nothing taken)", cp, n0, en_lead_played());
+        CHECK(en_lead_dmax == 1, "test_lead_forget: the most motifs drawn in one tick %u (1)", en_lead_dmax);
         en_set(P_LMEM, en_param_info(P_LMEM)->def);
     }
 

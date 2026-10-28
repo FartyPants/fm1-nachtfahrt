@@ -421,7 +421,7 @@ const char *en_chord_name(const int *pcs, int n, char *buf)
 }
 
 /* ------------------------------------------------------------ commands --- */
-enum { C_SET, C_POOL, C_PLAY, C_NEXT, C_FREEZE, C_SEED, C_PANIC, C_CLOCK, C_REGROW, C_MUTE, C_PERF, C_FX, C_SEQ, C_MACRO, C_PROT, C_REWALK, C_LOCK, C_SEQSET, C_LKEY, C_MOVE };
+enum { C_SET, C_POOL, C_PLAY, C_NEXT, C_FREEZE, C_SEED, C_PANIC, C_CLOCK, C_REGROW, C_MUTE, C_PERF, C_FX, C_SEQ, C_MACRO, C_PROT, C_REWALK, C_LOCK, C_SEQSET, C_LKEY, C_MOVE, C_LFORGET };
 #define QN 512u                                 /* (a piece is every parameter at once: room for twice over and more) */
 _Static_assert(QN >= 2u * (P_NPARAMS + 8), "the command queue can't hold a piece's parameters twice over");
 static uint32_t q[QN];
@@ -1630,7 +1630,8 @@ volatile uint8_t en_lead_dmax;                   /* (the most motifs drawn in a 
 static uint8_t ld_draws;
 #endif
 
-static void ld_reseed(void)                      /* a new piece: new ideas (the bank drawn again as it's needed) */
+static void ld_reseed(void)                      /* a new piece, or FORGET: new ideas (the bank drawn again as it's
+                                                  * needed) */
 {
     int k;
     for (k = 0; k < 4; k++) {
@@ -1704,6 +1705,7 @@ static void lead_off(void)                       /* the note let go */
     en_lead_deg = -1;
 }
 void en_lead_key(int d, int on) { post(C_LKEY, d, on); }
+void en_lead_forget(void) { post(C_LFORGET, 0, 0); }
 
 static int ld_deg_raw(int d)                     /* scale degree d (any) as a note, in the Lead's register */
 {
@@ -3672,6 +3674,16 @@ static void drain(void)
         case C_PERF: perf = (uint32_t)a; break;
         case C_FX: fxm = c & 0xFFFFu; break;
         case C_MOVE: mvm = c & 0xFFu; break;
+        case C_LFORGET:                          /* (the user's design: PERFORM's top key) the Lead forgets everything it
+                                                  * remembers: its ideas and its theme (the keys' too), a figure on the
+                                                  * keys, an answer due, the offspring; its note let go (not a key's: the
+                                                  * keys hold it); then new ideas as at a piece's start, its first block
+                                                  * after the theme's 4 draws, a bar each (no breath left over) */
+            if (ld_key < 0)
+                lead_off();
+            ld_reseed();
+            ld_rest = ld_gap = 0;
+            break;
         case C_REWALK: {                         /* the walk's slots walked again, all but the one playing, each from
                                                   * the slot before (yours and the gaps kept) */
             int k, prev = deg;

@@ -1,0 +1,39 @@
+# (BERLIN, the Lead's FORGET: the user's design) in PERFORM the top key (G5, w15: key 26), set apart from the moves by
+# the dark keys between, is lit steadily (not blinking: white 6 blinks, the solos blink), dark while held; a press:
+# the Lead forgets its ideas and its theme ("LEAD FORGOTTEN", a card), nothing else changes. Out of PERFORM the key
+# plays the Lead again
+wait 500
+turn PRESET 4
+wait 300
+expect piece 4
+listen
+tap SEL
+wait 300
+expect view 17
+said PERFORM ON
+expect litkey26 1
+wait 250
+expect litkey26 1
+wait 250
+expect litkey26 1
+key w15 down
+wait 100
+said LEAD FORGOTTEN
+expect litkey26 0
+expect card 1
+wait 400
+expect litkey26 0
+key w15 up
+wait 100
+expect litkey26 1
+expect mutes 0
+expect view 17
+tap ENV
+wait 300
+expect view 1
+said PERFORM OFF
+key w15 down
+wait 100
+said_none FORGOTTEN
+key w15 up
+wait 300

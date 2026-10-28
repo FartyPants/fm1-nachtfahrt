@@ -188,6 +188,10 @@ extern volatile uint16_t en_seq_lane[5], en_seq_acc[2];   /* the Pattern page's 
 void en_lead_key(int degree, int on);           /* the white keys: the Lead plays scale degree `degree` (0: the
                                                  * root) from the root up, in its register; on 0 lets it go */
 extern volatile int8_t en_lead_deg;             /* the degree the Lead sounds (played or its own): -1 none */
+void en_lead_forget(void);                      /* (PERFORM's top key) the Lead forgets all it remembers:
+                                                 * its ideas and its theme (the keys' too), a figure on the keys,
+                                                 * an answer due, the offspring; its note let go (not a key's); new
+                                                 * ideas as at a piece's start */
 /* (BERLIN, the Lead's memory) its phrases' roles: a pair's call (an open ending) and answer (closed), a sentence's
  * sequence and fragment, its cadence (the run); the role of the phrase playing, and a count of its phrases so far (for
  * tests: a phrase begins where the count moves) */

@@ -722,7 +722,9 @@ static void set_piece(int i)                    /* the piece playing kept as it 
  *   black 1-5    the same layers soloed, a press each (more than one: they play together; the rest muted)
  *   white 7-11   dub moves, held as long as the key is: every stab thrown into the echo, the filter pushed
  *                open, pushed shut, the floor dropped (the kick and the bass out), the echo pushed (all in, feeding back)
- * Each key that does something is lit: a layer while it sounds, a solo (blinking while on), a move (dark
+ *   white 16     (the top key, G5, set apart by the dark keys before it) FORGET, a press: the Lead forgets
+ *                its ideas and its theme (the keys' too), and grows new ones (en_lead_forget)
+ * Each key that does something is lit: a layer while it sounds, a solo (blinking while on), a move and FORGET (dark
  * while held). The rest do nothing; MIDI notes in still change the scale */
 #define PERF_N 15
 static const uint8_t PERF_KEY[PERF_N] = {0, 2, 4, 6, 7,          /* white 1-5: the layers */
@@ -745,6 +747,7 @@ static int perf_sounds(int i)                    /* layer i (0..4) heard: not mu
 }
 static void set_view(int v);
 #define PERF_SHIFT 9u                            /* white 6 (D4), held: the knobs the mix */
+#define PERF_FORGET 26u                          /* white 16 (G5), the top key: the Lead's memory erased */
 static void lock_toggle(void)                    /* SEL held: Lock, on or off: the phrases keep their kick, groove and plan,
                                                   * Evolve's own moves rest (not saved; off at boot) */
 {
@@ -760,6 +763,14 @@ static void perf_key(uint32_t key, int down)
         set_view(down ? V_MIX : V_PERF);
         if (down)
             say("MIX", 0);
+        return;
+    }
+    if (key == PERF_FORGET) {                    /* (the user: "the last key ... separated visibly") the Lead forgets */
+        if (down) {
+            en_lead_forget();
+            say("LEAD", "FORGOTTEN");
+            card_show("LEAD FORGOTTEN", "new ideas", K_BASS, 0);
+        }
         return;
     }
     for (i = 0; i < PERF_N && PERF_KEY[i] != key; i++)
@@ -2565,6 +2576,8 @@ static void leds(void)
             if (!(ui.solo & LAYER_MUTE[i]) || blink)
                 k |= 1u << PERF_KEY[10 + i];
         }
+        if (!(ui.keys >> PERF_FORGET & 1u))      /* FORGET: lit steadily (white 6 and the solos blink), dark while held */
+            k |= 1u << PERF_FORGET;
 
     } else if (proj.leds) {                      /* (BERLIN) the white key of the note the Lead sounds */
         const int d = en_lead_deg;

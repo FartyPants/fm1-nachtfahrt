@@ -107,7 +107,7 @@ second.
 | ALGORITHM | On a layer's page, its voice (on the Atmosphere's pages, its character). On the Chords page, the chord walk's character (Home, Wander, Free) |
 | OCT− / OCT+ | On the Sequence's, the Lead's and Sequence 2's pages, the layer's octave, a step a press (the Sequence −2 to 2, the Lead and Sequence 2 −2 to 1): the page's Octave knob shows it, the header says it ("SEQ OCTAVE −1"). OCT+ is lit while that octave is above where the piece was loaded, OCT− while it's below. On the other pages they do nothing. Both held 5 s: the update mode |
 | KNOB 1–4 | The four values at the bottom of the page. The line above them says what the one turning does |
-| White keys | Play the Lead in the piece's scale: the first white key is the root, the next the scale's second step, and so on up. While the Lead sounds a note, that key is lit. Three notes or more and a pause become the Lead's theme (see [The layers](#5-the-layers)). On the Pattern page they write the steps instead; in PERFORM they mute and play moves; with REC held they're the effects |
+| White keys | Play the Lead in the piece's scale: the first white key is the root, the next the scale's second step, and so on up. While the Lead sounds a note, that key is lit. Three notes or more and a pause become the Lead's theme (see [The layers](#5-the-layers)). On the Pattern page they write the steps instead; in PERFORM they mute, play moves, and the top one makes the Lead forget; with REC held they're the effects |
 | Black keys | Eleven effects, each while the key is held. They stay lit, so they stand apart from the Lead's white keys; a key goes dark while its effect is held: Take-off, Supernova, Twitter, Repeat, Swell, Freeze, Octave, Return, Rise, Close, Transpose (see [The effects grid](#9-the-effects-grid)). In PERFORM, the solos; on the Pattern page, the accents |
 | PLAY | Play / rest |
 | REC | A tap: hold (the echo and the cloud repeat what they hold). Held: the effects grid |
@@ -233,7 +233,8 @@ a little at a time like any of its ideas, even when the Lead otherwise keeps lit
 away). One or two notes are just played, nothing is kept; notes played while the Lead is muted aren't kept either. Your
 notes sound as you play them; the Lead counts them on the grid, to the nearest sixteenth. Stopping the music, or PANIC,
 forgets notes you are in the middle of playing; PANIC also drops an answer not yet begun (a theme already taken stays:
-the Lead plays it next, in its own time). A new piece starts with new ideas.
+the Lead plays it next, in its own time). A new piece starts with new ideas, and so does PERFORM's **Forget** (the
+top key).
 
 After your theme, the Lead's own ideas **grow out of it**. The next one starts from it: its first notes carried on in a
 new way, or its first notes and then the same again from another note of the chord, or its shape turned upside down.
@@ -471,6 +472,11 @@ that do something are lit:
 - **White 6, held:** the knobs become the levels (Drone, Seq, Lead, Seq 2).
 - **White 7–11, held:** **Sweep** (the Sequence's filter swept), **Open**, **Shut** (the filter pushed),
   **Drop** (both sequences out), **Echo** (the echo pushed, everything in and feeding back).
+- **The top key (G), apart from the rest:** **Forget**. A press and the Lead forgets everything it remembers:
+  its ideas, its theme (yours too, if you played one), a figure you were in the middle of playing, and an answer it
+  was about to give. The note it's playing stops; it thinks of a new theme and new ideas, as at the start of a piece,
+  and plays again within a few bars. Nothing else changes (no setting, nothing saved). The key is lit, and dark
+  while you hold it.
 
 SEL again, or a page's button, leaves.
 
