@@ -1,9 +1,17 @@
 # NACHTFAHRT for the M-VAVE FM-1
 
+![NACHTFAHRT](docs/img/site/banner.jpg)
+
+**[Install](https://fartypants.github.io/fm1-nachtfahrt/install/)** (Chrome or Edge, also Chrome on Android; the FM-1
+on USB) · **[Try it in the browser](https://fartypants.github.io/fm1-nachtfahrt/emu/)** ·
+**[Manual](https://fartypants.github.io/fm1-nachtfahrt/manual/)** ·
+**[Website](https://fartypants.github.io/fm1-nachtfahrt/)**
+
 NACHTFAHRT turns the M-VAVE FM-1 into a generative Berlin School machine, after the 1970s music of
 Tangerine Dream, Klaus Schulze and Ashra: long, hypnotic pieces, repeating synthesizer sequences,
-slowly evolving textures, a strong sense of space. It plays itself from the moment it's switched on.
-(It was called BERLIN while it was being built; the repository and the code keep that name.)
+slowly evolving textures, a strong sense of space. It plays itself from the moment it's switched on, and you
+can play with it: the white keys give you the melody, always in the piece's key.
+(It was called BERLIN while it was being built; the code keeps that name.)
 
 - a **Sequence** of up to 16 steps on a plucked analog-style voice (2600, Moog, Synthi, Pulse, Glass),
   its filter wandering slowly, its notes **repeated** at the echo's times (a dotted eighth by default, the
@@ -21,8 +29,9 @@ slowly evolving textures, a strong sense of space. It plays itself from the mome
 - **filter motion**: every layer's filter moves on its own clock, always relative to where you've set its
   Cutoff, so the layers diverge and converge, and you can turn the knob at any moment. The screen shows it.
 
-You don't play it, you steer it: pick a piece, change its key and tempo, thin or fill the sequences, push the
-echo, mute and solo the layers, play the Lead.
+Listen, and play: let it run for hours, or join in. Play the melody on the white keys over the sequences and the
+drone, sweep the filters on the black keys, pick a piece, change its key and tempo, thin or fill the sequences,
+push the echo, mute and solo the layers.
 
 NACHTFAHRT is a fork of [DUB-1](https://github.com/sbegueria/fm1-dub), itself a fork of
 [AMB-1](https://github.com/charlesvestal/fm1-amb), Charles Vestal's generative ambient firmware for the FM-1. It
