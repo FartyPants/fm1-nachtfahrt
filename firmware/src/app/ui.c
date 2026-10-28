@@ -2473,7 +2473,8 @@ static void draw_knobs(void)
             }
         }
         knob_text(k, t);
-        text_c(cx, 50, &FONT_B, t, moff ? K_DIM : hot ? K_ACC : K_TEXT);
+        text_c(cx, 50, &FONT_B, t + (t[0] == '+'), moff ? K_DIM : hot ? K_ACC : K_TEXT);   /* (the user: no plus, "1";
+                                                  * the font's thin plus read as a minus; the reader still says it) */
     }
     cv_blit(0, KNB_Y);
 }
