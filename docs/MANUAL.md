@@ -427,9 +427,9 @@ they're let go.
 
 **Shimmer** is a shimmer reverb, played. While it is held, the plate's tail is pitched an octave up and fed back
 into the plate, so each time round it climbs another octave, darker as it climbs (the FM-1's speaker is bright) and
-fading out after about two octaves. Some of the music goes into the plate with it, as much as the piece already
-sends there (never more than doubling it), so it is heard in every piece without a jump in level. Let go and the
-climbing stops; what is already in the plate dies away with its tail, not cut off.
+fading out after about two octaves. Some of the music goes into the plate with it, so it is heard in every piece
+(a few dB louder while held). Let go and the climbing stops; what is already in the plate dies away with its tail,
+not cut off.
 
 ### The black keys
 
