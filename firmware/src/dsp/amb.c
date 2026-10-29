@@ -75,10 +75,10 @@ const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PAR
  * sets over the defaults (PARAMS), in pairs, to -1. Tune and MIDI out are never set here: they belong to the player.
  * Keys and tempos are starting points (spec 6: from analysis sites, to tune by ear); the Lead is dreamy in all of them
  * (its reverb and echo 90, the defaults: the user); an Atmosphere only where it suits, of the four the user likes.
- * (Voices: the Sequence's 2600 Moog Synthi Pulse Glass, Sequence 2's and Sub; the Drone's Organ Strings Horn Saws
- *  Glass; the Lead's Odyssey Mini Flute Theremin Synthi. Modes: 0 Ionian, 1 Dorian, 2 Phrygian, 5 Aeolian. Repeat
- *  times: 1/8 1/8. 1/4 1/4. 1/2 1 bar. Drift: 2 4 8 16 32 64 bars, Hold. Play: the walk Home, Wander, Free. Grid:
- *  8ths, 16ths. Atmosphere: None Wind Surf Space Air Tape. The moves (filter motion spec 9): MW/MT/MR/MI a layer's
+ * (Voices: the Sequence's 2600 Moog Synthi Pulse Glass Pluck (0..5), Sequence 2's the five, Sub, Pluck (0..6);
+ *  the Drone's Organ Strings Horn Saws Glass; the Lead's Odyssey Mini Flute Theremin Synthi. Modes: 0 Ionian,
+ *  1 Dorian, 2 Phrygian, 5 Aeolian. Repeat times: 1/8 1/8. 1/4 1/4. 1/2 1 bar. Drift: 2 4 8 16 32 64 bars, Hold.
+ *  Play: the walk Home, Wander, Free. Grid: 8ths, 16ths. Atmosphere: None Wind Surf Space Air Tape. The moves (filter motion spec 9): MW/MT/MR/MI a layer's
  *  Width, Time, Rate and Intro in bars (0 Drone, 1 Sequence, 2 Lead, 3 Sequence 2, 4 Atmosphere; the Sequence's Width
  *  is Sweep); the Lead's Width kept low; Bridge the middle section's move. Memory: how much the Lead keeps its ideas,
  *  the Lead's memory spec 3.3's starting values, to tune by ear; every piece's set, Mirage's 50 the default too, so
@@ -213,6 +213,17 @@ static char *itoa_s(int v, char *b)
     return b;
 }
 
+/* (the voices batch) a sequence's voice knob (l: 0 the Sequence, 1 Sequence 2) as the engine's voice, EN_SV_NAME's
+ * index: Pluck was appended to both lists, so the Sequence's 5 is Pluck (6 here) where Sequence 2's 5 is Sub; a value
+ * out of range: 2600 */
+#define SV_PLUCK 6
+static int sv_of(int l, int v)
+{
+    if (l)
+        return (unsigned)v < EN_NS2V ? v : 0;
+    return (unsigned)v < EN_NSV ? (v == EN_NSV - 1 ? SV_PLUCK : v) : 0;
+}
+
 void en_param_text(int i, int v, char *b)
 {
     static const char *const ONOFF[2] = {"Off", "On"};
@@ -224,11 +235,11 @@ void en_param_text(int i, int v, char *b)
     else if (i == P_CVOICE)
         s = EN_CV_NAME[(unsigned)v < EN_NCV ? v : 0];
     else if (i == P_SVOICE)
-        s = EN_SV_NAME[(unsigned)v < EN_NSV ? v : 0];
+        s = EN_SV_NAME[sv_of(0, v)];
     else if (i == P_LVOICE)
         s = EN_BV_NAME[(unsigned)v < EN_NBV ? v : 0];
     else if (i == P_S2VOICE)
-        s = EN_SV_NAME[(unsigned)v < EN_NS2V ? v : 0];
+        s = EN_SV_NAME[sv_of(1, v)];
     else if (i >= P_CR0 && i <= P_CR7)
         s = EN_NOTE_NAME[(unsigned)v < 12u ? v : 0];
     else if (i >= P_CQ0 && i <= P_CQ7)
@@ -1291,8 +1302,47 @@ static void ar_tick_bar(void)                    /* a bar line (the first, at th
 typedef struct {
     uint8_t on, note, layer, voice;
     float ph, ph2, dt, dt2, amp, att, adec, env, edec, gl, gr, cut, c1[4], c2[4], s1[2], s2[2];
+    float last;                                  /* (its last output sample, before the pan: a steal's step) */
+    uint16_t ks_w, ks_r;                         /* (Pluck: its string, ks_line[its slot]) where it writes, where it
+                                                  * reads (the delay's whole samples behind) */
+    float ks_fr, ks_fb, ks_a1, ks_x1, ks_g;      /* the delay's fraction; the loop's gain a period; the last sample
+                                                  * read and the last read between two (the average's); the output's
+                                                  * gain (the velocity's, from the line's units) */
 } pluck_t;
 static pluck_t pluck[NPLUCK];
+
+/* (the voices batch, item 2) Pluck: a plucked string, Karplus-Strong. After fm1_open's third_party/synth/pluck.c
+ * (M-VAVE's FM1 adaptation of DaisySP's String; MIT licence, notice below), written again for this engine: a burst of
+ * noise a period long in a delay line, read back a period later (between two samples: the fraction) through the
+ * classic two-sample average (a gentle low-pass whose delay is half a sample at every frequency, so the pitch stays
+ * true up to the top: pluck.c's one-pole there drifted the high notes sharp) and the loop's gain, written in again.
+ * One knob, one job: Cutoff (with its motion, PERFORM's Sweep, the grid's Sweep) is the burst's brightness, at the
+ * strike (a one-pole on the noise, ~3.5 octaves over the cutoff, where the other voices' filters start); Decay how
+ * long it rings: the loop's gain gives the fundamental the other voices' amplitude T60 (1.5 x 80 .. 250 ms), the
+ * average's and the fraction's loss made up; Accent, the velocity, its level. Each voice's line, int16 (units of
+ * 1/KS_Q: the burst +-1 at most, +-2 with its mean taken out), is long enough for the lowest note the sequences
+ * reach: 24 (seq_note's clamp; the Octave cell only lifts) at Tune -50, 31.77 Hz: 1388 samples a period, read up to
+ * 1389 back. The noise has its own dice: Pluck changes the sound, never what the piece plays.
+ *
+ * pluck.c: Copyright (c) 2020 Electrosmith, Corp, Emilie Gillet; 2026 M-VAVE. MIT licence:
+ *   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+ *   documentation files (the "Software"), to deal in the Software without restriction, including without limitation
+ *   the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and
+ *   to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+ *   The above copyright notice and this permission notice shall be included in all copies or substantial portions of
+ *   the Software.
+ *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+ *   THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+ *   CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ *   IN THE SOFTWARE. */
+#define KS_N 1400                                /* (a line: 1389 needed, above) */
+#define KS_Q 16383.0f                            /* (the line's units a 1) */
+#define KS_GAIN 1.78f                            /* (its level: a note's energy as 2600's at the same knobs, +-1.5 dB
+                                                  * from 24 to 72 (the tests); the higher, the sooner its partials die,
+                                                  * so ~2 dB an octave more over 48, to 84) */
+static int16_t ks_line[NPLUCK][KS_N] EN_POOL;
+static uint32_t ks_rng = 0x6C078965u;
 static seq_t sq[2], sq_pend[2];
 static seq_hist_t sq_hist[2];
 static int sq_pos[2];
@@ -1305,7 +1355,7 @@ volatile uint8_t en_seq_len[2];
 volatile int8_t en_s2oct_shift;
 volatile uint16_t en_seq_lane[5], en_seq_acc[2];   /* (the Pattern page's lanes as Auto plays them: each sequence's
                                                   * steps (as Density thins them), octaves; the Sequence's skips; accents) */
-const char *const EN_SV_NAME[EN_NS2V] = {"2600", "Moog", "Synthi", "Pulse", "Glass", "Sub"};
+const char *const EN_SV_NAME[EN_NS2V] = {"2600", "Moog", "Synthi", "Pulse", "Glass", "Sub", "Pluck"};
 
 /* a piece's patterns, kept (en_seq_get, en_seq: EN_SEQ_N bytes): each one's degrees (16 + 16), steps, octaves and
  * accents (two bytes each, low first) and Density's order (16 + 16) */
@@ -1346,6 +1396,61 @@ static int sq_audible(int l)
     return l ? seq2_vol > 0.0f && !(mutes & (EN_M_KICK | EN_M_HATS)) : seq_vol > 0.0f && !(mutes & EN_M_PINGS);
 }
 
+#ifdef EN_HOST
+volatile uint32_t en_ks_struck;
+volatile float en_pl_steal;
+static int ks_fine(float x) { return x == x && fm_fabsf(x) < 1e30f && (x == 0.0f || fm_fabsf(x) >= 1.17549435e-38f); }
+int en_ks_ok(void)                               /* (host tests) the strings' float state: finite, no denormals */
+{
+    int i, ok = 1;
+    for (i = 0; i < NPLUCK; i++) {
+        const pluck_t *v = &pluck[i];
+        ok &= ks_fine(v->ks_fr) & ks_fine(v->ks_fb) & ks_fine(v->ks_a1) & ks_fine(v->ks_x1) & ks_fine(v->ks_g) &
+              ks_fine(v->amp) & ks_fine(v->att) & ks_fine(v->last);
+    }
+    return ok;
+}
+#endif
+
+static float fx_swm;                             /* (the grid's Sweep, below: the burst's brightness moves with it) */
+/* (Pluck) v struck (pluck_voice: its note, level, length and cutoff set): its line filled with the burst, a period and
+ * two (what the first reads, the fraction's neighbour and the average's), its mean taken out (no thump); the delay
+ * and the loop's gain from the period */
+static void ks_strike(pluck_t *v, int16_t *line)
+{
+    const float p = 1.0f / v->dt, d = fm_clampf(p - 0.5f, 2.0f, (float)(KS_N - 3)), w = FM_TWO_PI * v->dt,
+                b = 1.0f - fm_expf(-FM_TWO_PI * fm_minf(v->cut * 11.3137085f * fx_swm, 0.45f * EN_SR) * (1.0f / EN_SR));
+    const int len = (int)d, nb = len + 2;
+    const float fr = d - (float)len;
+    float lp = 0.0f, loss;
+    int32_t sum = 0, mean;
+    int i;
+    for (i = 0; i < nb; i++) {                   /* (white noise, -1 .. 1, through the one-pole) */
+        int k;
+        ks_rng = ks_rng * 1664525u + 1013904223u;
+        lp += b * ((float)(int32_t)ks_rng * (1.0f / 2147483648.0f) - lp);
+        k = (int)(lp * KS_Q);
+        line[KS_N - 1 - i] = (int16_t)k;
+        sum += k;
+    }
+    mean = sum / nb;
+    for (i = 0; i < nb; i++)
+        line[KS_N - 1 - i] = (int16_t)(line[KS_N - 1 - i] - mean);
+    v->ks_fr = fr;
+    v->ks_w = 0;
+    v->ks_r = (uint16_t)(KS_N - len);
+    v->ks_a1 = (float)line[KS_N - len - 1];
+    v->ks_x1 = v->ks_a1 + fr * ((float)line[KS_N - len - 2] - v->ks_a1);
+    /* the loop's gain: the amplitude's decay over a period (Decay's T60), over what the average (cos w/2) and the
+     * fraction's line take from the fundamental each time round; under 1, whatever (the top notes, a long Decay) */
+    loss = fm_cosf(0.5f * w) * fm_sqrtf(1.0f - 2.0f * fr * (1.0f - fr) * (1.0f - fm_cosf(w)));
+    v->ks_fb = fm_minf(fm_expf(p * fm_logf(v->adec)) / loss, 0.9995f);
+    v->ks_g = v->amp * (KS_GAIN / KS_Q) * fm_exp2f(0.34f * fm_minf((float)v->note - 48.0f, 36.0f) * (1.0f / 12.0f));
+#ifdef EN_HOST
+    en_ks_struck++;
+#endif
+}
+
 static void pluck_voice(int l, int n, int vel, int rep)   /* rep: a repeat, panned across from the note */
 {
     int i, best = 0;
@@ -1359,13 +1464,17 @@ static void pluck_voice(int l, int n, int vel, int rep)   /* rep: a repeat, pann
             lo = a, best = i;
     }
     v = &pluck[best];
-    if (v->on)
+    if (v->on) {
         midi(v->layer ? 0x83u : 0x81u, v->note, 0);
+#ifdef EN_HOST
+        if (fm_fabsf(v->last) > en_pl_steal)
+            en_pl_steal = fm_fabsf(v->last);
+#endif
+    }
     v->on = 1;
     v->note = (uint8_t)n;
     v->layer = (uint8_t)l;
-    v->voice = (uint8_t)(l ? ((unsigned)par[P_S2VOICE] < EN_NS2V ? par[P_S2VOICE] : 0)
-                           : ((unsigned)par[P_SVOICE] < EN_NSV ? par[P_SVOICE] : 0));
+    v->voice = (uint8_t)sv_of(l, par[l ? P_S2VOICE : P_SVOICE]);
     v->dt = mtof((float)n) * (1.0f / EN_SR);
     v->dt2 = v->dt * (v->voice == 1 ? 1.004f : v->voice == 4 ? 3.5f : 0.5f);   /* Moog's second saw, Glass's
                                                                                 * modulator, Sub's octave under */
@@ -1380,6 +1489,9 @@ static void pluck_voice(int l, int n, int vel, int rep)   /* rep: a repeat, pann
                                                   * octaves open) */
     en_pluck_cut[l] = v->cut;
     v->s1[0] = v->s1[1] = v->s2[0] = v->s2[1] = 0.0f;
+    v->last = 0.0f;
+    if (v->voice == SV_PLUCK)
+        ks_strike(v, ks_line[best]);
     p = ((l ? 0.0f : rep ? 0.35f : -0.25f) + 1.0f) * (FM_PI / 4.0f);
     v->gl = fm_cosf(p);
     v->gr = fm_sinf(p);
@@ -3638,6 +3750,7 @@ void en_init(void)
     cl_rng = sq_rng = 0x2545F491u;
     dr_rng = 0x6A09E667u;
     ld_rng = 0x3C6EF372u;
+    ks_rng = 0x6C078965u;                        /* (Pluck's bursts) */
     atm_rng = 0xBB67AE85u;
     ar_rng = 0x510E527Fu;
     s2o_rng = 0x9B05688Cu;
@@ -4576,7 +4689,40 @@ static float ms_lp1, ms_lp2;                     /* the side's lows (mono below 
  * bell (Glass) or a sine and its octave under (Sub), through two low-passes (24 dB, the second resonant) swept down
  * by the envelope from three and a half octaves over the cutoff */
 static inline float frac1(float x) { return x - (float)(int)x; }
-static void render_plucks(uint32_t n)
+/* (Pluck) a string's n samples (ks_strike): read a period back between two samples, averaged with the last read, the
+ * loop's gain, written in again; out at the velocity's level (att: the first ~2 ms eased in), into the mix and the
+ * sends as the other voices; amp follows Decay as theirs does (the string's fundamental with it, the partials over it
+ * sooner), so the quietest is taken for a new note, the meter moves and the note ends as theirs do */
+static void render_ks(pluck_t *v, int16_t *line, uint32_t n, float g, float es, float rv)
+{
+    const float adec = v->adec, fr = v->ks_fr, fb = v->ks_fb, kg = v->ks_g * g, gl = v->gl, gr = v->gr;
+    float amp = v->amp, att = v->att, a1 = v->ks_a1, x1 = v->ks_x1, y = 0.0f;
+    uint32_t w = v->ks_w, r = v->ks_r, j;
+    for (j = 0; j < n; j++) {
+        const float a = (float)line[r], x = a + fr * (a1 - a), s = 0.5f * (x + x1);
+        line[w] = (int16_t)(s * fb);             /* (toward 0: a string's last whisper is 0, never a denormal) */
+        a1 = a, x1 = x;
+        if (++w >= KS_N)
+            w = 0;
+        if (++r >= KS_N)
+            r = 0;
+        y = s * kg * att;
+        mixl[j] += y * gl;
+        mixr[j] += y * gr;
+        rsend[j] += y * rv;
+        esend[j] += y * es;
+        amp *= adec;
+        att += (1.0f - att) * 0.03f;
+    }
+    v->amp = amp, v->att = att, v->ks_a1 = a1, v->ks_x1 = x1, v->last = y;
+    v->ks_w = (uint16_t)w, v->ks_r = (uint16_t)r;
+    if (amp < 0.0008f) {
+        v->on = 0;
+        midi(v->layer ? 0x83u : 0x81u, v->note, 0);
+    }
+}
+
+static void render_plucks(uint32_t n)           /* (and Pluck's strings: render_ks) */
 {
     int i;
     const float g0 = seq_vol * 1.2f, g1 = seq2_vol * 1.2f;
@@ -4587,8 +4733,13 @@ static void render_plucks(uint32_t n)
                     /* (x2 since the echo report: the Sequences' repeats were barely heard against their dry) */
                     es = 1.2f * (sq_echo[v->layer] + fx_rep * (2.5f - sq_echo[v->layer]));   /* (Repeat: thrown in) */
         uint32_t j;
+        float y = 0.0f;
         if (!v->on)
             continue;
+        if (v->voice == SV_PLUCK) {              /* (a string: no oscillator, no filter) */
+            render_ks(v, ks_line[i], n, g, es, 0.35f * sq_rev[v->layer]);
+            continue;
+        }
         for (j = 0; j < n; j++) {
             float x, bp;
             if (!(j & 15u)) {
@@ -4612,7 +4763,7 @@ static void render_plucks(uint32_t n)
                 ph2 -= 1.0f;
             x = svf_lp(v->c1, v->s1, x, &bp);
             x = svf_lp(v->c2, v->s2, x, &bp);
-            x *= amp * att * g;
+            y = x *= amp * att * g;
             mixl[j] += x * v->gl;
             mixr[j] += x * v->gr;
             rsend[j] += x * 0.35f * sq_rev[v->layer];
@@ -4621,7 +4772,7 @@ static void render_plucks(uint32_t n)
             env *= edec;
             att += (1.0f - att) * 0.03f;
         }
-        v->amp = amp, v->env = env, v->att = att, v->ph = ph, v->ph2 = ph2;
+        v->amp = amp, v->env = env, v->att = att, v->ph = ph, v->ph2 = ph2, v->last = y;
         if (amp < 0.0008f) {
             v->on = 0;
             midi(v->layer ? 0x83u : 0x81u, v->note, 0);

@@ -13,7 +13,8 @@ slowly evolving textures, a strong sense of space. It plays itself from the mome
 can play with it: the white keys give you the melody, always in the piece's key.
 (It was called BERLIN while it was being built; the code keeps that name.)
 
-- a **Sequence** of up to 16 steps on a plucked analog-style voice (2600, Moog, Synthi, Pulse, Glass),
+- a **Sequence** of up to 16 steps on a plucked analog-style voice (2600, Moog, Synthi, Pulse, Glass) or a
+  plucked string (Pluck),
   its filter wandering slowly, its notes **repeated** at the echo's times (a dotted eighth by default, the
   classic Berlin School echo), so sparse notes fill in the spaces;
 - **Sequence 2**, often a step shorter, so the two drift apart and meet again, and with Motion an octave up or
@@ -104,7 +105,9 @@ the pieces system, the chord walk, the UI and the platform come from there. The 
 ("Effect Design, Part 1", JAES 1997), as in [FoMni-1](https://github.com/charlesvestal/fm1-fomni); Shimmer's
 octave shifter follows OCT UP and its SHIMMER in [Felucca](https://github.com/hugelton/Felucca)'s performance layer
 (Leo Kuroshita, Hügelton Instruments; also in [Skiff](https://github.com/illuminus5/skiff)); the granular
-cloud (Freeze) follows the design of CLOUD in [JIANT](https://github.com/juanjiant-bit/JIANT) (GPL-3.0); the Tape
+cloud (Freeze) follows the design of CLOUD in [JIANT](https://github.com/juanjiant-bit/JIANT) (GPL-3.0); Pluck's
+string follows `pluck.c` in M-VAVE's [fm1_open](https://github.com/m-vave/fm1_open) (after DaisySP's String,
+Electrosmith and Emilie Gillet; MIT); the Tape
 atmosphere is DUB-1's crackle, after Bahadirhan Kocer's "Using Resonators in Live". The way the sequence is
 played (a root accented, sparse notes, a dotted-eighth repeat as loud as the note, two delays) owes much to
 Synth Seeker's videos on Berlin School sequencing. The platform (hardware layer, USB, update loader, storage,

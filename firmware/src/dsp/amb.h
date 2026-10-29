@@ -176,9 +176,11 @@ void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2);
 /* the voices: each layer's sounds (ALGORITHM on the layer's page) */
 #define EN_NCV 5                         /* (BERLIN) the Drone's voices: Organ, Strings, Horn, Saws, Glass */
 #define EN_NBV 5
-#define EN_NSV 5                        /* (BERLIN) the Sequence's voices: 2600, Moog, Synthi, Pulse, Glass */
-#define EN_NS2V 6                       /* Sequence 2's: the same, and Sub */
-extern const char *const EN_SV_NAME[EN_NS2V];
+#define EN_NSV 6                        /* (BERLIN) the Sequence's voices: 2600, Moog, Synthi, Pulse, Glass, Pluck */
+#define EN_NS2V 7                       /* Sequence 2's: the same five, Sub, Pluck (the voices batch: Pluck appended to
+                                         * both, so every saved value keeps its voice; the Sequence's 5 is Pluck,
+                                         * Sequence 2's 5 Sub and 6 Pluck) */
+extern const char *const EN_SV_NAME[EN_NS2V];   /* all seven: 2600 .. Glass, Sub, Pluck (the engine's own numbers) */
 extern volatile uint8_t en_seq_len[2];          /* each sequence's return point as it plays (the performer's moves) */
 extern volatile int8_t en_s2oct_shift;          /* Sequence 2's octave away from its knob's (home): -1, 0, 1 (Motion's,
                                                  * at the section changes; the UI shows the knob as home + it) */
@@ -208,6 +210,10 @@ extern volatile uint8_t en_lead_dmax;
 extern volatile uint32_t en_shm_work;            /* (Shimmer) the shifter's samples worked so far (0 at rest) */
 extern volatile float en_shm_ret;                /* (Shimmer) its return's share, 1 (0: the dry's lift alone) */
 int en_state_ok(void);                           /* 1: the plate's and the shifter's state finite (no NaN, Inf) */
+extern volatile uint32_t en_ks_struck;           /* (Pluck) its strings struck so far */
+extern volatile float en_pl_steal;               /* the loudest a sounding sequence voice was (its last output sample)
+                                                  * when taken for a new note, since it was last set to 0 */
+int en_ks_ok(void);                              /* 1: Pluck's strings' float state finite, no denormals */
 int en_lead_cap(void);
 int en_lead_theme(int8_t *off, uint8_t *dur);
 int en_lead_played(void);                        /* (the theme the keys played: LD_PLAYED on slot 0, 1 or 0) */

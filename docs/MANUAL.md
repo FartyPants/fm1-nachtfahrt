@@ -184,9 +184,10 @@ moving darker, about -1 octave").
 
 **The Sequence** (ARP; MIDI channel 2) is the heart. Up to 16 steps in the scale, eighths or sixteenths,
 played on a plucked voice: **2600** (a saw), **Moog** (two saws a little apart), **Synthi** (a square),
-**Pulse** (a narrow pulse), **Glass** (an FM bell). Each goes through two low-passes, the second resonant,
-swept down by a short envelope. The root step is accented and the others quieter (Accent, on the Pattern
-page). Density decides how many of the steps sound, the least important dropping out first. Now and then
+**Pulse** (a narrow pulse), **Glass** (an FM bell), each through two low-passes, the second resonant,
+swept down by a short envelope; or **Pluck**, a plucked string (Karplus-Strong: a burst of noise ringing round a
+delay line a period long), whose Cutoff is how bright the pluck is and Decay how long the string rings. The
+root step is accented and the others quieter (Accent, on the Pattern page). Density decides how many of the steps sound, the least important dropping out first. Now and then
 (Evolve, Motion) a step changes, a note moves, an octave jumps, the sequence comes round early; it follows the Drone's chord
 (Transpose, on the Key page). Its cutoff wanders slowly over minutes, around the Cutoff you set (its Move page, below; its Width is the
 **Sweep**, also on PERFORM).
@@ -199,7 +200,7 @@ quarter (1/4.), so Repeat A, a dotted eighth, doesn't land on the echo's first r
 
 **Sequence 2** (SEQ; channel 4) is a second line, by default an octave down and a step shorter (7 against
 8), so the two drift apart and come back together. It has the same voices and **Sub** (a sine and its
-octave below). Chance thins it at random. Its **Intro** (Move page) opens its filter, from closed, over that many bars: in Rubycon
+octave below); on ALGORITHM, Pluck comes after Sub. Chance thins it at random. Its **Intro** (Move page) opens its filter, from closed, over that many bars: in Rubycon
 it comes out of the drone after the Sequence. Motion changes its steps and octave jumps but never its length:
 an 8 against a 7 stays 8 against 7. And with **Motion**, at a change of section, Sequence 2 may move an octave up
 or down from where its Octave knob is set (at the range's ends, the other way), and back at the next change of
@@ -580,6 +581,8 @@ must also share its source code.
 - The way the sequence is played (a short pluck, the root accented, sparse notes, a dotted-eighth repeat as
   loud as the note, two delays filling the spaces) owes much to Synth Seeker's videos on Berlin School
   sequencing.
+- Pluck's string (Karplus-Strong) follows `pluck.c` in M-VAVE's [fm1_open](https://github.com/m-vave/fm1_open), an
+  adaptation of DaisySP's String (Electrosmith, Emilie Gillet; MIT licence), written again for this engine.
 - The reverb is Jon Dattorro's plate ("Effect Design, Part 1", JAES 1997), by way of
   [FoMni-1](https://github.com/charlesvestal/fm1-fomni).
 - Shimmer's octave shifter (a rotating delay) follows OCT UP and its SHIMMER in **Felucca**'s performance layer

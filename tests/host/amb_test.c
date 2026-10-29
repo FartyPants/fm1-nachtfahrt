@@ -909,6 +909,113 @@ static void off_setup(int mem)
     en_play(1);
 }
 
+/* (the voices batch, item 2: Pluck) the Sequence alone on voice v (5: Pluck): every other layer, the echo, the plate,
+ * the cloud and the repeats out, the cutoff still (Sweep 0); one note a bar (step 0 of 16, degree deg) at Seq oct
+ * oct, root C, the chord's transposition off (Bed: the note is 48 + 12 oct + the degree's), at 120 */
+static void ks_solo(int v, int oct, int deg, int tune, int decay)
+{
+    int8_t d[16];
+    int k;
+    memset(d, 0, sizeof d);
+    d[0] = (int8_t)deg;
+    fresh();
+    en_set(P_CHORD, 0), en_set(P_LEAD, 0), en_set(P_SEQ2, 0), en_set(P_CRACKLE, 0);
+    en_set(P_ECHO, 0), en_set(P_REVERB, 0), en_set(P_CLOUD, 0), en_set(P_TAPA, 0), en_set(P_TAPB, 0);
+    en_set(P_SWEEP, 0), en_set(P_MI1, 0), en_set(P_TEMPO, 120), en_set(P_ROOT, 0), en_set(P_TRANS, 2);
+    en_set(P_EWIDTH, 0);                         /* (the dry's widening off: its copies' slow sway bends the pitch a
+                                                  * cent or two) */
+    en_set(P_SEQOCT, oct), en_set(P_TUNE, tune), en_set(P_DECAY, decay), en_set(P_SVOICE, v);
+    seq_write(16, 1u, d);
+    for (k = 0; k < 40; k++) {                   /* (stopped, until silent: a long plate's tail from the tests before,
+                                                  * en_init leaves the plate as it is, would sound under the note) */
+        peak = 0.0f;
+        run(0.5f);
+        if (peak < 1e-5f)
+            break;
+    }
+    en_play(1);
+}
+
+/* secs played, the output (mono, the two sides' mean) into x (at most max samples): how many */
+static int run_cap(float secs, float *x, int max)
+{
+    int blocks = (int)(secs * 44100.0f / 256.0f), b, j, k = 0;
+    for (b = 0; b < blocks; b++) {
+        en_render(buf, 256, 2048);
+        for (j = 0; j < 256; j++) {
+            const float y = 0.5f * ((float)buf[2 * j] + (float)buf[2 * j + 1]) / 8388608.0f;
+            if (y != y)
+                bad++;
+            if (k < max)
+                x[k++] = y;
+        }
+    }
+    return k;
+}
+
+/* the fundamental's frequency near f0 in x[0..n) (at most 1 s of it): the Hann-windowed DFT's peak, searched over
+ * +-60 cents in 1-cent steps, then parabolically on its log; 0 if the peak is at the search's edge (the note's
+ * envelope is real, so its partial's spectrum sits symmetric about the partial: the decay brings no bias; an
+ * autocorrelation's peak, tried first, was pulled ~40 cents by it on the low notes) */
+static float dft_pitch(const float *x, int n, float f0)
+{
+    static double hw[44100];
+    double m[121];
+    int c, i, best = 0;
+    if (n > 44100)
+        n = 44100;
+    for (i = 0; i < n; i++)
+        hw[i] = (0.5 - 0.5 * cos(6.283185307179586 * (double)i / (double)n)) * (double)x[i];
+    for (c = 0; c < 121; c++) {
+        const double w = 6.283185307179586 * (double)f0 * pow(2.0, (double)(c - 60) / 1200.0) / 44100.0;
+        const double cw = cos(w), sw = sin(w);
+        double re = 0.0, im = 0.0, pr = 1.0, pi = 0.0;
+        for (i = 0; i < n; i++) {
+            const double t = pr * cw - pi * sw;
+            re += hw[i] * pr, im -= hw[i] * pi;
+            pi = pr * sw + pi * cw, pr = t;
+        }
+        m[c] = log(re * re + im * im + 1e-300);
+        if (m[c] > m[best])
+            best = c;
+    }
+    if (best <= 0 || best >= 120)
+        return 0.0f;
+    {
+        const double den = m[best - 1] - 2.0 * m[best] + m[best + 1];
+        const double d = den < 0.0 ? 0.5 * (m[best - 1] - m[best + 1]) / den : 0.0;
+        return f0 * (float)pow(2.0, ((double)(best - 60) + d) / 1200.0);
+    }
+}
+
+/* the first sample of x[0..n) over 1e-4 (the note's start), or -1 */
+static int ks_onset(const float *x, int n)
+{
+    int i;
+    for (i = 0; i < n; i++)
+        if (fabsf(x[i]) > 1e-4f)
+            return i;
+    return -1;
+}
+
+/* the time (s) x takes from its loudest 10 ms to 40 dB under it, times 1.5: its T60 (0: never) */
+static float ks_t60(const float *x, int n)
+{
+    float e[400], top = 0.0f;
+    int w, i, nw = n / 441 < 400 ? n / 441 : 400, at = 0;
+    for (w = 0; w < nw; w++) {
+        e[w] = 0.0f;
+        for (i = 0; i < 441; i++)
+            e[w] += x[441 * w + i] * x[441 * w + i];
+        if (e[w] > top)
+            top = e[w], at = w;
+    }
+    for (w = at; w < nw; w++)
+        if (e[w] < top * 1e-4f)
+            return 1.5f * (float)(w - at) * 0.01f;
+    return 0.0f;
+}
+
 int main(void)
 {
     int pcs[4], n, i;
@@ -1009,6 +1116,18 @@ int main(void)
         CHECK(!strcmp(t, "Bed"), "transpose 2: %s", t);
         en_param_text(P_SVOICE, 0, t);
         CHECK(!strcmp(t, "2600"), "seq voice 0: %s", t);
+        /* (the voices batch, item 2) Pluck appended to both sequences' voices: the Sequence's sixth (after Glass),
+         * Sequence 2's seventh (after Sub, which keeps its 5: Rubycon and the saves keep their sound) */
+        en_param_text(P_SVOICE, 4, t);
+        CHECK(!strcmp(t, "Glass"), "seq voice 4: %s", t);
+        en_param_text(P_SVOICE, 5, t);
+        CHECK(!strcmp(t, "Pluck") && en_param_info(P_SVOICE)->hi == 5, "test_pluck_listed: seq voice 5 %s, hi %d", t,
+              en_param_info(P_SVOICE)->hi);
+        en_param_text(P_S2VOICE, 5, t);
+        CHECK(!strcmp(t, "Sub"), "seq2 voice 5: %s", t);
+        en_param_text(P_S2VOICE, 6, t);
+        CHECK(!strcmp(t, "Pluck") && en_param_info(P_S2VOICE)->hi == 6, "test_pluck_listed: seq2 voice 6 %s, hi %d", t,
+              en_param_info(P_S2VOICE)->hi);
         en_param_text(P_CATT, 40, t);
         CHECK(!strcmp(t, "40"), "attack 40, unsigned: %s", t);
         en_param_text(P_LOCT, 1, t);
@@ -1654,6 +1773,104 @@ int main(void)
                   "test_shimmer_selfosc: held over silence %.1f dB, 35 s on %.1f dB (it feeds itself)", (double)first,
                   (double)last);
         }
+    }
+
+    /* (the voices batch, item 2) Pluck: a plucked string (Karplus-Strong), the Sequence alone. (i) In tune from the
+     * lowest note either sequence reaches (24, the clamp, at Tune -50: ~31.8 Hz, the delay line's whole length) to the
+     * highest (108); (ii) Decay sets how long it rings, as it does the other voices' (their amplitude's T60, 1.5 x
+     * 80 .. 250 ms); (iii) about as loud as 2600 at the same knobs; (iv) after a long silence its state finite, no
+     * denormals; (v) a voice taken for a new note no louder than the oscillator voices' are, the notes paired */
+    {
+        static float x[2 * 44100];
+        static const int OCT[10] = {-2, -2, -1, -1, 1, 1, 2, 2, 2, 2}, DEG[10] = {0, 0, 0, 5, 0, 5, 0, 7, 14, 21},
+                         TUNE[10] = {-50, 0, 0, 0, 0, 50, 0, 0, 0, 0};
+        float t60[2], lv[5][2], st[2], sl[2][3];
+        int k, n, on;
+        for (k = 0; k < 10; k++) {
+            const uint32_t s0 = en_ks_struck;
+            float f, p, c;
+            int note;
+            ks_solo(5, OCT[k], DEG[k], TUNE[k], 100);
+            n = run_cap(1.2f, x, 2 * 44100);
+            on = ks_onset(x, n);
+            note = sq_n ? sq_note[0] : -1;
+            f = 440.0f * powf(2.0f, ((float)note - 69.0f) / 12.0f + (float)TUNE[k] / 1200.0f);
+            p = on >= 0 ? dft_pitch(x + on, n - on, f) : 0.0f;
+            c = p > 0.0f ? 1200.0f * log2f(p / f) : 999.0f;
+            printf("  pluck: note %d%+d cents (%.3f Hz): heard at %.3f Hz, %+.2f cents\n", note, TUNE[k], (double)f,
+                   (double)p, (double)c);
+            CHECK(en_ks_struck > s0 && fabsf(c) < 2.0f && !bad,
+                  "test_pluck_pitch: note %d%+d cents %+.2f cents off (struck %u, bad %d)", note, TUNE[k], (double)c,
+                  en_ks_struck - s0, bad);
+            if (!k)
+                CHECK(note == 24, "test_pluck_pitch: the lowest note %d (24)", note);
+        }
+        for (k = 0; k < 2; k++) {                /* (ii) Decay 0 and 100, note 48 */
+            const float nom = 1.5f * 0.08f * powf(2.0f, 0.0164f * (float)(k ? 100 : 0));
+            ks_solo(5, 0, 0, 0, k ? 100 : 0);
+            n = run_cap(1.2f, x, 2 * 44100);
+            on = ks_onset(x, n);
+            t60[k] = on >= 0 ? ks_t60(x + on, n - on) : 0.0f;
+            printf("  pluck: Decay %d: T60 %.3f s (the other voices' %.3f)\n", k ? 100 : 0, (double)t60[k], (double)nom);
+            CHECK(t60[k] > 0.6f * nom && t60[k] < 1.25f * nom, "test_pluck_decay: Decay %d T60 %.3f s (%.3f)",
+                  k ? 100 : 0, (double)t60[k], (double)nom);
+        }
+        CHECK(t60[1] > 2.3f * t60[0] && t60[1] < 4.0f * t60[0], "test_pluck_decay: 100 over 0 x%.2f (x3.1)",
+              (double)(t60[1] / fmaxf(t60[0], 1e-6f)));
+        for (k = 0; k < 5; k++) {                /* (iii) Pluck and 2600, notes 24 .. 72, the knobs' defaults */
+            int v;
+            for (v = 0; v < 2; v++) {
+                double e = 0.0;
+                int i;
+                ks_solo(v ? 0 : 5, k - 2, 0, 0, 35);
+                n = run_cap(1.0f, x, 2 * 44100);
+                on = ks_onset(x, n);
+                for (i = on; on >= 0 && i < on + 26460 && i < n; i++)
+                    e += (double)x[i] * (double)x[i];
+                lv[k][v] = (float)(10.0 * log10(e + 1e-30));
+            }
+            printf("  pluck: note %d, the note's energy: Pluck %.1f dB, 2600 %.1f dB\n", 48 + 12 * (k - 2),
+                   (double)lv[k][0], (double)lv[k][1]);
+            CHECK(fabsf(lv[k][0] - lv[k][1]) < 3.0f, "test_pluck_level: note %d Pluck %.1f dB, 2600 %.1f dB",
+                  48 + 12 * (k - 2), (double)lv[k][0], (double)lv[k][1]);
+        }
+        ks_solo(5, -2, 0, 0, 100);               /* (iv) the lowest notes, then 30 s of silence */
+        en_set(P_DENSITY, 100);
+        run(3.0f);
+        CHECK(en_ks_ok(), "test_pluck_state: not finite, or denormal, while playing");
+        en_play(0);
+        run(30.0f);
+        CHECK(en_ks_ok() && !bad, "test_pluck_state: after 30 s of silence not finite, or denormal (bad %d)", bad);
+        for (k = 0; k < 2; k++) {                /* (v) both sequences crowded: Pluck, then 2600 and Moog */
+            int c, nt, stuck = 0;
+            fresh();
+            for (c = 0; c < 16; c++)
+                memset(sounding[c], 0, sizeof sounding[c]);
+            en_set(P_SVOICE, k ? 0 : 5), en_set(P_S2VOICE, k ? 1 : 6);
+            en_set(P_SEQ, 70), en_set(P_SEQ2, 60), en_set(P_DENSITY, 100), en_set(P_TAPA, 100), en_set(P_TAPB, 100);
+            en_set(P_TAPAT, 0), en_set(P_TEMPO, 160), en_set(P_DECAY, 100), en_set(P_S2DEC, 100);
+            en_set(P_SEQOCT, 1);                 /* (up an octave: the top notes, Pluck's level lifted most) */
+            en_pl_steal = 0.0f;
+            en_play(1);
+            run_lvl(10.0f, &sl[k][0], &sl[k][1], &sl[k][2]);
+            st[k] = en_pl_steal;
+            en_play(0);
+            run(2.0f);
+            for (c = 1; c < 4; c += 2)
+                for (nt = 0; nt < 128; nt++)
+                    stuck += sounding[c][nt] != 0;
+            CHECK(!stuck && !bad, "test_pluck_notes (%s): %d notes not paired (bad %d)", k ? "2600" : "Pluck", stuck,
+                  bad);
+        }
+        printf("  pluck: a voice taken while sounding, its last sample at most: Pluck %.5f, 2600/Moog %.5f; the mix "
+               "%.1f dB, peak %.3f, over 0.9 %.5f (2600/Moog %.1f dB, %.3f, %.5f)\n", (double)st[0], (double)st[1],
+               (double)sl[0][0], (double)sl[0][1], (double)sl[0][2], (double)sl[1][0], (double)sl[1][1],
+               (double)sl[1][2]);
+        CHECK(fabsf(sl[0][0] - sl[1][0]) < 3.0f && sl[0][2] <= sl[1][2] + 0.001f,
+              "test_pluck_crowded: the mix %.1f dB (oscillators %.1f), over 0.9 %.5f (%.5f)", (double)sl[0][0],
+              (double)sl[1][0], (double)sl[0][2], (double)sl[1][2]);
+        CHECK(st[0] <= 1.5f * st[1] + 0.002f, "test_pluck_steal: a voice taken at %.5f (the oscillators' %.5f)",
+              (double)st[0], (double)st[1]);
     }
 
     /* (BERLIN) the black keys' Transpose: a written pattern played with Transpose held is the same pattern written three
