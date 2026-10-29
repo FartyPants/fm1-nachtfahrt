@@ -15,7 +15,7 @@ can play with it: the white keys give you the melody, always in the piece's key.
 
 ## VIDEO (click to play)
 
-[![NACHTFAHRT on the FM-1 — watch on YouTube](https://img.youtube.com/vi/OLXYHRydniw/maxresdefault.jpg)](https://youtu.be/OLXYHRydniw)
+[![NACHTFAHRT on the FM-1 — watch on YouTube](docs/img/site/video.jpg)](https://youtu.be/OLXYHRydniw)
 
 - a **Sequence** of up to 16 steps on a plucked analog-style voice (2600, Moog, Synthi, Pulse, Glass) or a
   plucked string (Pluck),
