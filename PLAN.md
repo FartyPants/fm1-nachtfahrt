@@ -22,7 +22,7 @@ Done, with the whole suite passing (`tests/run_tests.sh`, gate `tools/suite_gate
   (Intro) and takes the Bridge's move as an offset from its knob; a Move page (Width, Time, Rate, Intro) for each
   layer, the Sequence's Width being Sweep; the Arc page (Lead in, Bridge, Arc; its fourth knob the Lead's Memory);
   the motion shown (meter ticks, the dot on the brightness knob's ring, "MOVING DARKER, -n OCT", the screen reader).
-- **The black keys** play eleven effects while held (Take-off, Supernova, Twitter, Repeat, Swell, Freeze, Octave,
+- **The black keys** play eleven effects while held (Take-off, Supernova, Twitter, Repeat, Shimmer, Freeze, Octave,
   Return, Rise, Close, Transpose).
 - **PERFORM finished**: a muted Lead and a muted Drone are silent (MIDI too); Energy drives Repeat B; Wet moves
   every layer's echo send.
