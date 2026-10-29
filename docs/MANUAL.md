@@ -255,8 +255,8 @@ back where the theme does, and a new figure on the keys starts it all again from
 **The Atmosphere** (SAVE) is a background: **None**, **Wind** (a breath of soft, pink noise through a narrow
 band, swept slowly, louder as it climbs: gusts), **Surf** (waves of dark, deep noise, each brighter as it breaks),
 **Space** (chirps and bursts, far away), **Air**, **Tape** (a crackle ringing on the chord, DUB-1's), or **Rain**
-(soft drops, each a short ring at its own pitch, over a quiet hush). Wind and Surf are darker than they were, as
-loud as before.
+(soft drops, each a short ring at its own pitch, over a quiet hush). Wind and Surf are dark, their top end soft
+(the FM-1's speaker is bright).
 
 Its knobs keep their jobs whatever it is: Density, how busy (on Wind, how often its band turns; on Rain, how many
 drops); Drift, how quickly it changes (Wind's band, Surf's waves, Rain's showers coming and going); Colour, darker
