@@ -357,6 +357,106 @@ static void piece(int i)                         /* a piece, as the UI changes t
     en_regrow();
 }
 
+/* (Shimmer, fix round 2) a piece (Size and Reverb 100 if big) played 20 s; then 60 s from that one state three ways
+ * (two forked children streaming their output back): not held, held, and held with nothing returned (en_shm_ret 0).
+ * Out: the 5 s windows' most held over not held (dB), the held peak and share over 0.9, and the shimmer's own sound
+ * (held less held-with-nothing-returned: its climbing octaves) in dB re the held mix; then let go, 4 s against the
+ * same 4 s not held: its 2 s windows' most over not held (dB), its peak and not held's */
+typedef struct {
+    float over, pk, hot, own, rel_over, rel_pk, rel_npk;
+} shm_ab_t;
+static pid_t shm_child(int fx, float ret, int fd, float secs)
+{
+    pid_t pid = fork();
+    if (pid == 0) {
+        int b;
+        en_shm_ret = ret;
+        if (fx)
+            en_fx(1u << EN_FX_SHIMMER);
+        for (b = 0; b < (int)(secs * 44100.0f / 256.0f); b++) {
+            en_render(buf, 256, 2048);
+            if (write(fd, buf, sizeof buf) != (ssize_t)sizeof buf)
+                _exit(1);
+        }
+        _exit(0);
+    }
+    return pid;
+}
+static int shm_read(int fd, int32_t *to)
+{
+    size_t got = 0;
+    while (got < sizeof buf) {
+        const ssize_t r = read(fd, (char *)to + got, sizeof buf - got);
+        if (r <= 0)
+            return 0;
+        got += (size_t)r;
+    }
+    return 1;
+}
+static void shm_ab(int pc, int big, shm_ab_t *o)
+{
+    static int32_t nb[512], zb[512];
+    const int W = (int)(5.0f * 44100.0f / 256.0f);
+    int fn[2], fz[2], k, b, j, ok = 1;
+    pid_t p1, p2;
+    double sd = 0.0, sh = 0.0;
+    fresh();
+    piece(pc);
+    if (big)
+        en_set(P_SIZE, 100), en_set(P_REVERB, 100);
+    en_play(1);
+    run(20.0f);
+    o->over = -200.0f, o->pk = o->hot = 0.0f;
+    fflush(stdout);
+    if (pipe(fn) || pipe(fz))
+        return;
+    p1 = shm_child(0, 1.0f, fn[1], 64.1f);
+    p2 = shm_child(1, 0.0f, fz[1], 60.0f);
+    close(fn[1]);
+    close(fz[1]);
+    en_fx(1u << EN_FX_SHIMMER);
+    for (k = 0; k < 12 && ok; k++) {
+        double s = 0.0, sn = 0.0;
+        long h = 0;
+        for (b = 0; b < W && ok; b++) {
+            en_render(buf, 256, 2048);
+            bad += !en_state_ok();
+            ok = shm_read(fn[0], nb) && shm_read(fz[0], zb);
+            for (j = 0; j < 512; j++) {
+                const float x = (float)buf[j] / 8388608.0f, y = (float)zb[j] / 8388608.0f, z = (float)nb[j] / 8388608.0f;
+                s += (double)(x * x), sn += (double)(z * z), sh += (double)(x * x), sd += (double)((x - y) * (x - y));
+                o->pk = fmaxf(o->pk, fabsf(x));
+                h += fabsf(x) > 0.9f;
+            }
+        }
+        o->over = fmaxf(o->over, (float)(10.0 * log10((s + 1e-30) / (sn + 1e-30))));
+        o->hot = fmaxf(o->hot, (float)h / (float)(W * 512));
+    }
+    close(fz[0]);
+    waitpid(p2, 0, 0);
+    o->own = ok ? (float)(10.0 * log10(sd / (sh + 1e-30) + 1e-30)) : 0.0f;
+    en_fx(0);
+    o->rel_over = -200.0f, o->rel_pk = o->rel_npk = 0.0f;
+    for (k = 0; k < 2 && ok; k++) {
+        double s = 0.0, sn = 0.0;
+        for (b = 0; b < (int)(2.0f * 44100.0f / 256.0f) && ok; b++) {
+            en_render(buf, 256, 2048);
+            bad += !en_state_ok();
+            ok = shm_read(fn[0], nb);
+            for (j = 0; j < 512; j++) {
+                const float x = (float)buf[j] / 8388608.0f, z = (float)nb[j] / 8388608.0f;
+                s += (double)(x * x), sn += (double)(z * z);
+                o->rel_pk = fmaxf(o->rel_pk, fabsf(x)), o->rel_npk = fmaxf(o->rel_npk, fabsf(z));
+            }
+        }
+        o->rel_over = fmaxf(o->rel_over, (float)(10.0 * log10((s + 1e-30) / (sn + 1e-30))));
+    }
+    close(fn[0]);
+    waitpid(p1, 0, 0);
+    if (!ok)
+        bad++;
+}
+
 /* (BERLIN) the filter motion's parameters, by layer: the Drone, the Sequence, the Lead, Sequence 2, the Atmosphere */
 static const int FO_W[5] = {P_MW0, P_MW1, P_MW2, P_MW3, P_MW4}, FO_T[5] = {P_MT0, P_MT1, P_MT2, P_MT3, P_MT4},
                  FO_R[5] = {P_MR0, P_MR1, P_MR2, P_MR3, P_MR4}, FO_I[5] = {P_MI0, P_MI1, P_MI2, P_MI3, P_MI4};
@@ -1480,7 +1580,7 @@ int main(void)
                (double)bt[1], (double)stn, (double)sth, (double)str, (double)stt, w_rest, w_held, w_tail,
                en_shm_work - w0);
         CHECK(!bad && en_state_ok(), "test_shimmer: NaN or Inf in the plate or the shifter (%d blocks)", bad);
-        CHECK(rh > 0.003f && rh > 30.0f * rn, "test_shimmer_octave: the octave against the pitch, held %.2e, not %.2e",
+        CHECK(rh > 0.003f && rh > 10.0f * rn,   /* (fix round 2: the dry follows the piece's own send, less here) */ "test_shimmer_octave: the octave against the pitch, held %.2e, not %.2e",
               (double)rh, (double)rn);
         CHECK(bh[3] < bh[1] / 16.0f, "test_shimmer_cap: three octaves up %.2e, not well under one %.2e",
               (double)bh[3], (double)bh[1]);
@@ -1494,54 +1594,34 @@ int main(void)
               w_tail, en_shm_work - w0);
     }
 
-    /* (Shimmer, fix round 1: the review found the loop running away at Size >= ~70) held 60 s, the plate stays bounded:
-     * (i) Mirage as it is and (ii) Mirage at Size and Reverb 100: the level (5 s windows) never more than 6 dB over
-     * the same piece held with nothing returned (en_shm_ret 0: the dry's lift alone, SHM_DRY, the user's to rule;
-     * Mirage's is ~+13 dB over not held by itself), the peak under 0.995, almost nothing over 0.9; (iv) let go:
-     * nothing louder than while held; (iii) Size 100, held, the music stopped and muted: it dies away, it doesn't
-     * feed itself */
+    /* (Shimmer, fix rounds 1 and 2: the review found the loop running away at Size >= ~70; the dry now follows the
+     * piece's own send) held 60 s, against the same 60 s not held (forked from one state): (i) Mirage as it is, (ii)
+     * Mirage at Size and Reverb 100, Sunrain and Timewind: no 5 s window more than 6 dB over not held, the peak under
+     * 0.995, almost nothing over 0.9; the shimmer's own sound (its octaves: held less held with nothing returned) no
+     * quieter than -20 dB under the mix: heard (Swell wasn't); (iv) let go: nothing louder than while held; (iii) Size
+     * 100, held, the music stopped and muted: it dies away, it doesn't feed itself */
     {
-        int t, r, k;
-        for (t = 0; t < 2; t++) {
-            float lift = -200.0f;
-            for (r = 0; r < 2; r++) {
-                float db, pk, hot, ref = -200.0f, hmax = -200.0f, hpk = 0.0f, hhot = 0.0f, rmax = -200.0f, rpk = 0.0f;
-                fresh();
-                piece(6);
-                if (t)
-                    en_set(P_SIZE, 100), en_set(P_REVERB, 100);
-                en_shm_ret = (float)r;
-                en_play(1);
-                run(15.0f);
-                for (k = 0; k < 2; k++) {
-                    run_lvl(5.0f, &db, &pk, &hot);
-                    ref = fmaxf(ref, db);
-                }
-                en_fx(1u << EN_FX_SHIMMER);
-                for (k = 0; k < 12; k++) {
-                    run_lvl(5.0f, &db, &pk, &hot);
-                    hmax = fmaxf(hmax, db), hpk = fmaxf(hpk, pk), hhot = fmaxf(hhot, hot);
-                }
-                en_fx(0);
-                for (k = 0; k < 2; k++) {
-                    run_lvl(2.0f, &db, &pk, &hot);
-                    rmax = fmaxf(rmax, db), rpk = fmaxf(rpk, pk);
-                }
-                en_shm_ret = 1.0f;
-                if (!r) {
-                    lift = hmax;
-                    continue;
-                }
-                printf("  shimmer held 60 s, Mirage%s: not held %.1f dB, the dry's lift alone %.1f dB, held at most %.1f "
-                       "dB, peak %.3f, over 0.9 %.4f; let go %.1f dB, peak %.3f\n", t ? " at Size/Reverb 100" : "",
-                       (double)ref, (double)lift, (double)hmax, (double)hpk, (double)hhot, (double)rmax, (double)rpk);
-                CHECK(!bad && hmax < lift + 6.0f && hpk < 0.995f && hhot < 0.001f,
-                      "test_shimmer_bounded%s: held %.1f dB against %.1f (the lift alone), peak %.3f, over 0.9 %.4f "
-                      "(NaN blocks %d)", t ? "_size100" : "", (double)hmax, (double)lift, (double)hpk, (double)hhot, bad);
-                CHECK(rmax < hmax + 0.5f && rpk <= hpk * 1.05f,
-                      "test_shimmer_release_burst%s: let go %.1f dB peak %.3f, held %.1f dB peak %.3f",
-                      t ? "_size100" : "", (double)rmax, (double)rpk, (double)hmax, (double)hpk);
-            }
+        static const int PC[4] = {6, 6, 5, 0}, BIG[4] = {0, 1, 0, 0};
+        static const char *const NM[4] = {"Mirage", "Mirage at Size/Reverb 100", "Sunrain", "Timewind"};
+        int t, k;
+        for (t = 0; t < 4; t++) {
+            shm_ab_t o;
+            shm_ab(PC[t], BIG[t], &o);
+            printf("  shimmer held 60 s, %s: at most %+.1f dB over not held, peak %.3f, over 0.9 %.4f; its own sound "
+                   "%.1f dB re the mix; let go %+.1f dB over not held, peak %.3f (not held %.3f)\n", NM[t],
+                   (double)o.over, (double)o.pk, (double)o.hot, (double)o.own, (double)o.rel_over, (double)o.rel_pk,
+                   (double)o.rel_npk);
+            CHECK(!bad && o.over < 6.0f && o.pk < 0.995f && o.hot < 0.001f,
+                  "test_shimmer_bounded (%s): %+.1f dB over not held, peak %.3f, over 0.9 %.4f (bad %d)", NM[t],
+                  (double)o.over, (double)o.pk, (double)o.hot, bad);
+            CHECK(o.own > -20.0f, "test_shimmer_heard (%s): its own sound %.1f dB under the mix", NM[t], (double)o.own);
+            /* (the level no more over not held than while held; the peak: the tail on the music's own peaks there,
+             * +1 dB at most) */
+            CHECK(o.rel_over <= fmaxf(o.over, 0.0f) + 0.5f && o.rel_pk <= fmaxf(o.pk, o.rel_npk) * 1.12f &&
+                      o.rel_pk < 0.995f,
+                  "test_shimmer_release_burst (%s): let go %+.1f dB over not held (held %+.1f), peak %.3f (held %.3f, "
+                  "not held %.3f)", NM[t], (double)o.rel_over, (double)o.over, (double)o.rel_pk, (double)o.pk,
+                  (double)o.rel_npk);
         }
         {
             float db, pk, hot, first = 0.0f, last = 0.0f;
