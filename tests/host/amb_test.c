@@ -2096,6 +2096,53 @@ int main(void)
             CHECK(k < 1 || top[k][0] <= top[k][1], "test_choir_warm: Colour %d over 4 kHz Choir %.1f dB, Strings %.1f dB",
                   25 * (k - 1), (double)top[k][0], (double)top[k][1]);
         }
+        {   /* (iii, review round 1) about as loud as Strings at every corner of Reso and Colour (-50, 0, +50 each:
+             * narrower formants ring louder, a dark Colour leaves 'oo's F1 standing where Strings' saws are cut),
+             * and at Chord 100, Reso +50 and 0, Colour slammed end to end every half second, its peak no more
+             * than 2 dB over Strings' */
+            static const int RS[3] = {-50, 0, 50}, CL[3] = {-50, 0, 50};
+            float lr[3][3][2], pk[2][2], worst = 0.0f;
+            int r, c;
+            for (r = 0; r < 3; r++)
+                for (c = 0; c < 3; c++)
+                    for (v = 0; v < 2; v++) {
+                        double e = 0.0;
+                        ch_solo(v ? 1 : 5, CL[c]);   /* (over 8 s of chords changing every two bars: one chord
+                                                      * alone puts its partials near the formants or not, +-1..2 dB) */
+                        en_set(P_CRES, RS[r]), en_set(P_DRIFT, 0), en_set(P_ROOT, 5);
+                        run(1.5f);
+                        n = run_cap(8.0f, x, 13 * 44100);
+                        for (j = 0; j < n; j++)
+                            e += (double)x[j] * (double)x[j];
+                        lr[r][c][v] = (float)(10.0 * log10(e / (double)(n > 0 ? n : 1) + 1e-30));
+                    }
+            for (r = 0; r < 3; r++) {
+                printf("  choir: Reso %+d, Colour -50 / 0 / +50: Choir over Strings %+.1f / %+.1f / %+.1f dB\n", RS[r],
+                       (double)(lr[r][0][0] - lr[r][0][1]), (double)(lr[r][1][0] - lr[r][1][1]),
+                       (double)(lr[r][2][0] - lr[r][2][1]));
+                for (c = 0; c < 3; c++)
+                    worst = fmaxf(worst, fabsf(lr[r][c][0] - lr[r][c][1]));
+            }
+            CHECK(worst <= 2.0f, "test_choir_level_corners: Choir %.1f dB from Strings at its worst corner (2)",
+                  (double)worst);
+            for (r = 0; r < 2; r++)
+                for (v = 0; v < 2; v++) {
+                    ch_solo(v ? 1 : 5, -50);
+                    en_set(P_CHORD, 100), en_set(P_CRES, r ? 0 : 50);
+                    run(1.5f);
+                    peak = 0.0f;
+                    for (k = 0; k < 12; k++) {
+                        en_set(P_CCOL, k & 1 ? -50 : 50);
+                        run(0.5f);
+                    }
+                    pk[r][v] = peak;
+                }
+            printf("  choir: Chord 100, Colour slammed: peak Choir %.3f / Strings %.3f (Reso +50), %.3f / %.3f (Reso 0)\n",
+                   (double)pk[0][0], (double)pk[0][1], (double)pk[1][0], (double)pk[1][1]);
+            CHECK(pk[0][0] <= 1.259f * pk[0][1] && pk[1][0] <= 1.259f * pk[1][1] && !bad,
+                  "test_choir_level_corners: Chord 100 peak %.3f / %.3f (Strings %.3f / %.3f, +2 dB)", (double)pk[0][0],
+                  (double)pk[1][0], (double)pk[0][1], (double)pk[1][1]);
+        }
         for (v = 1; v >= 0; v--) {               /* (v) a chord every two bars, quick swells, the vowel moving: 12 s */
             ch_solo(v ? 1 : 5, 0);               /* (fresh: the Drone's notes counted from 0) */
             en_set(P_DRIFT, 0), en_set(P_DREL, 0), en_set(P_MW0, 100), en_set(P_MR0, 100);

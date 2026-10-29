@@ -590,8 +590,8 @@ must also share its source code.
   sequencing.
 - The Drone's Choir (formants in cascade on its notes, its vowels moving) follows VOICE in **Felucca**
   (`eng_formant.c`, Leo Kuroshita, Hügelton Instruments, GPL-3.0), after D. H. Klatt's cascade formant
-  synthesizer (JASA, 1980); written again in floating point. Its vowels' formants are the men's means measured
-  by Hillenbrand, Getty, Clark and Wheeler (JASA, 1995).
+  synthesizer (JASA, 1980); written again in floating point. Its vowels' formants are Felucca's table (after the
+  men's means measured by Hillenbrand, Getty, Clark and Wheeler, JASA, 1995).
 - Pluck's string (Karplus-Strong) follows `pluck.c` in M-VAVE's [fm1_open](https://github.com/m-vave/fm1_open), an
   adaptation of DaisySP's String (Electrosmith, Emilie Gillet; MIT licence), written again for this engine.
 - The reverb is Jon Dattorro's plate ("Effect Design, Part 1", JAES 1997), by way of

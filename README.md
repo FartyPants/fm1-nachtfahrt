@@ -106,7 +106,7 @@ the pieces system, the chord walk, the UI and the platform come from there. The 
 ("Effect Design, Part 1", JAES 1997), as in [FoMni-1](https://github.com/charlesvestal/fm1-fomni); Shimmer's
 octave shifter follows OCT UP and its SHIMMER in [Felucca](https://github.com/hugelton/Felucca)'s performance layer
 (Leo Kuroshita, Hügelton Instruments; also in [Skiff](https://github.com/illuminus5/skiff)); the Drone's Choir
-follows VOICE in Felucca (`eng_formant.c`, GPL-3.0; Klatt's cascade, Hillenbrand et al.'s vowels); the granular
+follows VOICE in Felucca (`eng_formant.c`, GPL-3.0; Klatt's cascade; its vowel table, after Hillenbrand et al.); the granular
 cloud (Freeze) follows the design of CLOUD in [JIANT](https://github.com/juanjiant-bit/JIANT) (GPL-3.0); Pluck's
 string follows `pluck.c` in M-VAVE's [fm1_open](https://github.com/m-vave/fm1_open) (after DaisySP's String,
 Electrosmith and Emilie Gillet; MIT); the Tape
