@@ -51,7 +51,7 @@ SDK_SHA256 = {
     "cfg/eq_cfg_hw.bin": "41167491bffed4651750719c973d2758adeb9021a5670d02d6a53c85ed80ea7d",
 }
 
-PRODUCT = "FM-1_800"                # package identity; release builds are FM-1_8XXYYZZ (see main)
+PRODUCT = "FM-1_197000000"          # package identity; release builds are FM-1_197XXYYZZ (see main)
 VERSION = None                      # FELUCCA_VERSION for release builds (default: firmware/src/ui.c)
 
 
@@ -344,18 +344,19 @@ def mmio_check():
 def main():
     global PRODUCT, VERSION
     ap = argparse.ArgumentParser()
-    ap.add_argument("--release", metavar="X.Y[.Z]", help="release build: identity FM-1_8XXYYZZ, version string X.Y[.Z]")
+    ap.add_argument("--release", metavar="X.Y[.Z]", help="release build: identity FM-1_197XXYYZZ, version string X.Y[.Z]")
     ap.add_argument("--sdk", type=Path, help="JieLi AC79 SDK checkout (default: $AC79_SDK)")
     a = ap.parse_args()
     name = "amb.fwsc"
     if a.release:
-        # identity FM-1_8 + major, minor, patch as two digits each (1.0 -> FM-1_8010000): FM-1 is the
-        # model the update tools match on; the number is ours (AMB-1 is FM-1_7..., X0X FM-1_9...). Digits only after the
-        # underscore, as the tools parse it.
+        # identity FM-1_197 ("197x") + major, minor, patch as two digits each (1.0 -> FM-1_197010000): FM-1 is the
+        # model the update tools match on; the number is ours. Nine digits: no other firmware in The Firmware Hub's
+        # catalogue matches it (checked 2026-10-28: FM-1_8... was DUB-1's and others', and every 3-8 digit identity
+        # matches catch-all patterns). Digits only after the underscore, as the tools parse it.
         m = re.fullmatch(r"(\d{1,2})\.(\d{1,2})(?:\.(\d{1,2}))?(-[A-Za-z0-9]+)?", a.release)
         if not m:
             raise SystemExit(f"--release {a.release}: use X.Y[.Z][-suffix], up to two digits each")
-        PRODUCT = "FM-1_8%02d%02d%02d" % (int(m[1]), int(m[2]), int(m[3] or 0))
+        PRODUCT = "FM-1_197%02d%02d%02d" % (int(m[1]), int(m[2]), int(m[3] or 0))
         VERSION = a.release.upper()
         name = f"nachtfahrt-{a.release}.fwsc"
     fm1pkg_make.SDK = a.sdk
