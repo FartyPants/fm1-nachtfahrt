@@ -76,7 +76,7 @@ const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PAR
  * Keys and tempos are starting points (spec 6: from analysis sites, to tune by ear); the Lead is dreamy in all of them
  * (its reverb and echo 90, the defaults: the user); an Atmosphere only where it suits, of the four the user likes.
  * (Voices: the Sequence's 2600 Moog Synthi Pulse Glass Pluck (0..5), Sequence 2's the five, Sub, Pluck (0..6);
- *  the Drone's Organ Strings Horn Saws Glass; the Lead's Odyssey Mini Flute Theremin Synthi. Modes: 0 Ionian,
+ *  the Drone's Organ Strings Horn Saws Glass Choir; the Lead's Odyssey Mini Flute Theremin Synthi. Modes: 0 Ionian,
  *  1 Dorian, 2 Phrygian, 5 Aeolian. Repeat times: 1/8 1/8. 1/4 1/4. 1/2 1 bar. Drift: 2 4 8 16 32 64 bars, Hold.
  *  Play: the walk Home, Wander, Free. Grid: 8ths, 16ths. Atmosphere: None Wind Surf Space Air Tape. The moves (filter motion spec 9): MW/MT/MR/MI a layer's
  *  Width, Time, Rate and Intro in bars (0 Drone, 1 Sequence, 2 Lead, 3 Sequence 2, 4 Atmosphere; the Sequence's Width
@@ -184,8 +184,9 @@ void en_piece(int i, int16_t *par, uint16_t *pool)
     *pool = EN_MODE_POOL[par[P_MODE]];
 }
 
-const char *const EN_CV_NAME[EN_NCV] = {"Organ", "Strings", "Horn", "Saws", "Glass"};   /* (BERLIN: the Drone's; the voices
-                                                 * batch: Horn was Choir, its place kept: pieces and saves sound the same) */
+const char *const EN_CV_NAME[EN_NCV] = {"Organ", "Strings", "Horn", "Saws", "Glass", "Choir"};   /* (BERLIN: the Drone's;
+                                                 * the voices batch: Horn was Choir, its place kept; the formant Choir
+                                                 * appended: pieces and saves sound the same) */
 const char *const EN_BV_NAME[EN_NBV] = {"Odyssey", "Mini", "Flute", "Theremin", "Synthi"};   /* (BERLIN: the Lead's) */
 const char *const EN_CQ_NAME[EN_NCQ] = {"Empty", "Major", "Minor", "Sus2", "Sus4", "Dim", "Aug"};
 const char *const EN_CX_NAME[EN_NCX] = {"Triad", "6", "7", "Maj7", "9", "11", "Add9"};
@@ -707,14 +708,17 @@ static int chord_slot = -1;                     /* the slot whose chord sounds (
 /* (BERLIN) the Drone: the chord held, its four notes and the root an octave under (a pedal), swelling in over Attack
  * and away over Release; a new chord swells in on the other bank while the old one dies. Its voices: Organ
  * (drawbars), Strings (a saw, into the ensemble), Horn (a saw through two fixed formants, an 'ah': was Choir),
- * Saws (two, apart), Glass (FM); the bus through the phaser. MIDI channel 1: a chord's notes on as it starts, off as it goes */
+ * Saws (two, apart), Glass (FM), Choir (two saws a note through three moving formants, a vowel, into the ensemble:
+ * choir(), below); the bus through the phaser. MIDI channel 1: a chord's notes on as it starts, off as it goes */
 #define NDR 5
 typedef struct {
     uint8_t note;
-    float ph, ph2, dt, gl, gr, s[2], f1[2], f2[2];
+    float ph, ph2, dt, gl, gr, s[2], f1[2], f2[2], vp;   /* (vp: Choir's slow drift, its phase) */
 } drv_t;
 static drv_t drv[2][NDR];
 static uint8_t dr_bank, dr_on[2];
+static uint8_t ch_live;                          /* (Choir, below) 0: from rest (its states cleared, its vowel where it
+                                                  * should be) */
 static float dr_lvl[2], dr_up = 0.0001f, dr_down = 0.00005f, ph_depth, ph_lfo, phz[2][6], ph_last[2];
 static uint32_t dr_rng = 0x6A09E667u;
 static float dr_pedal = 0.7f, dr_rev = 1.0f, dr_echo = 1.0f;   /* (the pedal's level; the sends, x1 at 50) */          /* (its own: the voices' phases leave the music's draws alone) */
@@ -753,6 +757,8 @@ static void drone_chord(void)                    /* the chord as voiced (stab[].
         v->dt = mtof((float)n) * (1.0f / EN_SR);
         v->ph = (float)(seq_rand(&dr_rng) >> 8) * (1.0f / 16777216.0f);
         v->ph2 = (float)(seq_rand(&dr_rng) >> 8) * (1.0f / 16777216.0f);
+        v->vp = v->ph;                           /* (Choir's drift from a place of its own: no new draw, so every
+                                                  * voice's phases stay as they were) */
         v->gl = fm_cosf(p);
         v->gr = fm_sinf(p);
         if (dr_heard())
@@ -3771,6 +3777,7 @@ void en_init(void)
     ld_reseed();
     dr_on[0] = dr_on[1] = dr_midi[0] = dr_midi[1] = 0;
     dr_lvl[0] = dr_lvl[1] = 0.0f;
+    ch_live = 0;                                 /* (Choir from rest) */
     plate_init();
     for (i = 0; i < TAPE_N; i++)
         tape[i] = 0;
@@ -4795,6 +4802,149 @@ static float ens_tap(float d)                    /* d samples back, between two 
                 b = (float)ens_buf[(ens_w - (uint32_t)i - 1u) & (ENS_N - 1u)];
     return (a + (b - a) * f) * (1.0f / 8192.0f);
 }
+
+/* (the voices batch, item 3) Choir, the Drone's formant choir. Each note is two saws a little apart (a section's
+ * voices), their pitches drifting slowly apart and back (a few cents, each note at its own rate, set once a chunk),
+ * panned into the bus as the other voices are. Then, on each side, the one filter every note shares: a one-pole tilt
+ * (a voice's source falls about 12 dB an octave, a saw's 6), three formant resonators in cascade, Colour's low-pass
+ * (as the other voices have it), and then the Strings' ensemble. The filters are linear and every note's are the
+ * same, so filtering the sum is the same as filtering each note; the cost doesn't grow with the notes (two banks in a
+ * crossfade cost what one does, but for the saws).
+ * - Resonators (Klatt 1980): y = a x + b y1 + c y2, r = exp(-pi B / fs), b = 2 r cos(2 pi F / fs), c = -r^2,
+ *   a = 1 - b - c (unity at DC: the fundamentals under F1 pass, the formants stand over them, nothing over F3).
+ *   Coefficients once a chunk.
+ * - The vowel: on a path from dark to bright, 'oo' 'oh' 'ah' 'eh' 'ee' (F1..F3: Hillenbrand et al. 1995, men's means;
+ *   bandwidths a little wider than one speaker's, for a section), between two of them by straight lines. Two vowels
+ *   per octave of the Drone's brightness: Colour (its middle 'ah', -25 'oo', +25 'ee') and the filter motion (the
+ *   Move page, Intro, Bridge, Rise and Close) move it, eased over about 0.1 s.
+ * - Resonance narrows the formants (bandwidth x2 .. x0.5) as well as raising the low-pass's peak, as for the others.
+ * After Felucca's VOICE (eng_formant.c, Leo Kuroshita, Hügelton Instruments, GPL-3.0), written again in floating
+ * point; no code taken */
+#define CV_CHOIR 5
+#define CH_TILT 0.0950f                          /* (the tilt's one-pole: 1 - exp(-2 pi 700 / fs), its corner 700 Hz) */
+#define CH_GAIN 0.42f                            /* (its level: about Strings' at the same Colour) */
+static const float CH_F[5][3] = {                /* 'oo' who'd, 'oh' hoed, 'ah' hod, 'eh' head, 'ee' heed (Hz) */
+    {378.0f, 997.0f, 2343.0f}, {497.0f, 910.0f, 2459.0f}, {768.0f, 1333.0f, 2522.0f}, {580.0f, 1799.0f, 2605.0f},
+    {342.0f, 2322.0f, 3000.0f}};
+static const float CH_B[5][3] = {                /* their bandwidths (Hz) */
+    {90.0f, 110.0f, 180.0f}, {100.0f, 110.0f, 180.0f}, {120.0f, 130.0f, 200.0f}, {100.0f, 140.0f, 200.0f},
+    {80.0f, 160.0f, 220.0f}};
+static float ch_p, ch_s[2][9];                   /* the vowel heard (0 'oo' .. 4 'ee'); each side's tilt, the three
+                                                  * resonators' y1 y2, the low-pass */
+#ifdef EN_HOST
+volatile float en_ch_vowel;
+volatile uint32_t en_ch_work;
+static float ch_rc[3][3];                        /* (the resonators' coefficients as last set) */
+float en_ch_gain(float hz)                       /* (host tests) the three resonators' gain at hz, as last set */
+{
+    const float w = FM_TWO_PI * hz * (1.0f / EN_SR), cw = fm_cosf(w), sw = fm_sinf(w), c2 = fm_cosf(2.0f * w),
+                s2 = fm_sinf(2.0f * w);
+    float g = 1.0f;
+    int f;
+    for (f = 0; f < 3; f++) {
+        const float re = 1.0f - ch_rc[f][1] * cw - ch_rc[f][2] * c2, im = ch_rc[f][1] * sw + ch_rc[f][2] * s2;
+        g *= ch_rc[f][0] * fm_rsqrtf(re * re + im * im + 1e-30f);
+    }
+    return g;
+}
+int en_ch_ok(void)                               /* (host tests) Choir's float state: finite, no denormals */
+{
+    int i, k, ok = ks_fine(ch_p);
+    for (i = 0; i < 2; i++)
+        for (k = 0; k < 9; k++)
+            ok &= ks_fine(ch_s[i][k]);
+    return ok;
+}
+#endif
+static void choir(uint32_t n, float g, const float *c)   /* both banks into drl/drr (cleared), then the shared filter */
+{
+    const float want = fm_clampf(2.0f + 2.0f * (2.0f * rel(P_CCOL) + fo[FO_DRONE]), 0.0f, 4.0f),
+                bws = fm_exp2f(-rel(P_CRES));
+    float rc[3][3];
+    uint32_t j;
+    int b, i, f;
+    if (!ch_live) {
+        memset(ch_s, 0, sizeof ch_s);
+        ch_p = want;
+        ch_live = 1;
+    } else {
+        ch_p += (want - ch_p) * fm_minf((float)n * (1.0f / 4410.0f), 1.0f);
+    }
+    {
+        const int v0 = ch_p >= 3.0f ? 3 : (int)ch_p;
+        const float fr = ch_p - (float)v0;
+        for (f = 0; f < 3; f++) {
+            const float hz = CH_F[v0][f] + fr * (CH_F[v0 + 1][f] - CH_F[v0][f]),
+                        bw = (CH_B[v0][f] + fr * (CH_B[v0 + 1][f] - CH_B[v0][f])) * bws,
+                        r = fm_expf(-FM_PI * bw * (1.0f / EN_SR));
+            rc[f][1] = 2.0f * r * fm_cosf(FM_TWO_PI * hz * (1.0f / EN_SR));
+            rc[f][2] = -r * r;
+            rc[f][0] = 1.0f - rc[f][1] - rc[f][2];
+#ifdef EN_HOST
+            ch_rc[f][0] = rc[f][0], ch_rc[f][1] = rc[f][1], ch_rc[f][2] = rc[f][2];
+#endif
+        }
+    }
+    for (b = 0; b < 2; b++) {
+        float lvl = dr_lvl[b], d1[NDR], d2[NDR], gl[NDR], gr[NDR];
+        const float to = dr_on[b] ? 1.0f : 0.0f;
+        if (!dr_on[b] && lvl <= 0.0f)
+            continue;
+        for (i = 0; i < NDR; i++) {              /* (once a chunk: the two saws' rates, drifting; the pans, the pedal's
+                                                  * level in them) */
+            drv_t *v = &drv[b][i];
+            const float w = 0.0025f * sine(v->vp), pg = i == EN_NPAD ? dr_pedal : 1.0f;
+            d1[i] = v->dt * (1.0f + w);
+            d2[i] = v->dt * (1.0045f - w);
+            v->vp += (float)n * ((0.11f + 0.037f * (float)i) * (1.0f / EN_SR));
+            if (v->vp >= 1.0f)
+                v->vp -= 1.0f;
+            gl[i] = v->gl * pg;
+            gr[i] = v->gr * pg;
+        }
+        for (j = 0; j < n; j++) {
+            float a, l = 0.0f, r = 0.0f;
+            lvl = to > lvl ? fm_minf(lvl + dr_up, 1.0f) : fm_maxf(lvl - dr_down, 0.0f);
+            a = lvl * lvl * g;
+            for (i = 0; i < NDR; i++) {
+                drv_t *v = &drv[b][i];
+                const float x = blep_saw(v->ph, d1[i]) + blep_saw(v->ph2, d2[i]);
+                v->ph += d1[i];
+                if (v->ph >= 1.0f)
+                    v->ph -= 1.0f;
+                v->ph2 += d2[i];
+                if (v->ph2 >= 1.0f)
+                    v->ph2 -= 1.0f;
+                l += x * gl[i];
+                r += x * gr[i];
+            }
+            drl[j] += a * l;
+            drr[j] += a * r;
+        }
+        dr_lvl[b] = lvl;
+    }
+    for (b = 0; b < 2; b++) {                    /* each side: the tilt, F1 -> F2 -> F3, the low-pass */
+        float *s = ch_s[b], *d = b ? drr : drl;
+        for (j = 0; j < n; j++) {
+            float y, x, bp;
+            s[0] += CH_TILT * (d[j] - s[0]);
+            y = rc[0][0] * s[0] + rc[0][1] * s[1] + rc[0][2] * s[2];
+            s[2] = s[1], s[1] = y;
+            x = rc[1][0] * y + rc[1][1] * s[3] + rc[1][2] * s[4];
+            s[4] = s[3], s[3] = x;
+            y = rc[2][0] * x + rc[2][1] * s[5] + rc[2][2] * s[6];
+            s[6] = s[5], s[5] = y;
+            d[j] = CH_GAIN * svf_lp(c, s + 7, y, &bp);
+        }
+        for (i = 0; i < 9; i++)                  /* (at level 0 the states die away: never into denormals) */
+            s[i] = fm_flush(s[i]);
+    }
+#ifdef EN_HOST
+    en_ch_vowel = ch_p;
+    en_ch_work += n;
+#endif
+}
+
 static void render_drone(uint32_t n)
 {
     const int cv = cvoice < EN_NCV ? cvoice : 0;
@@ -4802,14 +4952,20 @@ static void render_drone(uint32_t n)
     float c[4], cf1[4], cf2[4];
     uint32_t j;
     int b, i;
-    if (!dr_on[0] && !dr_on[1] && dr_lvl[0] <= 0.0f && dr_lvl[1] <= 0.0f)
+    if (!dr_on[0] && !dr_on[1] && dr_lvl[0] <= 0.0f && dr_lvl[1] <= 0.0f) {
+        ch_live = 0;                             /* (Choir from rest when it next sounds) */
         return;
+    }
     svf_coefs(c, fc, k);
     svf_coefs(cf1, 650.0f, 0.3f);                /* (Horn: two formants, an 'ah') */
     svf_coefs(cf2, 1080.0f, 0.35f);
     for (j = 0; j < n; j++)
         drl[j] = drr[j] = 0.0f;
-    for (b = 0; b < 2; b++) {
+    if (cv == CV_CHOIR)
+        choir(n, g, c);
+    else
+        ch_live = 0;
+    for (b = 0; b < 2 && cv != CV_CHOIR; b++) {
         float lvl = dr_lvl[b];
         const float to = dr_on[b] ? 1.0f : 0.0f;
         if (!dr_on[b] && lvl <= 0.0f)
@@ -4847,7 +5003,7 @@ static void render_drone(uint32_t n)
         }
         dr_lvl[b] = lvl;
     }
-    if (cv == 1) {                               /* Strings: the ensemble */
+    if (cv == 1 || cv == CV_CHOIR) {             /* Strings and Choir: the ensemble */
         const float r = 0.6f * (1.0f / EN_SR), r2 = 6.0f * (1.0f / EN_SR);
         for (j = 0; j < n; j++) {
             float m = 0.5f * (drl[j] + drr[j]), t0, t1, t2;

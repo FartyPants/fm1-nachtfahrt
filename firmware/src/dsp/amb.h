@@ -174,7 +174,7 @@ void en_render(int32_t *out_lr, uint32_t n, uint32_t gain_q12);
 void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2);
 
 /* the voices: each layer's sounds (ALGORITHM on the layer's page) */
-#define EN_NCV 5                         /* (BERLIN) the Drone's voices: Organ, Strings, Horn, Saws, Glass */
+#define EN_NCV 6                         /* (BERLIN) the Drone's voices: Organ, Strings, Horn, Saws, Glass, Choir */
 #define EN_NBV 5
 #define EN_NSV 6                        /* (BERLIN) the Sequence's voices: 2600, Moog, Synthi, Pulse, Glass, Pluck */
 #define EN_NS2V 7                       /* Sequence 2's: the same five, Sub, Pluck (the voices batch: Pluck appended to
@@ -214,6 +214,10 @@ extern volatile uint32_t en_ks_struck;           /* (Pluck) its strings struck s
 extern volatile float en_pl_steal;               /* the loudest a sounding sequence voice was (its last output sample)
                                                   * when taken for a new note, since it was last set to 0 */
 int en_ks_ok(void);                              /* 1: Pluck's strings' float state finite, no denormals */
+extern volatile float en_ch_vowel;               /* (Choir) the vowel heard: 0 'oo', 1 'oh', 2 'ah', 3 'eh', 4 'ee' */
+extern volatile uint32_t en_ch_work;             /* (Choir) its samples rendered so far */
+int en_ch_ok(void);                              /* 1: Choir's float state finite, no denormals */
+float en_ch_gain(float hz);                      /* (Choir) its three formants' gain at hz, as last set */
 int en_lead_cap(void);
 int en_lead_theme(int8_t *off, uint8_t *dur);
 int en_lead_played(void);                        /* (the theme the keys played: LD_PLAYED on slot 0, 1 or 0) */

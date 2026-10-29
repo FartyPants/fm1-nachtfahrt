@@ -570,6 +570,8 @@ static int expect(const char *what, const char *val)
         got = (int)(lit_keys >> (atoi(what + 6) % 27) & 1u);
     else if (!strcmp(what, "ksstruck"))           /* (Pluck) its strings struck so far */
         got = (int)en_ks_struck;
+    else if (!strcmp(what, "chwork"))             /* (Choir) its samples rendered so far */
+        got = (int)en_ch_work;
     else if (!strcmp(what, "s2shift"))            /* Sequence 2's octave away from home, Motion's (-1, 0, 1) */
         got = en_s2oct_shift;
     else if (!strcmp(what, "s2knob"))             /* Sequence 2's Octave knob as the screen shows it */

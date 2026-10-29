@@ -19,7 +19,8 @@ can play with it: the white keys give you the melody, always in the piece's key.
   classic Berlin School echo), so sparse notes fill in the spaces;
 - **Sequence 2**, often a step shorter, so the two drift apart and meet again, and with Motion an octave up or
   down now and then, for a section;
-- a **Drone**: a chord on two banks of voices (Organ, Strings, Horn, Saws, Glass) with a pedal under it, a
+- a **Drone**: a chord on two banks of voices (Organ, Strings, Horn, Saws, Glass, or a Choir whose vowel moves
+  with the Drone's filter) with a pedal under it, a
   phaser and a slow walk from chord to chord;
 - a **Lead**: one gliding voice (Odyssey, Mini, Flute, Theremin, Synthi) playing dreamy calls and answers deep in
   the reverb and the echo; it remembers its motifs and returns to the piece's theme (how much it keeps: **Memory**).
@@ -104,7 +105,8 @@ NACHTFAHRT is a fork of [DUB-1](https://github.com/sbegueria/fm1-dub), a fork of
 the pieces system, the chord walk, the UI and the platform come from there. The reverb is Jon Dattorro's plate
 ("Effect Design, Part 1", JAES 1997), as in [FoMni-1](https://github.com/charlesvestal/fm1-fomni); Shimmer's
 octave shifter follows OCT UP and its SHIMMER in [Felucca](https://github.com/hugelton/Felucca)'s performance layer
-(Leo Kuroshita, Hügelton Instruments; also in [Skiff](https://github.com/illuminus5/skiff)); the granular
+(Leo Kuroshita, Hügelton Instruments; also in [Skiff](https://github.com/illuminus5/skiff)); the Drone's Choir
+follows VOICE in Felucca (`eng_formant.c`, GPL-3.0; Klatt's cascade, Hillenbrand et al.'s vowels); the granular
 cloud (Freeze) follows the design of CLOUD in [JIANT](https://github.com/juanjiant-bit/JIANT) (GPL-3.0); Pluck's
 string follows `pluck.c` in M-VAVE's [fm1_open](https://github.com/m-vave/fm1_open) (after DaisySP's String,
 Electrosmith and Emilie Gillet; MIT); the Tape

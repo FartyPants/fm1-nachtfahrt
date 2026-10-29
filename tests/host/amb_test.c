@@ -1016,6 +1016,103 @@ static float ks_t60(const float *x, int n)
     return 0.0f;
 }
 
+/* (the voices batch, item 3: Choir) the Drone alone on voice v at Colour col: every other layer, the echo, the plate,
+ * the cloud, the repeats, the phaser and the master actions' motion out; the chord held (Drift Hold) on C, quick to
+ * swell (Attack 0), its filter's move still (Width 0, no Intro, no Bridge, no Arc) unless a test sets them after;
+ * stopped until silent first (a tail from the tests before), then playing */
+static void ch_solo(int v, int col)
+{
+    int k;
+    fresh();
+    for (k = 0; k < P_NPARAMS; k++)              /* (every knob at its default first: the chord, its voicing and the
+                                                  * sound the same whatever the tests before left) */
+        en_set(k, en_param_info(k)->def);
+    en_pool(EN_MODE_POOL[en_param_info(P_MODE)->def]);
+    en_set(P_SEQ, 0), en_set(P_LEAD, 0), en_set(P_SEQ2, 0), en_set(P_CRACKLE, 0);
+    en_set(P_ECHO, 0), en_set(P_REVERB, 0), en_set(P_CLOUD, 0), en_set(P_TAPA, 0), en_set(P_TAPB, 0);
+    en_set(P_PHASER, 0), en_set(P_MOTION, 0), en_set(P_EVOLVE, 0), en_set(P_DRIFT, 6), en_set(P_TEMPO, 120);
+    en_set(P_ROOT, 0), en_set(P_MW0, 0), en_set(P_MI0, 0), en_set(P_BRIDGE, 0), en_set(P_ARC, 0), en_set(P_EWIDTH, 0);
+    en_set(P_CATT, 0), en_set(P_CHORD, 80), en_set(P_CVOICE, v), en_set(P_CCOL, col);
+    en_regrow();
+    for (k = 0; k < 40; k++) {
+        peak = 0.0f;
+        run(0.5f);
+        if (peak < 1e-5f)
+            break;
+    }
+    en_play(1);
+}
+
+/* x[0..CH_FN) (Hann) to its spectrum's envelope: the mean power over a quarter octave about each of 200 .. ~4 kHz in
+ * 1/48-octave steps (ch_hz), dB, into env[0..CH_NE); *top: the share of the power above 4 kHz, dB */
+#define CH_FN 32768
+#define CH_NE 208
+static float ch_hz(int k) { return 200.0f * powf(2.0f, (float)k / 48.0f); }
+static int ch_at(float f) { return (int)(48.0f * log2f(f / 200.0f) + 0.5f); }   /* (f's step) */
+static void ch_env(const float *x, float *env, float *top)
+{
+    static double re[CH_FN], im[CH_FN], pw[CH_FN / 2];
+    double all = 0.0, hi = 0.0;
+    int i, j, k, m;
+    for (i = 0; i < CH_FN; i++)
+        re[i] = (0.5 - 0.5 * cos(6.283185307179586 * (double)i / (double)CH_FN)) * (double)x[i], im[i] = 0.0;
+    for (i = 1, j = 0; i < CH_FN; i++) {         /* (radix 2, in place) */
+        int bit = CH_FN >> 1;
+        for (; j & bit; bit >>= 1)
+            j ^= bit;
+        j ^= bit;
+        if (i < j) {
+            double t = re[i];
+            re[i] = re[j], re[j] = t;
+        }
+    }
+    for (m = 2; m <= CH_FN; m <<= 1)
+        for (i = 0; i < m / 2; i++) {
+            const double w = -6.283185307179586 * (double)i / (double)m, c = cos(w), s = sin(w);
+            for (k = i; k < CH_FN; k += m) {
+                const double tr = c * re[k + m / 2] - s * im[k + m / 2], ti = s * re[k + m / 2] + c * im[k + m / 2];
+                re[k + m / 2] = re[k] - tr, im[k + m / 2] = im[k] - ti;
+                re[k] += tr, im[k] += ti;
+            }
+        }
+    for (i = 1; i < CH_FN / 2; i++) {
+        pw[i] = re[i] * re[i] + im[i] * im[i];
+        all += pw[i];
+        if ((double)i * 44100.0 / CH_FN > 4000.0)
+            hi += pw[i];
+    }
+    *top = (float)(10.0 * log10(hi / (all + 1e-300) + 1e-300));
+    for (k = 0; k < CH_NE; k++) {
+        const int b0 = (int)(ch_hz(k) * 0.917f * CH_FN / 44100.0f), b1 = (int)(ch_hz(k) * 1.091f * CH_FN / 44100.0f);
+        double s = 0.0;
+        for (i = b0; i <= b1; i++)
+            s += pw[i];
+        env[k] = (float)(10.0 * log10(s / (double)(b1 - b0 + 1) + 1e-300));
+    }
+}
+
+/* a click's mark: the largest step between two samples in x[0..n) over the 99th percentile of each 64 samples'
+ * largest step (a chord's own peaks, two banks summed in a crossfade, stay near it, ~1.3 .. 1.6 for every voice; a
+ * click, a step the size of the signal, stands well out; the median, tried first, rated every voice ~3 .. 4 with no
+ * click: it measured the waveform's crest) */
+static int ch_cmp(const void *a, const void *b) { return *(const float *)a < *(const float *)b ? -1 : *(const float *)a > *(const float *)b; }
+static float ch_click(const float *x, int n)
+{
+    static float w[13 * 44100 / 64 + 1];
+    float top = 0.0f;
+    int i, nw = 0;
+    for (i = 64; i + 64 <= n; i += 64) {
+        float m = 0.0f;
+        int j;
+        for (j = i; j < i + 64; j++)
+            m = fmaxf(m, fabsf(x[j] - x[j - 1]));
+        top = fmaxf(top, m);
+        w[nw++] = m;
+    }
+    qsort(w, (size_t)nw, sizeof w[0], ch_cmp);
+    return nw ? top / fmaxf(w[nw * 99 / 100], 1e-12f) : 0.0f;
+}
+
 int main(void)
 {
     int pcs[4], n, i;
@@ -1104,6 +1201,13 @@ int main(void)
         CHECK(!strcmp(t, "Strings"), "ctone 1: %s", t);
         en_param_text(P_CVOICE, 2, t);           /* (the voices batch: the saw through two formants is a Horn now) */
         CHECK(!strcmp(t, "Horn"), "ctone 2: %s", t);
+        /* (the voices batch, item 3) Choir appended as the Drone's sixth voice (after Glass): every voice before it
+         * keeps its number, so the pieces and the saves keep their sound */
+        en_param_text(P_CVOICE, 4, t);
+        CHECK(!strcmp(t, "Glass"), "ctone 4: %s", t);
+        en_param_text(P_CVOICE, 5, t);
+        CHECK(!strcmp(t, "Choir") && en_param_info(P_CVOICE)->hi == 5, "test_choir_listed: drone voice 5 %s, hi %d", t,
+              en_param_info(P_CVOICE)->hi);
         en_param_text(P_TAPAT, 1, t);
         CHECK(!strcmp(t, "1/8."), "repeat A time 1: %s", t);
         en_param_text(P_TAPBT, 2, t);
@@ -1873,6 +1977,156 @@ int main(void)
               (double)sl[1][0], (double)sl[0][2], (double)sl[1][2]);
         CHECK(st[0] <= 1.5f * st[1] + 0.002f, "test_pluck_steal: a voice taken at %.5f (the oscillators' %.5f)",
               (double)st[0], (double)st[1]);
+    }
+
+    /* (the voices batch, item 3) Choir: the Drone's formant choir, the Drone alone, about two and a half minutes of
+     * music. (i) Its spectrum peaks at the vowel's first two formants (Hillenbrand et al. 1995, men: 'oo' 378 / 997 Hz
+     * at Colour -25, 'ah' 768 / 1333 Hz at Colour 0, the move still), and the vowel is where Colour puts it; (ii) the
+     * Move page moves the vowel, slowly, with the Drone's filter motion; (iii) about as loud as Strings at the same
+     * Colour; (iv) no brighter on top (over 4 kHz) than Strings; (v) a chord's crossfade, the vowel moving, doesn't
+     * click; (vi) its state finite, no denormals, after half a minute at level 0 and half a minute stopped */
+    {
+        static float x[13 * 44100], env[CH_NE];
+        static const float F[5][2] = {{378.0f, 997.0f}, {497.0f, 910.0f}, {768.0f, 1333.0f}, {580.0f, 1799.0f},
+                                      {342.0f, 2322.0f}};
+        float lv[4][2], top[4][2], ck[3], at, pr, ct[2][2];
+        int k, n, v, j;
+        for (k = 0; k < 2; k++) {                /* (i) 'oo', then 'ah' */
+            const int vw = k ? 2 : 0;
+            static float env2[CH_NE], h[CH_NE];
+            float g[3], best = 0.0f;
+            int i;
+            ch_solo(1, k ? 0 : -25);             /* (the same chord on Strings: the same notes, its partials where the
+                                                  * Choir's are; what the Choir has over it is its formants) */
+            run(1.5f);
+            run_cap(0.8f, x, 13 * 44100);
+            ch_env(x, env2, &at);
+            ch_solo(5, k ? 0 : -25);
+            run(1.5f);
+            n = run_cap(0.8f, x, 13 * 44100);
+            ch_env(x, env, &at);
+            /* (the balance the vowel sets: 'ah's F1 over 'oo's, 'ah's F2 over 'oo's; a voice without formants moves
+             * them only by Colour's low-pass, a few dB) */
+            ct[k][0] = env[ch_at(768.0f)] - env[ch_at(378.0f)];
+            ct[k][1] = env[ch_at(1333.0f)] - env[ch_at(997.0f)];
+            for (i = 0; i < CH_NE; i++)
+                h[i] = env[i] - env2[i];
+            {                                    /* (over Strings, the most within +-10% of F1 and of F2 against the
+                                                  * median over 200 Hz .. 4 kHz: where the Choir puts its energy) */
+                static float hs[CH_NE];
+                float mx;
+                for (i = 0; i < CH_NE; i++)
+                    hs[i] = h[i];
+                qsort(hs, CH_NE, sizeof hs[0], ch_cmp);
+                for (j = 0; j < 2; j++) {
+                    mx = -999.0f;
+                    for (i = ch_at(0.9f * F[vw][j]); i <= ch_at(1.1f * F[vw][j]); i++)
+                        mx = fmaxf(mx, h[i]);
+                    pr = mx - hs[CH_NE / 2];
+                    printf("  choir: vowel %d, F%d %.0f Hz: over Strings %.1f dB over its median\n", vw, j + 1,
+                           (double)F[vw][j], (double)pr);
+                    CHECK(n >= CH_FN && pr >= (j ? 3.0f : 6.0f) && !bad,
+                          "test_choir_formants: vowel %d F%d %.0f Hz only %.1f dB over Strings' median", vw, j + 1,
+                          (double)F[vw][j], (double)pr);
+                }
+            }
+            /* (the formants themselves, as set, whatever the chord: the cascade's gain peaks within 5% of the table's
+             * F1 and F2, each standing 3 dB or more over the gain halfway (in octaves) between them) */
+            for (j = 0; j < 2; j++) {
+                float f, at2 = 0.0f;
+                best = 0.0f;
+                for (f = 0.9f * F[vw][j]; f <= 1.1f * F[vw][j]; f += 1.0f)
+                    if (en_ch_gain(f) > best)
+                        best = en_ch_gain(f), at2 = f;
+                g[j] = at2;
+            }
+            g[2] = en_ch_gain(sqrtf(F[vw][0] * F[vw][1]));
+            printf("  choir: vowel %d, the formants' own peaks at %.0f and %.0f Hz (%.1f, %.1f dB over the gain between)\n",
+                   vw, (double)g[0], (double)g[1], (double)(20.0f * log10f(en_ch_gain(g[0]) / g[2])),
+                   (double)(20.0f * log10f(en_ch_gain(g[1]) / g[2])));
+            CHECK(fabsf(g[0] / F[vw][0] - 1.0f) < 0.05f && fabsf(g[1] / F[vw][1] - 1.0f) < 0.05f &&
+                  en_ch_gain(g[0]) > 1.41f * g[2] && en_ch_gain(g[1]) > 1.41f * g[2],
+                  "test_choir_formants: vowel %d, its formants at %.0f and %.0f Hz (%.0f, %.0f)", vw, (double)g[0],
+                  (double)g[1], (double)F[vw][0], (double)F[vw][1]);
+            CHECK(fabsf(en_ch_vowel - (float)vw) < 0.05f, "test_choir_vowel: Colour %d: the vowel at %.2f (%d)",
+                  k ? 0 : -25, (double)en_ch_vowel, vw);
+        }
+        printf("  choir: 'oo' to 'ah': 768 over 378 Hz %+.1f -> %+.1f dB, 1333 over 997 Hz %+.1f -> %+.1f dB\n",
+               (double)ct[0][0], (double)ct[1][0], (double)ct[0][1], (double)ct[1][1]);
+        CHECK(ct[1][0] - ct[0][0] >= 10.0f && ct[1][1] - ct[0][1] >= 10.0f,
+              "test_choir_formants: 'oo' to 'ah' moved F1's balance %.1f dB, F2's %.1f dB (10)",
+              (double)(ct[1][0] - ct[0][0]), (double)(ct[1][1] - ct[0][1]));
+        {                                        /* (ii) the Move page: Width and Rate 100, Time 50; 40 s */
+            float lo = 9.0f, hi = -9.0f, prev = 0.0f, jump = 0.0f, dev = 0.0f;
+            ch_solo(5, 0);
+            en_set(P_MW0, 100), en_set(P_MR0, 100), en_set(P_MT0, 50);
+            for (k = 0; k < 400; k++) {
+                float p, want;
+                run(0.1f);
+                p = en_ch_vowel, want = fminf(fmaxf(2.0f + 2.0f * en_fo[0], 0.0f), 4.0f);
+                lo = fminf(lo, p), hi = fmaxf(hi, p);
+                if (k)
+                    jump = fmaxf(jump, fabsf(p - prev));
+                if (k > 20)
+                    dev = fmaxf(dev, fabsf(p - want));
+                prev = p;
+            }
+            printf("  choir: moving, the vowel from %.2f to %.2f, at most %.3f in 0.1 s, %.3f off the motion's\n",
+                   (double)lo, (double)hi, (double)jump, (double)dev);
+            CHECK(hi - lo >= 1.0f && jump <= 0.25f && dev <= 0.2f && !bad,
+                  "test_choir_moves: the vowel %.2f .. %.2f, %.3f in 0.1 s, %.3f off", (double)lo, (double)hi,
+                  (double)jump, (double)dev);
+        }
+        for (k = 0; k < 4; k++)                  /* (iii, iv) Colour -25, 0, 25, 50: Choir, then Strings */
+            for (v = 0; v < 2; v++) {
+                double e = 0.0;
+                ch_solo(v ? 1 : 5, 25 * (k - 1));
+                run(1.5f);
+                n = run_cap(0.8f, x, 13 * 44100);
+                for (j = 0; j < n; j++)
+                    e += (double)x[j] * (double)x[j];
+                lv[k][v] = (float)(10.0 * log10(e / (double)(n > 0 ? n : 1) + 1e-30));
+                ch_env(x, env, &top[k][v]);
+            }
+        for (k = 0; k < 4; k++) {
+            printf("  choir: Colour %d: Choir %.1f dB (over 4 kHz %.1f dB), Strings %.1f dB (%.1f dB)\n", 25 * (k - 1),
+                   (double)lv[k][0], (double)top[k][0], (double)lv[k][1], (double)top[k][1]);
+            CHECK(k == 3 || fabsf(lv[k][0] - lv[k][1]) < 3.0f, "test_choir_level: Colour %d Choir %.1f dB, Strings %.1f dB",
+                  25 * (k - 1), (double)lv[k][0], (double)lv[k][1]);
+            CHECK(k < 1 || top[k][0] <= top[k][1], "test_choir_warm: Colour %d over 4 kHz Choir %.1f dB, Strings %.1f dB",
+                  25 * (k - 1), (double)top[k][0], (double)top[k][1]);
+        }
+        for (v = 1; v >= 0; v--) {               /* (v) a chord every two bars, quick swells, the vowel moving: 12 s */
+            ch_solo(v ? 1 : 5, 0);               /* (fresh: the Drone's notes counted from 0) */
+            en_set(P_DRIFT, 0), en_set(P_DREL, 0), en_set(P_MW0, 100), en_set(P_MR0, 100);
+            n = run_cap(12.0f, x, 13 * 44100);
+            ck[v] = ch_click(x + 44100, n - 44100);
+            CHECK(dr_n >= 10u, "test_choir_crossfade: %u Drone notes in 12 s (%s)", dr_n, v ? "Strings" : "Choir");
+        }
+        {                                        /* (the mark sees a click: Choir's run with a step of its own RMS
+                                                  * put in at 6 s) */
+            double e = 0.0;
+            for (j = 44100; j < n; j++)
+                e += (double)x[j] * (double)x[j];
+            for (j = 6 * 44100; j < n; j++)
+                x[j] += (float)sqrt(e / (double)(n - 44100));
+            ck[2] = ch_click(x + 44100, n - 44100);
+        }
+        printf("  choir: a crossfade's largest step over the 99th percentile: Choir %.2f, Strings %.2f; Choir with a "
+               "click put in %.2f\n", (double)ck[0], (double)ck[1], (double)ck[2]);
+        CHECK(ck[0] <= 2.0f && ck[2] > 2.0f && !bad, "test_choir_crossfade: a step %.2f x the usual (Strings %.2f; a "
+              "click put in %.2f)", (double)ck[0], (double)ck[1], (double)ck[2]);
+        ch_solo(5, 0);                           /* (vi) */
+        run(3.0f);
+        CHECK(en_ch_ok(), "test_choir_state: not finite, or denormal, while playing");
+        en_set(P_CHORD, 0);
+        run(30.0f);
+        CHECK(en_ch_ok(), "test_choir_state: after 30 s at level 0 not finite, or denormal");
+        en_set(P_CHORD, 80);
+        run(1.0f);
+        en_play(0);
+        run(30.0f);
+        CHECK(en_ch_ok() && !bad, "test_choir_state: after 30 s stopped not finite, or denormal (bad %d)", bad);
     }
 
     /* (BERLIN) the black keys' Transpose: a written pattern played with Transpose held is the same pattern written three

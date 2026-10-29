@@ -211,7 +211,12 @@ what you set is its octave again, the move gone; what's saved is always the octa
 
 **The Drone** (ENV; channel 1) holds the chord on two banks of five voices: the chord's four notes and the
 root an octave under (the **Pedal**). Voices: **Organ**, **Strings** (through an ensemble), **Horn** (a saw through two fixed formants), **Saws**,
-**Glass**. A phaser sweeps it slowly (**Phaser**). The chord walks from degree to degree every **Drift** bars
+**Glass**, **Choir**. The Choir sings a vowel: each note is two voices a little apart, through three formants
+(as a voice's mouth shapes it) and the Strings' ensemble. The vowel moves with the Drone's brightness: **Colour**
+chooses it ('oo' at −25, 'ah' at 0, 'ee' at +25, 'oh' and 'eh' between; past ±25 it only gets darker or
+brighter), and its **Move** page moves it, slowly, as it moves the other voices' filter (two vowels for each
+octave the filter moves; the Intro opens it from 'oo'). Its **Reso** makes the formants sharper or softer. A
+phaser sweeps it slowly (**Phaser**). The chord walks from degree to degree every **Drift** bars
 (the Nachtfahrt page), or follows the eight slots of the Chords page.
 
 **The Lead** (LFO; channel 3) is one voice, gliding: **Odyssey**, **Mini**, **Flute**, **Theremin**, **Synthi**. It plays
@@ -379,8 +384,9 @@ moves the whole shape by the chord's interval, as an analog sequencer transposed
 the scale), **Diatonic** moves it by scale steps (it stays in the scale) and **Bed** doesn't move it (the
 chord changes under it).
 
-**ENV: Drone:** Pedal (the root an octave under), Reso, Phaser, Attack. **Its sound:** Colour (darker or
-brighter, and the voices' detune), Release, Reverb, Echo. **Its Move page:** Width, Time, Rate, Intro.
+**ENV: Drone:** Pedal (the root an octave under), Reso (on Choir: how sharp its formants are, too), Phaser,
+Attack. **Its sound:** Colour (darker or brighter, and the voices' detune; on Choir its vowel), Release, Reverb,
+Echo. **Its Move page:** Width, Time, Rate, Intro (on Choir they move its vowel).
 
 **ARP: Sequence:** Density, Octave, Length (3–16), Grid (8ths or 16ths). **Its sound:** Cutoff, Decay,
 Reverb, Echo. **Repeats:** Repeat A, A time, Repeat B, B time (1/8, dotted 1/8, 1/4, dotted 1/4, 1/2, a bar).
@@ -582,6 +588,10 @@ must also share its source code.
 - The way the sequence is played (a short pluck, the root accented, sparse notes, a dotted-eighth repeat as
   loud as the note, two delays filling the spaces) owes much to Synth Seeker's videos on Berlin School
   sequencing.
+- The Drone's Choir (formants in cascade on its notes, its vowels moving) follows VOICE in **Felucca**
+  (`eng_formant.c`, Leo Kuroshita, Hügelton Instruments, GPL-3.0), after D. H. Klatt's cascade formant
+  synthesizer (JASA, 1980); written again in floating point. Its vowels' formants are the men's means measured
+  by Hillenbrand, Getty, Clark and Wheeler (JASA, 1995).
 - Pluck's string (Karplus-Strong) follows `pluck.c` in M-VAVE's [fm1_open](https://github.com/m-vave/fm1_open), an
   adaptation of DaisySP's String (Electrosmith, Emilie Gillet; MIT licence), written again for this engine.
 - The reverb is Jon Dattorro's plate ("Effect Design, Part 1", JAES 1997), by way of

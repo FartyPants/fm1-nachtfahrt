@@ -27,7 +27,7 @@ Done, with the whole suite passing (`tests/run_tests.sh`, gate `tools/suite_gate
   rarely (Evolve, Motion); transposed by the chord (Parallel, Diatonic, Bed); **Repeats** A and B at the echo's
   times, as notes; Density thinning by priority; eighths or sixteenths; the Pattern page.
 - **Sequence 2**, its own length (by default a step shorter), Chance, Sub voice.
-- **The Drone**: two banks (chord + pedal), five voices (Organ, Strings, Horn, Saws, Glass: Horn was "Choir"), ensemble, phaser.
+- **The Drone**: two banks (chord + pedal), six voices (Organ, Strings, Horn, Saws, Glass, Choir: Horn was the old "Choir"; Choir, appended, is a formant choir), ensemble, phaser.
 - **The Lead**: one gliding voice, five voices, dreamy sends (reverb and echo 90); calls and answers that remember
   their motifs and the piece's theme (Memory, below); the white keys play it and write its theme: a figure of three
   notes or more (up to 16, within four bars) and a two-beat pause is answered a beat later, in its rhythm with
