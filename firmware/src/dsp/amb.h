@@ -220,6 +220,11 @@ int en_lead_idea(int8_t *off, uint8_t *dur);
  * backwards; its tail continued; its rhythm with new notes */
 enum { LK_PLAIN, LK_HEAD, LK_SEQ, LK_MIRROR, LK_BACK, LK_TAIL, LK_RHY };
 #define LD_REST (-128)                          /* a rest inside a motif */
+#ifndef EN_LEAD_CPMAX
+#define EN_LEAD_CPMAX 16                        /* (the user's ear, Part 3) the white keys' figure: the most entries
+                                                 * (notes and rests) kept as the theme, within its last 4 bars; the one
+                                                 * constant (8 was the first build's) */
+#endif
 /* (host tests only, between renders) motif slot `slot` (0..3) written: n entries (1..8), each a scale degree from the
  * chord root's degree (LD_REST: a rest) and its length in sixteenths; the Lead's next pair plays it */
 void en_lead_motif(int slot, const int8_t *off, const uint8_t *dur, int n);

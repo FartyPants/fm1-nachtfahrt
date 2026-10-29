@@ -1,8 +1,9 @@
-# (BERLIN, the Lead's memory, spec 3.5 and 7.3) the white keys write the theme: Timewind (D Aeolian, 96 BPM: a
-# sixteenth 156 ms) in Emerge, its long intro, the generated Lead silent. Four white keys in a bar, a quarter each
-# (w4 w5 w3 w2: A4 Bb4 G4 F4); two beats after the last is let go the figure is the theme, and at the next bar line the
-# Lead plays it back as it was played: its call (the last note its open ending's), then after a beat or two its answer
-# (the same, the last note closed and held twice as long)
+# (BERLIN, the Lead's memory, spec 3.5 and 7.3; Part 3, the user: "it basically repeats what I played") the white keys
+# write the theme, and the Lead answers it: Timewind (D Aeolian, 96 BPM: a beat 625 ms) in Emerge, its long intro, the
+# generated Lead silent. Four white keys in a bar, a quarter each (w4 w5 w3 w2: A4 Bb4 G4 F4); two beats after the last
+# is let go the figure is the theme, and a beat or two later (3-4 beats after the last key) the Lead answers it, not
+# playing it back: its rhythm (four quarters), its own notes (E4 A4 F4 D4, none the figure's in its place), closing on
+# the root, held as the figure's last. Pinned from the first run's MIDI log (the answer at +2033 ms)
 wait 300
 expect pool 1453
 bar 2
@@ -21,23 +22,18 @@ wait 620
 key w2 up
 expect notes_ch3 4
 expect lastnote_ch3 65
-# the call, from bar 4's downbeat: A4, Bb4, G4, then its ending
-bar 4
+wait 1800
+expect notes_ch3 4
 wait 300
+expect notes_ch3 5
+expect lastnote_ch3 64
+wait 625
 expect lastnote_ch3 69
 wait 625
-expect lastnote_ch3 70
+expect lastnote_ch3 65
 wait 625
-expect lastnote_ch3 67
-wait 625
+expect lastnote_ch3 62
 expect notes_ch3 8
-# the answer, after a breath of two beats (calm): the same, from A4 again
-wait 1900
-expect notes_ch3 9
-expect lastnote_ch3 69
-wait 625
-expect lastnote_ch3 70
-wait 625
-expect lastnote_ch3 67
+# nothing more from the Lead in Emerge
 wait 3000
-expect notes_ch3 12
+expect notes_ch3 8

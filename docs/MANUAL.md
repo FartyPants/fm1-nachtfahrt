@@ -75,8 +75,8 @@ NACHTFAHRT starts playing as soon as it's on. A few minutes with it:
    Sequence is only a faint heartbeat under the drone.
 3. **Play the lead.** Press a white key: the lead plays that step of the scale, from the root up, and its
    key lights while it sounds. It glides from note to note, deep in the reverb and the echo. Play three notes or more
-   and pause: the lead takes them as its theme, plays them back to you at the next bar line, and brings them back
-   later. The black keys stay lit: they play effects while you hold them, dark while held (Rise opens every filter, Close shuts them, and so on: see [The effects grid](#9-the-effects-grid)).
+   and pause: the lead takes them as its theme, answers you a beat or two later in your rhythm, and brings your
+   notes back later. The black keys stay lit: they play effects while you hold them, dark while held (Rise opens every filter, Close shuts them, and so on: see [The effects grid](#9-the-effects-grid)).
 4. **Shape the sequence.** Press ARP: the Sequence page. KNOB 1 (Density) thins it out or fills it in;
    KNOB 3 (Length) makes it shorter or longer. Press ARP again for its sound (Cutoff opens the filter), and
    again for its **Repeats**: the notes the echo plays back, as loud as the note itself. One press more:
@@ -225,23 +225,23 @@ By default its reverb and echo are at 90, so it sings far away. It may start **L
 three quarters of an octave either way.
 
 The white keys play the Lead too, and **write its theme**. Play three notes or more (the last four bars of what you
-play are kept, at most eight notes and rests) and pause for two beats: at the next bar line the Lead plays them back to
-you, in the octave you played them, as its call (its last note on an open ending), then its answer (closed, held
-longer). It does this in any part of the piece, Emerge too, even before **Lead in**: you asked by playing. From
-then on your notes are the piece's theme: they come back where the theme does, over whatever chord is playing, varied
-a little at a time like any of its ideas, even when the Lead otherwise keeps little (a theme you played is never thrown
-away). One or two notes are just played, nothing is kept; notes played while the Lead is muted aren't kept either. Your
-notes sound as you play them; the Lead counts them on the grid, to the nearest sixteenth. Stopping the music, or PANIC,
-forgets notes you are in the middle of playing; PANIC also drops an answer not yet begun (a theme already taken stays:
-the Lead plays it next, in its own time). A new piece starts with new ideas, and so does PERFORM's **Forget** (the
-top key).
+play are kept, at most sixteen notes and rests) and pause for two beats. What you played was the call, and the Lead
+**answers** it a beat or two later: your rhythm, its own notes, around where you played, ending on the chord. It
+doesn't play your notes back to you. It does this in any part of the piece, Emerge too, even before **Lead in**: you
+asked by playing. From then on your notes are the piece's theme: they come back whole where the theme does, over
+whatever chord is playing, varied a little at a time like any of its ideas, even when the Lead otherwise keeps little
+(a theme you played is never thrown away). One or two notes are just played, nothing is kept; notes played while the
+Lead is muted aren't kept either. Your notes sound as you play them; the Lead counts them on the grid, to the nearest
+sixteenth. Stopping the music, or PANIC, forgets notes you are in the middle of playing; PANIC also drops an answer
+not yet begun (a theme already taken stays: the Lead plays it next, in its own time). A new piece starts with new
+ideas, and so does PERFORM's **Forget** (the top key).
 
-After your theme, the Lead's own ideas **grow out of it**. The next one starts from it: its first notes carried on in a
-new way, or its first notes and then the same again from another note of the chord, or its shape turned upside down.
-The ones after stray further, even when Memory would keep an idea: your notes backwards, its last notes carried on,
-then only its rhythm with new notes. After a while its ideas are its own again: about 45 seconds at Memory 0, a minute
-and a half at 50, two and a half minutes at 100. Your theme itself keeps coming back where the theme does, and a new
-figure on the keys starts it all again from that one.
+After your theme, the Lead's own ideas **grow out of it**. The next one, a bar or two after the answer, starts from
+it: its first notes carried on in a new way, or its first notes and then the same again from another note of the
+chord, or its shape turned upside down. The ones after stray further, even when Memory would keep an idea: your notes
+backwards, its last notes carried on, then only its rhythm with new notes. After a while its ideas are its own again:
+about 45 seconds at Memory 0, a minute and a half at 50, two and a half minutes at 100. Your theme itself keeps coming
+back where the theme does, and a new figure on the keys starts it all again from that one.
 
 **The Atmosphere** (SAVE) is a background: **None**, **Wind** (a breath of noise through a narrow band, swept
 slowly), **Surf** (waves), **Space** (chirps and bursts, far away), **Air**, or **Tape** (a crackle ringing on
