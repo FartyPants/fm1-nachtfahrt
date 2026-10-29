@@ -41,8 +41,9 @@ NACHTFAHRT is a fork of [DUB-1](https://github.com/sbegueria/fm1-dub), itself a 
 [AMB-1](https://github.com/charlesvestal/fm1-amb), Charles Vestal's generative ambient firmware for the FM-1. It
 keeps their platform, panel, echo, plate and much of the engine.
 
-**Status: 0.1, in development.** It runs in the browser emulator and in the host simulator; it hasn't been
-built for or run on an FM-1 yet (see [PLAN.md](PLAN.md)).
+**Status: a test version below 1.0** (see [the releases](https://github.com/FartyPants/fm1-nachtfahrt/releases)). It
+runs on the FM-1, installed from the [web installer](https://fartypants.github.io/fm1-nachtfahrt/install/), and in the
+[browser emulator](https://fartypants.github.io/fm1-nachtfahrt/emu/), from the same code.
 
 ## The pieces
 
@@ -81,7 +82,7 @@ NACHTFAHRT is not connected with any of these artists.
 | SELECT | On a layer's pages, its level; on the Nachtfahrt page, Energy (elsewhere nothing) |
 | OCT− / OCT+ | On the Sequence's, the Lead's and Sequence 2's pages, its octave (lit while it's above or below where the piece was loaded) |
 
-The [manual](docs/MANUAL.md) has the rest. [PLAN.md](PLAN.md) has what's done and what's still to do.
+The [manual](docs/MANUAL.md) has the rest.
 
 ## Building and testing
 

@@ -8,3 +8,6 @@ __pycache__/
 
 # design notes and plans: kept locally, not published (the user, 2026-10-28)
 docs/superpowers/
+
+# the development plan: kept local (the user, 2026-10-29)
+PLAN.md
