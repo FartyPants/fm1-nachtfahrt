@@ -6,16 +6,17 @@ sequences, slowly evolving textures and a lot of space. It plays itself from the
 A sequence of plucked notes runs over a drone, its notes repeated by the echo; a second sequence, often a
 step shorter, drifts against it; a lead sings long phrases far back in the reverb; wind, surf or the sounds
 of space pass behind. Each piece opens from the drone, flows, gives the lead its turn, crosses a bridge, and goes on for ever;
-every layer's filter moves slowly on its own. You don't play it, you steer it: pick a piece and a key, thin or fill the sequences, open the
-filter, push the echo, mute and solo the layers, or play the lead yourself on the white keys.
+every layer's filter moves slowly on its own. Listen, and play: let it run, or join in. Play a melody on the white
+keys and the lead answers it, takes it as its theme and grows new ideas out of it; pick a piece and a key, thin or fill
+the sequences, open the filter, push the echo, mute and solo the layers.
 
 Source, releases and the web installer: [github.com/FartyPants/fm1-nachtfahrt](https://github.com/FartyPants/fm1-nachtfahrt)
 and [fartypants.github.io/fm1-nachtfahrt](https://fartypants.github.io/fm1-nachtfahrt/).
 
 NACHTFAHRT is a fork of DUB-1, itself a fork of AMB-1, Charles Vestal's generative ambient firmware for the FM-1.
 
-**This is 0.1, in development.** It runs in the browser emulator and the host simulator; it has not yet been
-built for or run on an FM-1.
+**This is 0.9.2, a test version below 1.0.** It runs on the FM-1 (install it from the web installer) and in the
+browser emulator, from the same code.
 
 ![A drawing of the FM-1 running NACHTFAHRT, each control labelled with what it does: the Controls section below says the same in words](img/fm1-panel.svg "The FM-1 (a drawing), running NACHTFAHRT, each control labelled")
 

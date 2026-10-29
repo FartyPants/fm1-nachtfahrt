@@ -18,16 +18,16 @@ import sys
 from pathlib import Path
 
 SRC = Path(__file__).resolve().parents[1]
-PART_COLOURS = {}                                     # (X0X marks its parts with a swatch; DUB-1 has none)
+PART_COLOURS = {}                                     # (X0X marks its parts with a swatch; NACHTFAHRT has none)
 
 CSS = """
-/* DUB-1's colours, as its screen and the emulator: a dark room, a cold teal (the names kept from AMB-1's) */
+/* NACHTFAHRT's colours, as its screen and the site's cover: black, a pale lavender ink, cyan, the Drone's violet
+   (the names kept from AMB-1's) */
 :root {
-  --paper: #10141a; --sheet: #1e252f; --green-1: #1e4648; --green-3: #2b6e72;
-  --river: #2b6e72; --river-2: #5cc4cc; --ink: #dee4e8; --muted: #9aa8b6; --rule: #2e3846;
+  --paper: #000000; --sheet: #0d0b14; --green-1: #241f33; --green-3: #b48cff;
+  --river: #b48cff; --river-2: #7fd8ff; --ink: #efe7ff; --muted: #a49cb8; --rule: #241f33;
   color-scheme: dark;
-  /* --river-2 and --muted a shade darker than the cover's, so text in them reads (4.5:1 on the paper and
-     the cards) */
+  /* --river-2 and --muted read on the paper and the cards (cyan 12:1, the muted lavender 7.6:1 on black) */
 }
 body {
   background: var(--paper); color: var(--ink); margin: 0;
@@ -112,7 +112,7 @@ def slug(title):
     return f"s{m.group(1)}" if m else re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
 
 
-NAME = "DUB-1"
+NAME = "NACHTFAHRT"
 IMG_BASE = SRC / "docs"
 EMBED = False                                         # --fragment: images as data URIs
 
@@ -174,10 +174,10 @@ def convert(md):
                 i += 1
             out.append(f'<div class="callout"><p>{inline(" ".join(para))}</p></div>')
             continue
-        if ln.startswith("# "):                         # the title; DUB-1's own a way home (the site's root)
+        if ln.startswith("# "):                         # the title; NACHTFAHRT's own a way home (the site's root)
             t = ln[2:].strip()
             if t == NAME:                               # the site's header (home, the other pages), then the title
-                out.append('<header class="site"><a class="home" href="../">DUB-1</a><nav aria-label="DUB-1"><a href="../emu/">Emulator</a><a href="../install/">Install</a><a href="../manual/" aria-current="page">Manual</a><a href="https://github.com/sbegueria/fm1-dub">Source</a></nav></header>')
+                out.append(f'<header class="site"><a class="home" href="../">{NAME}</a><nav aria-label="{NAME}"><a href="../emu/">Emulator</a><a href="../install/">Install</a><a href="../manual/" aria-current="page">Manual</a><a href="https://github.com/FartyPants/fm1-nachtfahrt">Source</a></nav></header>')
                 out.append('<h1>Manual</h1>')
             else:
                 out.append(f'<a class="home" href="../">{NAME}</a>\n<h1>{inline(t)}</h1>')
@@ -259,7 +259,7 @@ def main():
         header += sep
     skip = '<a class="skip" href="#content">Skip to content</a>\n'
     page = (f"<title>{html.escape(title)}</title>\n"
-            f'<meta name="description" content="{html.escape(what)} for {NAME}, a generative ambient firmware for the M-VAVE FM-1.">\n'
+            f'<meta name="description" content="{html.escape(what)} for {NAME}, a generative 1970s Berlin School instrument for the M-VAVE FM-1.">\n'
             f'<style>{CSS}</style>\n{skip}{header}<main id="content">\n{rest}\n</main>\n')
     if not fragment:
         head, _, rest = page.partition("</style>\n")
