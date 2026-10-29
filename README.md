@@ -19,7 +19,7 @@ can play with it: the white keys give you the melody, always in the piece's key.
 [![NACHTFAHRT on the FM-1 — watch on YouTube](docs/img/site/video.jpg)](https://youtu.be/OLXYHRydniw)
 
 ## Why?
-CM loves this "Berlin School" thing, with all its repetition and echoing, evolving plucks and drones, because it puts him to sleep, and if there is one thing that a Cranky Man needs, it is sleep. Lots of it. Usually around 15 hours per week. And now it can put you to sleep, too!
+Cranky Man loves this "Berlin School" thing, with all its repetition and echoing, evolving plucks and drones, because it puts him to sleep, and if there is one thing that a Cranky Man needs, it is sleep. Lots of it. Usually around 15 hours per week. And now it can put you to sleep, too!
 
 The whole idea behind this music generator is that IF you are NOT put to sleep by the lead sound (which plays itself), then when you start playing, it will listen, and then respond to your musical "call" with its own version of the musical phrase.
 
