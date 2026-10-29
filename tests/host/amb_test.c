@@ -5208,6 +5208,8 @@ int main(void)
         CHECK(pa[7][P_SEQ] == 20 && pa[7][P_SEQ2] == 0 && pa[7][P_LEAD] == 70,
               "test_pieces_cyborg: Sequence %d, Sequence 2 %d, Lead %d (the user's: 20, 0, 70)", pa[7][P_SEQ],
               pa[7][P_SEQ2], pa[7][P_LEAD]);
+        CHECK(pa[2][P_CVOICE] == 5 && pa[2][P_CHORD] == 70,
+              "test_pieces_phaedra: Drone voice %d, level %d (the user's: Choir 5, 70)", pa[2][P_CVOICE], pa[2][P_CHORD]);
         /* (the Lead's memory, spec 3.3) each piece's Memory (the Arc page's fourth knob): the report's starting
          * values, to tune by ear */
         for (a = 0; a < EN_NPIECES; a++) {

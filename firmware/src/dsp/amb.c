@@ -103,11 +103,11 @@ static const int16_t PC_WAHNFRIED[] = {       /* Schulze, Wahnfried 1883: roots 
     P_FEEDBACK, 75, P_REVERB, 45,
     P_MW0, 45, P_MT0, 60, P_MR0, 45, P_MW2, 15, P_BRIDGE, 30,
     P_ARC, 20, P_MOTION, 55, P_LMEM, 40, -1};
-static const int16_t PC_PHAEDRA[] = {         /* Tangerine Dream, Phaedra: a Moog bass line, Mellotron flutes */
+static const int16_t PC_PHAEDRA[] = {         /* Tangerine Dream, Phaedra: a Moog bass line, Mellotron flutes and choir */
     P_TEMPO, 149, P_ROOT, 2, P_MODE, MODE_AEOLIAN,
     P_SVOICE, 1, P_SEQOCT, -1, P_SEQLEN, 16, P_DENSITY, 70, P_SWEEP, 85,
     P_SEQ2, 40, P_S2VOICE, 1, P_SEQ2OCT, 0, P_SEQ2LEN, 15, P_MI3, 0,
-    P_CVOICE, 2, P_DRIFT, 4,
+    P_CHORD, 70, P_CVOICE, 5, P_DRIFT, 4,         /* (the user's ear: the Drone a formant Choir, at 70) */
     P_LVOICE, 2, P_LDIN, 24,
     P_NCHAR, 5, P_CRACKLE, 10,
     P_MW0, 25, P_MW3, 30, P_MR3, 40, P_MW4, 25,

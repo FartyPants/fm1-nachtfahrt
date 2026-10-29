@@ -50,7 +50,7 @@ built for or run on an FM-1 yet (see [PLAN.md](PLAN.md)).
 |---|---|---|---|---|
 | 1 | Timewind | Schulze, *Bayreuth Return* | D minor, 96 | Two sequences of 16 and 15, an organ through the phaser, a long opening (the Sequence's filter takes 32 bars to open), a wider reverb |
 | 2 | Wahnfried | Schulze, *Wahnfried 1883* | B♭ Dorian, 80 | Strings drifting, the roots walking with no home, a faint heartbeat of sequences under them, a theremin lead; the Drone's filter is the main movement |
-| 3 | Phaedra | Tangerine Dream, *Phaedra* | D minor, 149 | A Moog bass line of 16 over a second line of 15, flutes, much filter movement; the Sequence opens over 16 bars, Sequence 2 is straight in |
+| 3 | Phaedra | Tangerine Dream, *Phaedra* | D minor, 149 | A Moog bass line of 16 over a second line of 15, a choir, flutes, much filter movement; the Sequence opens over 16 bars, Sequence 2 is straight in |
 | 4 | Rubycon | Tangerine Dream, *Rubycon* | F minor, 144 | Dark organ, two sequences of 8 (the 2600, two octaves down) and 7 rising out of the drone, the Synthi lead: the Sequence opens over 16 bars, Sequence 2 after it, over 32 |
 | 5 | Stratosfear | Tangerine Dream, *Stratosfear* | E minor, 138 | Brighter and driving, two sequences interlocking, straight in, the Lead forward |
 | 6 | Sunrain | Ashra, *New Age of Earth* | D major, 130 | The most hopeful: sequences of 8 and 7, both echo repeats at full, bright strings, surf; straight in |
