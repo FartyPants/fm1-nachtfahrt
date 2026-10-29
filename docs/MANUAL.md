@@ -186,7 +186,8 @@ moving darker, about -1 octave").
 played on a plucked voice: **2600** (a saw), **Moog** (two saws a little apart), **Synthi** (a square),
 **Pulse** (a narrow pulse), **Glass** (an FM bell), each through two low-passes, the second resonant,
 swept down by a short envelope; or **Pluck**, a plucked string (Karplus-Strong: a burst of noise ringing round a
-delay line a period long), whose Cutoff is how bright the pluck is and Decay how long the string rings. The
+delay line a period long), whose Cutoff is how bright the pluck is and Decay how long the string rings (high up,
+from about the G above the top of the keys, a string rings short whatever Decay is set to, as a real one does). The
 root step is accented and the others quieter (Accent, on the Pattern page). Density decides how many of the steps sound, the least important dropping out first. Now and then
 (Evolve, Motion) a step changes, a note moves, an octave jumps, the sequence comes round early; it follows the Drone's chord
 (Transpose, on the Key page). Its cutoff wanders slowly over minutes, around the Cutoff you set (its Move page, below; its Width is the
