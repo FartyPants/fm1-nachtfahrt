@@ -3745,6 +3745,7 @@ static void quiet(void)
     notes_off();
 }
 
+static void ch_gt_init(void);
 void en_init(void)
 {
     int i;
@@ -3752,6 +3753,8 @@ void en_init(void)
         sint[i] = fm_sinf((float)i * (FM_TWO_PI / (float)SN));
     for (i = 0; i <= SN; i++)
         orgt[i] = sint[i % SN] + 0.5f * sint[2 * i % SN] + 0.3f * sint[3 * i % SN] + 0.2f * sint[4 * i % SN];
+    ch_gt_init();                                /* (the Choir's level steps here, not on the audio thread's first
+                                                  * Choir chunk: ~230 trig calls in one block) */
     rng = 0x9E3779B9u;                           /* (BERLIN) the dice from the top: a reset plays the same again */
     cl_rng = sq_rng = 0x2545F491u;
     dr_rng = 0x6A09E667u;
