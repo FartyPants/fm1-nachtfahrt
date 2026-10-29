@@ -75,7 +75,7 @@ const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PAR
  * sets over the defaults (PARAMS), in pairs, to -1. Tune and MIDI out are never set here: they belong to the player.
  * Keys and tempos are starting points (spec 6: from analysis sites, to tune by ear); the Lead is dreamy in all of them
  * (its reverb and echo 90, the defaults: the user); an Atmosphere only where it suits, of the four the user likes.
- * (Voices: the Sequence's 2600 Moog Synthi Pulse Glass, Sequence 2's and Sub; the Drone's Organ Strings Choir Saws
+ * (Voices: the Sequence's 2600 Moog Synthi Pulse Glass, Sequence 2's and Sub; the Drone's Organ Strings Horn Saws
  *  Glass; the Lead's Odyssey Mini Flute Theremin Synthi. Modes: 0 Ionian, 1 Dorian, 2 Phrygian, 5 Aeolian. Repeat
  *  times: 1/8 1/8. 1/4 1/4. 1/2 1 bar. Drift: 2 4 8 16 32 64 bars, Hold. Play: the walk Home, Wander, Free. Grid:
  *  8ths, 16ths. Atmosphere: None Wind Surf Space Air Tape. The moves (filter motion spec 9): MW/MT/MR/MI a layer's
@@ -184,7 +184,8 @@ void en_piece(int i, int16_t *par, uint16_t *pool)
     *pool = EN_MODE_POOL[par[P_MODE]];
 }
 
-const char *const EN_CV_NAME[EN_NCV] = {"Organ", "Strings", "Choir", "Saws", "Glass"};   /* (BERLIN: the Drone's) */
+const char *const EN_CV_NAME[EN_NCV] = {"Organ", "Strings", "Horn", "Saws", "Glass"};   /* (BERLIN: the Drone's; the voices
+                                                 * batch: Horn was Choir, its place kept: pieces and saves sound the same) */
 const char *const EN_BV_NAME[EN_NBV] = {"Odyssey", "Mini", "Flute", "Theremin", "Synthi"};   /* (BERLIN: the Lead's) */
 const char *const EN_CQ_NAME[EN_NCQ] = {"Empty", "Major", "Minor", "Sus2", "Sus4", "Dim", "Aug"};
 const char *const EN_CX_NAME[EN_NCX] = {"Triad", "6", "7", "Maj7", "9", "11", "Add9"};
@@ -694,8 +695,8 @@ static int chord_slot = -1;                     /* the slot whose chord sounds (
 /* ------------------------------------------------------------------ the drone --- */
 /* (BERLIN) the Drone: the chord held, its four notes and the root an octave under (a pedal), swelling in over Attack
  * and away over Release; a new chord swells in on the other bank while the old one dies. Its voices: Organ
- * (drawbars), Strings (a saw, into the ensemble), Choir (a saw through two formants), Saws (two, apart), Glass (FM);
- * the bus through the phaser. MIDI channel 1: a chord's notes on as it starts, off as it goes */
+ * (drawbars), Strings (a saw, into the ensemble), Horn (a saw through two fixed formants, an 'ah': was Choir),
+ * Saws (two, apart), Glass (FM); the bus through the phaser. MIDI channel 1: a chord's notes on as it starts, off as it goes */
 #define NDR 5
 typedef struct {
     uint8_t note;
@@ -4600,7 +4601,7 @@ static void render_drone(uint32_t n)
     if (!dr_on[0] && !dr_on[1] && dr_lvl[0] <= 0.0f && dr_lvl[1] <= 0.0f)
         return;
     svf_coefs(c, fc, k);
-    svf_coefs(cf1, 650.0f, 0.3f);                /* (Choir: two formants, an 'ah') */
+    svf_coefs(cf1, 650.0f, 0.3f);                /* (Horn: two formants, an 'ah') */
     svf_coefs(cf2, 1080.0f, 0.35f);
     for (j = 0; j < n; j++)
         drl[j] = drr[j] = 0.0f;

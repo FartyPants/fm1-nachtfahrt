@@ -207,7 +207,7 @@ Octave knob shows where it is, and OCT+ or OCT− lights. Turn its Octave knob o
 what you set is its octave again, the move gone; what's saved is always the octave you set.
 
 **The Drone** (ENV; channel 1) holds the chord on two banks of five voices: the chord's four notes and the
-root an octave under (the **Pedal**). Voices: **Organ**, **Strings** (through an ensemble), **Choir**, **Saws**,
+root an octave under (the **Pedal**). Voices: **Organ**, **Strings** (through an ensemble), **Horn** (a saw through two fixed formants), **Saws**,
 **Glass**. A phaser sweeps it slowly (**Phaser**). The chord walks from degree to degree every **Drift** bars
 (the Nachtfahrt page), or follows the eight slots of the Chords page.
 
@@ -341,7 +341,7 @@ filter's usable range.
 |---|---|---|---|---|---|---|---|
 | 1 | **Timewind** | Schulze, *Bayreuth Return* | D minor, 96 | Two: 2600, 16 steps in 16ths, Repeat B; Sequence 2 Moog, 15 steps, an octave down; Reverb 50 | Organ + phaser, Odyssey | Wind | A slow opening: the Sequence's Intro is 32 bars. A gentle wander on every layer; Bridge 45 |
 | 2 | **Wahnfried** | Schulze, *Wahnfried 1883* | B♭ Dorian, 80 | A faint heartbeat: the Sequence at 30 (opening over 16 bars), Sequence 2 at 50, an octave down | Strings at 95, the roots walking free; Theremin | None | The Drone's filter is the main movement: Width 45, with long moves; Bridge 30 |
-| 3 | **Phaedra** | Tangerine Dream, *Phaedra* | D minor, 149 | Moog bass 16, a Moog line of 15 over it, much sweep | Choir, Flute | Tape | The Sequence opens over 16 bars (Sweep 85, wide); Sequence 2 straight in, sweeping often |
+| 3 | **Phaedra** | Tangerine Dream, *Phaedra* | D minor, 149 | Moog bass 16, a Moog line of 15 over it, much sweep | Horn, Flute | Tape | The Sequence opens over 16 bars (Sweep 85, wide); Sequence 2 straight in, sweeping often |
 | 4 | **Rubycon** | Tangerine Dream, *Rubycon* | F minor, 144 | 2600 8, two octaves down, and Sub 7 at octave 0, dark | Organ, low and dark, Synthi | None | The Sequence opens over 16 bars, then Sequence 2 over 32: it comes out of the drone after it; Bridge 50 |
 | 5 | **Stratosfear** | Tangerine Dream, *Stratosfear* | E minor, 138 | Pulse 16 and 2600 15, together from the start | Strings, Mini forward | None | Straight in, no Intros; both sequences' filters move often |
 | 6 | **Sunrain** | Ashra, *New Age of Earth* | D major, 130 | Pulse 8, Glass 7, both repeats at 100 | Strings, Odyssey | Surf | Straight in, no Intros; Sequence 2 and the Atmosphere wander a little wider |

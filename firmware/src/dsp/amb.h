@@ -174,7 +174,7 @@ void en_render(int32_t *out_lr, uint32_t n, uint32_t gain_q12);
 void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2);
 
 /* the voices: each layer's sounds (ALGORITHM on the layer's page) */
-#define EN_NCV 5                         /* (BERLIN) the Drone's voices: Organ, Strings, Choir, Saws, Glass */
+#define EN_NCV 5                         /* (BERLIN) the Drone's voices: Organ, Strings, Horn, Saws, Glass */
 #define EN_NBV 5
 #define EN_NSV 5                        /* (BERLIN) the Sequence's voices: 2600, Moog, Synthi, Pulse, Glass */
 #define EN_NS2V 6                       /* Sequence 2's: the same, and Sub */

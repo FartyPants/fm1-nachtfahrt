@@ -18,7 +18,7 @@ can play with it: the white keys give you the melody, always in the piece's key.
   classic Berlin School echo), so sparse notes fill in the spaces;
 - **Sequence 2**, often a step shorter, so the two drift apart and meet again, and with Motion an octave up or
   down now and then, for a section;
-- a **Drone**: a chord on two banks of voices (Organ, Strings, Choir, Saws, Glass) with a pedal under it, a
+- a **Drone**: a chord on two banks of voices (Organ, Strings, Horn, Saws, Glass) with a pedal under it, a
   phaser and a slow walk from chord to chord;
 - a **Lead**: one gliding voice (Odyssey, Mini, Flute, Theremin, Synthi) playing dreamy calls and answers deep in
   the reverb and the echo; it remembers its motifs and returns to the piece's theme (how much it keeps: **Memory**).

@@ -870,6 +870,8 @@ int main(void)
         CHECK(!strcmp(t, "Organ"), "ctone 0: %s", t);
         en_param_text(P_CVOICE, 1, t);
         CHECK(!strcmp(t, "Strings"), "ctone 1: %s", t);
+        en_param_text(P_CVOICE, 2, t);           /* (the voices batch: the saw through two formants is a Horn now) */
+        CHECK(!strcmp(t, "Horn"), "ctone 2: %s", t);
         en_param_text(P_TAPAT, 1, t);
         CHECK(!strcmp(t, "1/8."), "repeat A time 1: %s", t);
         en_param_text(P_TAPBT, 2, t);

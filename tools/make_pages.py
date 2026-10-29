@@ -104,7 +104,7 @@ Wet and Energy.</p>
 
 <h2>What it plays</h2>
 <ul class="layers">
-  <li class="d"><b>Drone.</b> Organ, strings, choir, saws or glass, through a slow phaser, with the root an octave below; its chords walk slowly.</li>
+  <li class="d"><b>Drone.</b> Organ, strings, horn, saws or glass, through a slow phaser, with the root an octave below; its chords walk slowly.</li>
   <li class="s"><b>Sequence.</b> The arpeggio at the heart of it: a Moog-style line repeated by the echo, its filter wandering, rising over the piece.</li>
   <li class="t"><b>Sequence 2.</b> A second line, usually a step shorter, so the two drift apart and meet again; now and then it moves an octave.</li>
   <li class="l"><b>Lead.</b> A gliding solo voice far in the reverb, phrasing in calls and answers; or your own melody on the keys.</li>
