@@ -226,15 +226,16 @@ three quarters of an octave either way.
 
 The white keys play the Lead too, and **write its theme**. Play three notes or more (the last four bars of what you
 play are kept, at most sixteen notes and rests) and pause for two beats. What you played was the call, and the Lead
-**answers** it a beat or two later: your rhythm, its own notes, around where you played, ending on the chord. It
-doesn't play your notes back to you. It does this in any part of the piece, Emerge too, even before **Lead in**: you
-asked by playing. From then on your notes are the piece's theme: they come back whole where the theme does, over
-whatever chord is playing, varied a little at a time like any of its ideas, even when the Lead otherwise keeps little
-(a theme you played is never thrown away). One or two notes are just played, nothing is kept; notes played while the
-Lead is muted aren't kept either. Your notes sound as you play them; the Lead counts them on the grid, to the nearest
-sixteenth. Stopping the music, or PANIC, forgets notes you are in the middle of playing; PANIC also drops an answer
-not yet begun (a theme already taken stays: the Lead plays it next, in its own time). A new piece starts with new
-ideas, and so does PERFORM's **Forget** (the top key).
+**answers** it a beat or two later: your rhythm, its own notes but close to yours (it picks up a step or two from your
+last note, and on the strong beats it lands on a chord note next to yours), ending on the chord. It doesn't play your
+notes back to you. It does this in any part of the piece, Emerge too, even before **Lead in**: you asked by playing.
+From then on your notes are the piece's theme: they come back whole where the theme does, over whatever chord is
+playing, varied a little at a time like any of its ideas, even when the Lead otherwise keeps little (a theme you
+played is never thrown away). One or two notes are just played, nothing is kept; notes played while the Lead is muted
+aren't kept either. Your notes sound as you play them; the Lead counts them on the grid, to the nearest sixteenth.
+Stopping the music, or PANIC, forgets notes you are in the middle of playing; PANIC also drops an answer not yet begun
+(a theme already taken stays: the Lead plays it next, in its own time). A new piece starts with new ideas, and so does
+PERFORM's **Forget** (the top key).
 
 After your theme, the Lead's own ideas **grow out of it**. The next one, a bar or two after the answer, starts from
 it: its first notes carried on in a new way, or its first notes and then the same again from another note of the

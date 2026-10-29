@@ -2,8 +2,9 @@
 # write the theme, and the Lead answers it: Timewind (D Aeolian, 96 BPM: a beat 625 ms) in Emerge, its long intro, the
 # generated Lead silent. Four white keys in a bar, a quarter each (w4 w5 w3 w2: A4 Bb4 G4 F4); two beats after the last
 # is let go the figure is the theme, and a beat or two later (3-4 beats after the last key) the Lead answers it, not
-# playing it back: its rhythm (four quarters), its own notes (E4 A4 F4 D4, none the figure's in its place), closing on
-# the root, held as the figure's last. Pinned from the first run's MIDI log (the answer at +2033 ms)
+# playing it back: its rhythm (four quarters), its own notes related to the figure's (review 1: A4 F4 F4 D4, its first
+# a third above the figure's last, three of the four not the figure's in their place), closing on the root, held as the
+# figure's last. Pinned from the MIDI log (the answer at +2033 ms)
 wait 300
 expect pool 1453
 bar 2
@@ -26,10 +27,11 @@ wait 1800
 expect notes_ch3 4
 wait 300
 expect notes_ch3 5
-expect lastnote_ch3 64
-wait 625
 expect lastnote_ch3 69
 wait 625
+expect lastnote_ch3 65
+wait 625
+expect notes_ch3 7
 expect lastnote_ch3 65
 wait 625
 expect lastnote_ch3 62

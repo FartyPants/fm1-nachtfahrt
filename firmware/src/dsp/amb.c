@@ -1554,7 +1554,8 @@ static struct {
 } lead;
 static float lead_vol, ld_gk = 0.004f, ld_tone = 1.0f, ld_att = 0.0009f, ld_rev = 1.0f, ld_echo = 1.0f;
 #define CP_MAX EN_LEAD_CPMAX                     /* (the keys' figure: the most entries kept, amb.h) */
-#define LD_MOTN (CP_MAX > 8 ? CP_MAX : 8)        /* (a motif's room: the keys' theme's, or the generator's 8) */
+#define LD_MOTN (((CP_MAX > 8 ? CP_MAX : 8) + 1) & ~1)   /* (a motif's room: the keys' theme's, or the generator's
+                                                  * 8; even, for its first half twice: ld_frag) */
 static uint8_t ld_note[LD_MOTN], ld_dur[LD_MOTN], ld_n, ld_i, ld_left, ld_rest;
 static int8_t ld_dg[LD_MOTN], ld_key = -1;       /* (the phrase's degrees; the degree held on the keys, -1: none) */
 volatile int8_t en_lead_deg = -1;                /* (the degree the Lead sounds, for the keys' light; -1: none) */
@@ -1627,6 +1628,8 @@ static uint8_t cp_du[CP_MAX], cp_n, cp_q, ld_cap;   /* (their lengths; entries; 
 #define CP_HELD 2u
 #define CP_ANS 4u
 #define CP_NEXT 8u
+static int8_t cp_r;                              /* (the chord root's degree when the keys' theme was taken: the
+                                                  * frame of its degrees, for its answer) */
 static uint8_t ld_kin = 255;                     /* (bars since the keys' theme was taken: its offspring's clock,
                                                   * ld_kinship; 255: none, or their time over) */
 static uint8_t ld_iband;                         /* (the kind of offspring the line's idea was made as, ld_band: a
@@ -1692,6 +1695,8 @@ int en_lead_played(void) { return (ld_bank[0].cm & LD_PLAYED) != 0; }
 volatile uint8_t en_lead_ideas, en_lead_kind;
 static int ld_kinship(void);
 int en_lead_kin(void) { return ld_kinship(); }
+static void ld_vary(ld_motif_t *m);
+void en_lead_vary(int slot) { ld_vary(&ld_bank[slot & 3]); }
 int en_lead_idea(int8_t *off, uint8_t *dur)
 {
     int i;
@@ -2228,8 +2233,10 @@ static int ld_frag(ld_motif_t *m)                /* the first half, twice (its h
     int h = (m->n + 1) / 2, i;
     while (h > 1 && (m->off[h - 1] == LD_REST || (m->dur[h - 1] >= LD_HELD && !ld_on(m->off[h - 1], cm))))
         h--;
-    if (m->n < 2 || m->off[0] == LD_REST || m->off[h - 1] - m->off[0] > 2 || m->off[0] - m->off[h - 1] > 2)
-        return 0;                                /* (its halves joined by a step or a third: no leap made) */
+    if (m->n < 2 || m->off[0] == LD_REST || m->off[h - 1] - m->off[0] > 2 || m->off[0] - m->off[h - 1] > 2 ||
+        2 * h > (int)sizeof m->off)
+        return 0;                                /* (its halves joined by a step or a third: no leap made; room for
+                                                  * both) */
     for (i = 0; i < h; i++)
         m->off[h + i] = m->off[i], m->dur[h + i] = m->dur[i];
     m->n = (uint8_t)(2 * h);
@@ -2365,7 +2372,11 @@ static void ld_vary(ld_motif_t *m)
         return;
     op = x < 38u ? 0 : x < 57u ? 1 : x < 88u ? 2 : 3;   /* (the nudge 38, the ending 19, the tail 31, the half 12) */
     for (tries = 0; tries < 4; tries++, op = (op + 1) % 4) {   /* (one that leaves no more held tones off the
-                                                  * chord unresolved than there were: else undone, the next tried) */
+                                                  * chord unresolved than there were: else undone, the next tried; never
+                                                  * the first half twice of a theme the player played: their second half
+                                                  * would be gone for good) */
+        if (op == 3 && (m->cm & LD_PLAYED))
+            continue;
         if (ld_op(m, op, last) && ld_bad(m) <= bad)
             return;
         *m = was;
@@ -2503,29 +2514,51 @@ static void lead_plan(void)                      /* the next phrase: the group's
     keys = ld_role == LR_ANSWER && !ld_slot && (ld_cap & CP_ANS);
     ld_cap &= (uint8_t)~CP_ANS;
     if (keys) {                                  /* the keys' answer (Part 3: not a copy of them, the parrot the user
-                                                  * heard): their rhythm, the generator's notes (one draw: this tick
-                                                  * plans, so it thinks of nothing else), moved by octaves nearest the
-                                                  * figure as played (the Lead answers where it was played); then the
-                                                  * closed ending as any answer's, not held longer (their rhythm kept) */
+                                                  * heard; review 1: "your rhythm, related notes, a closing ending"):
+                                                  * their rhythm, the generator's notes (one draw: this tick plans, so
+                                                  * it thinks of nothing else) drawn around the figure's own middle,
+                                                  * its first note a step or a third from the figure's last (it picks
+                                                  * up where the player stopped), each note on a strong beat (as the
+                                                  * generator's: on beat 1 or 3, or held a half note) the chord tone
+                                                  * next to the figure's there (its outline kept, its notes not the
+                                                  * same); in the figure's frame (its degrees from the root it was
+                                                  * taken on, cp_r: the chord may have moved since); then the closed
+                                                  * ending as any answer's, not held longer (their rhythm kept) */
         int8_t g[LD_MOTN];
-        int sf = 0, sa = 0, c = 0, k, bk = 0, bd = 1 << 30;
-        for (i = 0; i < t.n; i++) {
+        const int8_t reg = ld_reg;
+        int sf = 0, c = 0, fl = 0, first = -1, lst = -1, at = 0, f;
+        for (i = 0; i < t.n; i++)
+            if (t.off[i] != LD_REST) {
+                sf += t.off[i] + cp_r, c++, fl = t.off[i] + cp_r, lst = i;   /* (degrees over the scale's root) */
+                first = first < 0 ? i : first;
+            }
+        for (i = 0; i < t.n; at += t.dur[i], i++) {
+            const int x = t.off[i] + cp_r - r;   /* (the figure's note there, over the chord's root now) */
+            int a[4], na = 0, d;
             g[i] = LD_FREE;
-            if (t.off[i] != LD_REST)
-                sf += t.off[i], c++;
+            if (t.off[i] == LD_REST || i == lst)
+                continue;
+            if (i == first) {                    /* (a step or a third from its last: a chord tone if one is) */
+                for (d = -2; d <= 2; d++)
+                    if (d && ld_on(fl - r + d, cm))
+                        a[na++] = fl - r + d;
+                if (!na)
+                    a[na++] = fl - r + 1, a[na++] = fl - r - 1;
+            } else if (!(at & 7) || t.dur[i] >= 8) {   /* (the nearest chord tone not the figure's) */
+                for (d = 1; d <= 2 && !na; d++) {
+                    if (ld_on(x - d, cm))
+                        a[na++] = x - d;
+                    if (ld_on(x + d, cm))
+                        a[na++] = x + d;
+                }
+            }
+            if (na)
+                g[i] = (int8_t)a[seq_rand(&ld_rng) % (uint32_t)na];
         }
+        f = c ? (sf >= 0 ? (2 * sf + c) / (2 * c) : -((c - 2 * sf) / (2 * c))) : ns + ns / 2;   /* (its middle) */
+        ld_reg = (int8_t)(f - ns - ns / 2);      /* (the draw's centre there: ld_gen's c0) */
         ld_gen(&t, ld_int, LR_ANSWER, g);
-        for (i = 0; i < t.n; i++)
-            if (t.off[i] != LD_REST)
-                sa += t.off[i];
-        for (k = -3; k <= 3 && c; k++) {
-            const int d = sa + k * ns * c - sf;
-            if ((d < 0 ? -d : d) < bd)
-                bd = d < 0 ? -d : d, bk = k;
-        }
-        for (i = 0; i < t.n; i++)
-            if (t.off[i] != LD_REST)
-                t.off[i] = (int8_t)(t.off[i] + bk * ns);
+        ld_reg = reg;
         t.cm |= LD_KEEP;                         /* (this pass in the octave it's made in: no register's octave) */
         ld_cap |= CP_NEXT;
     }
@@ -2694,6 +2727,7 @@ static int ld_take(void)
         m->n = (uint8_t)(cp_n - k);
         m->heard = 1;
         m->cm = (uint16_t)(ld_cmask() | LD_PLAYED);
+        cp_r = (int8_t)r;
         ld_next = -1;
         ld_slot = 0;                             /* (the call was the player's) */
         ld_blen = ld_pair = 1;

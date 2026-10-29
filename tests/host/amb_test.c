@@ -630,22 +630,34 @@ static int ld_left_on(void)
 /* (Part 3, the user: the Lead answers the keys, it doesn't repeat them) from the log: the phrase at entry i against the
  * keys' figure logged at k0 .. k0+n-1: 1 if it's the keys' answer (LR_ANSWER on the theme, slot 0, n notes, the
  * figure's rhythm: each onset apart as the figure's, the last held as long); *dif: its notes not the figure's (in how
- * many places), *dm: its mean note less the figure's (semitones) */
+ * many places), *dm: its notes less the figure's, in degrees, summed (its mean's distance x n). (Review 1: its notes
+ * related to the figure's) la_first:
+ * its first note's distance from the figure's last, in degrees; la_strong: the most a note on a strong beat (on beat 1
+ * or 3 of the phrase, or held a half note; not the first, nor the last: the ending's) is from the figure's there */
+static int la_first, la_strong;
 static int lg_answer(uint32_t i, uint32_t k0, int n, int *dif, int *dm)
 {
     int k, sa = 0, sf = 0, ok = n > 0 && i + (uint32_t)n <= lg_n && lg_first(i) && lg_last(i + (uint32_t)n - 1u) &&
                               lg[i].role == LR_ANSWER && lg[i].slot == 0;
-    *dif = 0, *dm = 0;
+    *dif = 0, *dm = 0, la_first = 99, la_strong = 0;
     for (k = 0; k < n && ok; k++) {
         const uint32_t a = i + (uint32_t)k, f = k0 + (uint32_t)k;
+        const int dd = lg_deg(lg[a].note) - lg_deg(lg[f].note);
         if (k < n - 1)
             ok &= lg[a + 1u].on - lg[a].on == lg[f + 1u].on - lg[f].on;
         else
             ok &= lg[a].off - lg[a].on == lg[f].off - lg[f].on;
         *dif += lg[a].note != lg[f].note;
-        sa += lg[a].note, sf += lg[f].note;
+        sa += lg_deg(lg[a].note), sf += lg_deg(lg[f].note);
+        if (k && k < n - 1 && (!((lg[a].on - lg[i].on) & 7u) || lg[f + 1u].on - lg[f].on >= 8u) &&
+            (dd < 0 ? -dd : dd) > la_strong)
+            la_strong = dd < 0 ? -dd : dd;
     }
-    *dm = (sa - sf) / (n ? n : 1);
+    if (ok) {
+        const int d1 = lg_deg(lg[i].note) - lg_deg(lg[k0 + (uint32_t)n - 1u].note);
+        la_first = d1 < 0 ? -d1 : d1;
+    }
+    *dm = sa - sf;
     return ok;
 }
 /* (the Lead's offspring) how much motif (o, d, n entries) shares with a theme (to, td, tn), 0..100: the mean of its
@@ -2602,8 +2614,10 @@ int main(void)
      * (the Lead's own phrases going on). 2 keys (a gesture): nothing taken, the theme as it was. 4 keys within a bar
      * (degrees 2 4 3 6, 4 2 2 8 sixteenths, legato): the theme the figure (its degrees from the chord's root, its
      * lengths); not played back: the Lead's next phrase is its answer (LR_ANSWER on slot 0, the figure's rhythm, its
-     * notes not the figure's in half the places or more, near where it was played), beginning 1-2 beats after the
-     * figure closed (two beats after the last let go: 11 .. 17 sixteenths after it) */
+     * notes not the figure's in half the places or more but related (review 1): their mean within 3 degrees of the
+     * figure's, its first a step or a third from the figure's last, its strong beats on chord tones next to the
+     * figure's there, within 2 degrees), beginning 1-2 beats after the figure closed (two beats after the last let go:
+     * 11 .. 17 sixteenths after it) */
     {
         static const int FG[4] = {2, 4, 3, 6}, FD[4] = {4, 2, 2, 8}, GG[2] = {4, 5}, GD[2] = {4, 4};
         const uint32_t pl = EN_MODE_POOL[MODE_AEOLIAN];
@@ -2647,11 +2661,12 @@ int main(void)
             for (k = 0; k < (int)lg_n && k < 16; k++)
                 printf("  test_capture: note %u at +%d for %d, phrase %u, role %u, slot %u\n", lg[k].note,
                        (int)(lg[k].on - lg[0].on), (int)(lg[k].off - lg[k].on), lg[k].phr, lg[k].role, lg[k].slot);
-        CHECK(okt && ans && 2 * dif >= 4 && dm <= 7 && dm >= -7 && bl >= s + 11u && bl <= s + 17u,
+        CHECK(okt && ans && 2 * dif >= 4 && dm <= 3 * 4 && dm >= -3 * 4 && la_first <= 2 && la_strong <= 2 &&
+                  bl >= s + 11u && bl <= s + 17u,
               "test_capture: 4 keys: the theme the figure %d (%d entries); its answer %d (its notes not the figure's "
-              "in %d places of 4, >= 2; %d semitones from it, within 7), at +%d sixteenths after the last let go (11 "
-              ".. 17)",
-              okt, nt, ans, dif, dm, (int)(bl - s));
+              "in %d places of 4, >= 2; its mean %+d/4 degrees from the figure's, within 3; its first %d degrees from "
+              "the figure's last, its strong beats at most %d from the figure's, both within 2), at +%d sixteenths "
+              "after the last let go (11 .. 17)", okt, nt, ans, dif, dm, la_first, la_strong, (int)(bl - s));
         printf("  test_capture: the answer %d sixteenths after the last key let go\n", (int)(bl - s));
         {                                        /* (a player's timing: each key pressed and let go 30 ms late or 20
                                                   * ms early, a quarter of a sixteenth: the figure on the grid all the
@@ -2911,9 +2926,9 @@ int main(void)
      * D Aeolian at 120, Flow, the chord held, Lead in 0, Phrases 100, Memory 50: a 12-note figure within 4 bars (40
      * sixteenths) is kept whole, up to the capture's limit (EN_LEAD_CPMAX: its last that many entries); the Lead's next
      * phrase is its answer, not the figure: the kept figure's rhythm, its notes not the figure's in half the places or
-     * more, near where it was played, its last note on the chord, beginning 1-2 beats after the figure closed (11 .. 17
-     * sixteenths after the last let go); then, not on Flow's roll, the line's first offspring within 8 bars of the
-     * answer's end */
+     * more but related (as test_capture's), its last note on the chord, beginning 1-2 beats after the figure closed
+     * (11 .. 17 sixteenths after the last let go); then, not on Flow's roll, the line's first offspring within 8 bars
+     * of the answer's end */
     {
         static const int FG[12] = {4, 5, 6, 7, 6, 5, 4, 3, 4, 6, 5, 4}, FD[12] = {4, 2, 2, 4, 4, 2, 2, 4, 4, 4, 4, 4};
         const int kept = 12 < EN_LEAD_CPMAX ? 12 : EN_LEAD_CPMAX, k0 = 12 - kept;
@@ -2945,12 +2960,15 @@ int main(void)
                 printf("  test_capture_answer: note %u at +%d for %d, phrase %u, role %u, slot %u\n", lg[k].note,
                        (int)(lg[k].on - lg[0].on), (int)(lg[k].off - lg[k].on), lg[k].phr, lg[k].role, lg[k].slot);
         printf("  test_capture_answer: %d kept of 12; the answer at +%d sixteenths, %d of %d notes not the figure's, "
-               "%d semitones from it\n", nt, (int)(bl - s), dif, kept, dm);
-        CHECK(ok && ans && 2 * dif >= kept && dm <= 7 && dm >= -7 && ct && bl >= s + 11u && bl <= s + 17u,
+               "its mean %+d/%d degrees from it, its first %d degrees from the figure's last, its strong beats within "
+               "%d\n", nt, (int)(bl - s), dif, kept, dm, kept, la_first, la_strong);
+        CHECK(ok && ans && 2 * dif >= kept && dm <= 3 * kept && dm >= -3 * kept && la_first <= 2 && la_strong <= 2 &&
+                  ct && bl >= s + 11u && bl <= s + 17u,
               "test_capture_answer: the theme the figure's last %d %d (%d entries); its answer %d (%d of %d notes not "
-              "the figure's; %d semitones from it, within 7; its last on the chord %d), at +%d sixteenths after the "
-              "last "
-              "let go (11 .. 17)", kept, ok, nt, ans, dif, kept, dm, ct, (int)(bl - s));
+              "the figure's; its mean %+d/%d degrees from the figure's, within 3; its first %d degrees from the "
+              "figure's last, its strong beats at most %d from the figure's, both within 2; its last on the chord %d), "
+              "at +%d sixteenths after the last let go (11 .. 17)", kept, ok, nt, ans, dif, kept, dm, kept, la_first,
+              la_strong, ct, (int)(bl - s));
         end = ans ? lg[12u + (uint32_t)kept - 1u].off : en_bars;
         while (en_lead_ideas == id0 && en_bars < end + 12u * 16u)
             run(256.0f / 44100.0f + 1e-6f);
@@ -2961,6 +2979,68 @@ int main(void)
         CHECK(en_lead_ideas != id0 && at <= 8u && kind > LK_PLAIN,
               "test_capture_answer: the first offspring %d, %u bars after the answer ends (<= 8), made %d (not 0)",
               en_lead_ideas != id0, at, kind);
+        en_set(P_LMEM, en_param_info(P_LMEM)->def);
+    }
+
+    /* (BERLIN, the Lead's memory, Part 3 review 1) the keys' answer where the figure was played, whatever the chord
+     * does between: D Aeolian at 120, Flow, Drift 2 bars, Lead in 0; a 4-note figure (20 sixteenths) from a bar line
+     * where the chord changed, so it closes a beat before the next change and the answer begins on it (the root
+     * moved): the answer's mean within 3 degrees of the figure's, and related to it as test_capture's (its frame the
+     * figure's root, not the chord's now) */
+    {
+        static const int FG[4] = {4, 6, 5, 3}, FD[4] = {4, 4, 4, 8};
+        uint32_t i, x = 0, s;
+        int ans, dif, dm, sa = 0, sf = 0, moved, k, r0;
+        off_setup(50);
+        en_set(P_TEMPO, 120);
+        en_set(P_DRIFT, 0);                      /* (2 bars) */
+        run(8.0f);
+        for (r0 = en_chord_root; !x && en_bars < 64u * 16u;) {   /* (a bar line the chord changed on) */
+            run(256.0f / 44100.0f + 1e-6f);
+            if (en_chord_root != r0)
+                x = en_bars / 16u * 16u;
+        }
+        run_to(x + 32u);                         /* (the next change's bar line: the figure on it) */
+        lg_n = 0, lg_open = -1;
+        s = keys_now(FG, FD, 4);
+        run_to(s + 8u * 16u);
+        ans = lg_answer(4, 0, 4, &dif, &dm);
+        for (k = 0; k < 4 && ans; k++)
+            sa += lg_deg(lg[4u + (uint32_t)k].note), sf += lg_deg(lg[(uint32_t)k].note);
+        moved = ans && lg[4].croot != lg[3].croot;
+        for (i = 0; i < lg_n && i < 8u && !ans; i++)
+            printf("  test_capture_chord: note %u at +%d, root %u, role %u slot %u\n", lg[i].note,
+                   (int)(lg[i].on - lg[0].on), lg[i].croot, lg[i].role, lg[i].slot);
+        printf("  test_capture_chord: the answer's mean %+d/4 degrees from the figure's, the root %u then %u\n",
+               sa - sf, ans ? lg[3].croot : 0, ans ? lg[4].croot : 0);
+        CHECK(ans && moved && sa - sf <= 12 && sf - sa <= 12 && la_first <= 2 && la_strong <= 2,
+              "test_capture_chord: the keys' answer %d, over a new root %d, its mean %+d/4 degrees from the figure's "
+              "(within 3); its first %d degrees from the figure's last, its strong beats at most %d from the figure's "
+              "(both within 2)", ans, moved, sa - sf, la_first, la_strong);
+        en_set(P_LMEM, en_param_info(P_LMEM)->def);
+    }
+
+    /* (BERLIN, the Lead's memory, Part 3 review 1: the controller's ruling) a played theme is varied note by note, but
+     * never its first half twice (that would put the player's first half in place of their second for good): a 12-note
+     * figure taken, then 300 variations of it (en_lead_vary): its rhythm the figure's every time */
+    {
+        static const int FG[12] = {4, 5, 6, 7, 6, 5, 4, 3, 4, 6, 5, 4}, FD[12] = {4, 2, 2, 4, 4, 2, 2, 4, 4, 4, 4, 4};
+        const int kept = 12 < EN_LEAD_CPMAX ? 12 : EN_LEAD_CPMAX, k0 = 12 - kept;
+        int8_t off[32];
+        uint8_t dur[32];
+        int v, k, nt, bad = 0;
+        off_setup(50);
+        run(6.0f);
+        keys_play(FG, FD, 12);
+        run(2.0f);
+        for (v = 0; v < 300; v++) {
+            en_lead_vary(0);
+            nt = en_lead_theme(off, dur);
+            for (k = 0, bad += nt != kept; k < kept && nt == kept; k++)
+                bad += dur[k] != FD[k0 + k];
+        }
+        CHECK(en_lead_played() && !bad, "test_capture_vary: 300 variations of a played theme: %d lengths not the "
+              "figure's (0), the keys' %d", bad, en_lead_played());
         en_set(P_LMEM, en_param_info(P_LMEM)->def);
     }
 
@@ -3076,8 +3156,8 @@ int main(void)
      * minute apart: in Flow at Memory 0 the Lead takes one or two in its 45 s) well over that of the same run's ideas
      * without the keys; those taken 16 bars or more after it's ended (45 s at Memory 0) the generator's own (made
      * plain) and sharing no more than those (+ 10: a few ideas each). Without the keys no kinship, ever (the rest: the
-     * goldens). A new figure: kinship again, the next idea its offspring (sharing more than the plain ideas: a
-     * 2-note head scores low on kin_of) */
+     * goldens). A new figure: kinship again, the next idea its offspring, close kin (made from its head or its
+     * contour: kin_of scores a 2-note head low, so the kind is asked) */
     {
         static const int FG[5] = {7, 11, 10, 8, 9}, FD[5] = {3, 3, 2, 6, 10}, F2[5] = {9, 8, 6, 7, 4},
                          D2[5] = {6, 2, 2, 4, 12};
@@ -3125,10 +3205,9 @@ int main(void)
         na = ideas_log(40.0f, t2, d2, 5, at, kv, kd, 64, &k0, &kmax);
         printf("  test_offspring_kin: a new figure: the next idea's kinship with it %d, made %d\n", na ? kv[0] : -1,
                na ? kd[0] : -1);
-        CHECK(kmax >= 95 && na >= 1 && kd[0] != LK_PLAIN && kv[0] * nb > sb,
-              "test_offspring_kin: a new figure: the kinship at most %d (>= 95); its next idea (%d) made %d (an "
-              "offspring), kinship %d (more than without the keys, %ld)", kmax, na, na ? kd[0] : -1, na ? kv[0] : -1,
-              nb ? sb / nb : 0);
+        CHECK(kmax >= 95 && na >= 1 && (kd[0] == LK_HEAD || kd[0] == LK_SEQ || kd[0] == LK_MIRROR),
+              "test_offspring_kin: a new figure: the kinship at most %d (>= 95); its next idea (%d) made %d (close "
+              "kin: its head continued 1, a sequence 2, mirrored 3)", kmax, na, na ? kd[0] : -1);
     }
 
     /* (BERLIN, the Lead's offspring: its pace, the controller's ruling) off_setup at Memory 0, 50 and 100, the same

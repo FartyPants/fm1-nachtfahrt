@@ -214,6 +214,7 @@ int en_lead_played(void);                        /* (the theme the keys played: 
 int en_lead_kin(void);
 extern volatile uint8_t en_lead_ideas, en_lead_kind;
 int en_lead_idea(int8_t *off, uint8_t *dur);
+void en_lead_vary(int slot);                     /* (between renders: motif slot `slot` varied once, as a pass may) */
 #endif
 /* (the Lead's offspring) how a fresh idea was made: the generator's own; from a theme the keys played, its head (2-4
  * notes) continued; its head and the head again on another chord tone (a sequence); its contour mirrored; its notes
