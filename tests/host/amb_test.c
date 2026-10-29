@@ -1842,10 +1842,12 @@ int main(void)
         run(30.0f);
         CHECK(en_ks_ok() && !bad, "test_pluck_state: after 30 s of silence not finite, or denormal (bad %d)", bad);
         for (k = 0; k < 2; k++) {                /* (v) both sequences crowded: Pluck, then 2600 and Moog */
+            static int was[2][128];              /* (the sequences' channels as the tests before left them: only
+                                                  * this run's notes are counted; the last test still sees all) */
             int c, nt, stuck = 0;
             fresh();
-            for (c = 0; c < 16; c++)
-                memset(sounding[c], 0, sizeof sounding[c]);
+            memcpy(was[0], sounding[1], sizeof was[0]);
+            memcpy(was[1], sounding[3], sizeof was[1]);
             en_set(P_SVOICE, k ? 0 : 5), en_set(P_S2VOICE, k ? 1 : 6);
             en_set(P_SEQ, 70), en_set(P_SEQ2, 60), en_set(P_DENSITY, 100), en_set(P_TAPA, 100), en_set(P_TAPB, 100);
             en_set(P_TAPAT, 0), en_set(P_TEMPO, 160), en_set(P_DECAY, 100), en_set(P_S2DEC, 100);
@@ -1858,7 +1860,7 @@ int main(void)
             run(2.0f);
             for (c = 1; c < 4; c += 2)
                 for (nt = 0; nt < 128; nt++)
-                    stuck += sounding[c][nt] != 0;
+                    stuck += sounding[c][nt] != was[c >> 1][nt];
             CHECK(!stuck && !bad, "test_pluck_notes (%s): %d notes not paired (bad %d)", k ? "2600" : "Pluck", stuck,
                   bad);
         }
