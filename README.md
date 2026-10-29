@@ -13,7 +13,7 @@ slowly evolving textures, a strong sense of space. It plays itself from the mome
 can play with it: the white keys give you the melody, always in the piece's key.
 (It was called BERLIN while it was being built; the code keeps that name.)
 
-https://youtu.be/OLXYHRydniw?si=lHrKj13zKBICOcXD
+[![NACHTFAHRT on the FM-1 — watch on YouTube](https://img.youtube.com/vi/OLXYHRydniw/maxresdefault.jpg)](https://youtu.be/OLXYHRydniw)
 
 - a **Sequence** of up to 16 steps on a plucked analog-style voice (2600, Moog, Synthi, Pulse, Glass) or a
   plucked string (Pluck),
