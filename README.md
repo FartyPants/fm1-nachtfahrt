@@ -7,6 +7,7 @@ on USB) · **[Try it in the browser](https://fartypants.github.io/fm1-nachtfahrt
 **[Manual](https://fartypants.github.io/fm1-nachtfahrt/manual/)** ·
 **[Website](https://fartypants.github.io/fm1-nachtfahrt/)**
 
+## What?
 NACHTFAHRT turns the M-VAVE FM-1 into a generative Berlin School machine, after the 1970s music of
 Tangerine Dream, Klaus Schulze and Ashra: long, hypnotic pieces, repeating synthesizer sequences,
 slowly evolving textures, a strong sense of space. It plays itself from the moment it's switched on, and you
@@ -17,6 +18,12 @@ can play with it: the white keys give you the melody, always in the piece's key.
 
 [![NACHTFAHRT on the FM-1 — watch on YouTube](docs/img/site/video.jpg)](https://youtu.be/OLXYHRydniw)
 
+## Why?
+CM loves this "Berlin School" thing, with all its repetition and echoing, evolving plucks and drones, because it puts him to sleep, and if there is one thing that a Cranky Man needs, it is sleep. Lots of it. Usually around 15 hours per week. And now it can put you to sleep, too!
+
+The whole idea behind this music generator is that IF you are NOT put to sleep by the lead sound (which plays itself), then when you start playing, it will listen, and then respond to your musical "call" with its own version of the musical phrase.
+
+## What it does?
 - a **Sequence** of up to 16 steps on a plucked analog-style voice (2600, Moog, Synthi, Pulse, Glass) or a
   plucked string (Pluck),
   its filter wandering slowly, its notes **repeated** at the echo's times (a dotted eighth by default, the
