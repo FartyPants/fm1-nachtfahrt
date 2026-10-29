@@ -13,6 +13,8 @@ slowly evolving textures, a strong sense of space. It plays itself from the mome
 can play with it: the white keys give you the melody, always in the piece's key.
 (It was called BERLIN while it was being built; the code keeps that name.)
 
+<video src="[path/to/video.mp4](https://youtube.be/OLXYHRydniw)" width="320" height="240" controls></video>
+
 [![Watch the video](https://youtube.be/OLXYHRydniw)](https://youtube.be/OLXYHRydniw)
 
 - a **Sequence** of up to 16 steps on a plucked analog-style voice (2600, Moog, Synthi, Pulse, Glass) or a
