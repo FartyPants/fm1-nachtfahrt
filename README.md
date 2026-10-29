@@ -26,7 +26,7 @@ can play with it: the white keys give you the melody, always in the piece's key.
   the reverb and the echo; it remembers its motifs and returns to the piece's theme (how much it keeps: **Memory**).
   You can also play it on the white keys, in the scale: three notes or more and a pause become its theme, and its
   next ideas grow out of yours, straying further until they are its own again;
-- an **Atmosphere**: Wind, Surf, Space, Air or Tape (or none);
+- an **Atmosphere**: Wind, Surf, Space, Air, Tape or Rain (or none);
 - an **arc**: a piece opens from the drone (each layer's filter rising from closed), flows, lets the Lead take
   over and crosses a bridge in the middle, where the layers' filters part and come together. It never ends by
   itself: it repeats for ever;
@@ -109,7 +109,9 @@ octave shifter follows OCT UP and its SHIMMER in [Felucca](https://github.com/hu
 follows VOICE in Felucca (`eng_formant.c`, GPL-3.0; Klatt's cascade; its vowel table, after Hillenbrand et al.); the granular
 cloud (Freeze) follows the design of CLOUD in [JIANT](https://github.com/juanjiant-bit/JIANT) (GPL-3.0); Pluck's
 string follows `pluck.c` in M-VAVE's [fm1_open](https://github.com/m-vave/fm1_open) (after DaisySP's String,
-Electrosmith and Emilie Gillet; MIT); the Tape
+Electrosmith and Emilie Gillet; MIT); Wind's pink and Surf's brown noise and Rain's drops follow NOISE in
+[Skiff](https://github.com/illuminus5/skiff) (`eng_noise.c`, Leo Kuroshita, Hügelton Instruments; GPL-3.0; Paul Kellet's
+pink filter); the Tape
 atmosphere is DUB-1's crackle, after Bahadirhan Kocer's "Using Resonators in Live". The way the sequence is
 played (a root accented, sparse notes, a dotted-eighth repeat as loud as the note, two delays) owes much to
 Synth Seeker's videos on Berlin School sequencing. The platform (hardware layer, USB, update loader, storage,

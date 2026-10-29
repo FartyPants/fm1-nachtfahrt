@@ -34,7 +34,7 @@ Done, with the whole suite passing (`tests/run_tests.sh`, gate `tools/suite_gate
   related notes of the Lead's own; the Lead's next ideas grow out of it, straying further (about 90 s at Memory 50),
   and the figure itself comes back at the theme's moments. **FORGET** (PERFORM, the top key, G5) wipes the Lead's
   memory.
-- **The Atmosphere**: None, Wind, Surf, Space, Air, Tape.
+- **The Atmosphere**: None, Wind (pink), Surf (brown), Space, Air, Tape, Rain (soft drops).
 - **The arc**: Emerge (only while the Intros open), Flow, Solo, Bridge; the swell into Flow; no endings (a piece
   repeats for ever); a piece changed starts its own arc.
 - **Filter motion**:

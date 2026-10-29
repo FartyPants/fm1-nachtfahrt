@@ -78,7 +78,7 @@ const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PAR
  * (Voices: the Sequence's 2600 Moog Synthi Pulse Glass Pluck (0..5), Sequence 2's the five, Sub, Pluck (0..6);
  *  the Drone's Organ Strings Horn Saws Glass Choir; the Lead's Odyssey Mini Flute Theremin Synthi. Modes: 0 Ionian,
  *  1 Dorian, 2 Phrygian, 5 Aeolian. Repeat times: 1/8 1/8. 1/4 1/4. 1/2 1 bar. Drift: 2 4 8 16 32 64 bars, Hold.
- *  Play: the walk Home, Wander, Free. Grid: 8ths, 16ths. Atmosphere: None Wind Surf Space Air Tape. The moves (filter motion spec 9): MW/MT/MR/MI a layer's
+ *  Play: the walk Home, Wander, Free. Grid: 8ths, 16ths. Atmosphere: None Wind Surf Space Air Tape Rain. The moves (filter motion spec 9): MW/MT/MR/MI a layer's
  *  Width, Time, Rate and Intro in bars (0 Drone, 1 Sequence, 2 Lead, 3 Sequence 2, 4 Atmosphere; the Sequence's Width
  *  is Sweep); the Lead's Width kept low; Bridge the middle section's move. Memory: how much the Lead keeps its ideas,
  *  the Lead's memory spec 3.3's starting values, to tune by ear; every piece's set, Mirage's 50 the default too, so
@@ -534,6 +534,7 @@ typedef struct {
 static noise_ctl_t nctl;
 static uint8_t atm_char;                        /* (BERLIN) the Atmosphere's character (render_atmos) */
 static uint32_t atm_rng;                        /* (its random: en_init's seed) */
+static void atm_reset(void);
 static int ec_pp;                               /* (BERLIN) the echo ping-pongs (twice its time fits the tape) */
 static float ec_g = 0.6f, ec_lpc = 0.68f, ec_wide = 1.0f;   /* the echo's Blur, Tone, Width (and the chord's and the
                                                              * pings': widen) */
@@ -3761,6 +3762,7 @@ void en_init(void)
     ld_rng = 0x3C6EF372u;
     ks_rng = 0x6C078965u;                        /* (Pluck's bursts) */
     atm_rng = 0xBB67AE85u;
+    atm_reset();                                 /* (the voices batch: its wanderings and filters too) */
     ar_rng = 0x510E527Fu;
     s2o_rng = 0x9B05688Cu;
     en_s2oct_shift = 0;
@@ -4138,7 +4140,9 @@ static void widen(uint32_t n)
  * a second; a little of it into the plate.
  * Four controls shape it, each -1..+1 around the piece's own (0), and a character (a preset of the mix): ready
  * on ARP's Noise page (P_NCOL .. P_NCHAR, into nctl) */
-const char *const EN_NCHAR_NAME[EN_NNCHAR] = {"None", "Wind", "Surf", "Space", "Air", "Tape"};   /* (BERLIN: the Atmosphere's;
+const char *const EN_NCHAR_NAME[EN_NNCHAR] = {"None", "Wind", "Surf", "Space", "Air", "Tape", "Rain"};   /* (BERLIN: the
+                                                  * Atmosphere's; the voices batch: Rain appended, so every one before it
+                                                  * keeps its number in the pieces and the saves;
                                                   * NCHAR below is the dub's noise machine, heard as Tape) */
 #define NZCH 5                                  /* (the dub's noise machine's characters: Tape is its 1) */
 /* 1.3.0's noise machine (build/research/dubtechno/REPORT4-noise.md, after Bahadirhan Kocer's "Using Resonators in
@@ -4258,19 +4262,83 @@ static void noise_step(int s)
     nz_wait = (int32_t)fm_maxf(gap - lead, 0.0f);
     nz_due = 1;
 }
-/* (BERLIN) the Atmosphere: the Synthi's weather (Schulze's "water, wind, twittering, thunder"). Wind: noise through a
- * resonant band-pass wandering ~250 Hz .. 2 kHz, gusting; Surf: dark noise swelling and falling every 6 .. 12 s, left
- * and right apart; Space: sample-and-hold bleeps, short sines on random notes of the scale high up, at random, into
- * the echo; Air: a soft high hiss, breathing; Tape: the dub's noise machine (render_crackle). Colour: darker ..
- * brighter; Density: calmer .. busier; Drift: slower .. quicker. While playing, as the dub's was */
-enum { ATM_NONE, ATM_WIND, ATM_SURF, ATM_SPACE, ATM_AIR, ATM_TAPE };
+/* (BERLIN) the Atmosphere: the Synthi's weather (Schulze's "water, wind, twittering, thunder"). Wind: pink noise through
+ * a resonant band-pass wandering ~250 Hz .. 2 kHz, louder as it climbs (gusts); Surf: brown noise swelling and falling
+ * every 6 .. 12 s, left and right apart, brighter as a wave breaks; Space: sample-and-hold bleeps, short sines on
+ * random notes of the scale high up, at random, into the echo; Air: a soft high hiss, breathing; Tape: the dub's noise
+ * machine (render_crackle); Rain: soft drops, each a short ring, over a quiet hush. Colour: darker .. brighter;
+ * Density: calmer .. busier; Drift: slower .. quicker. While playing, as the dub's was.
+ * (The voices batch, item 4: Wind's pink, Surf's brown, Wind's level following its band and Rain's drops after Skiff's
+ * NOISE, eng_noise.c, Leo Kuroshita, Hügelton Instruments, GPL-3.0-only: its COLR tilt, white -> pink (three leaky
+ * poles, Paul Kellet's "economy" filter) -> brown (a leaky integrator), its DRFT (the cutoff wandering, the level
+ * following it) and its DUST (sparse impulses through a resonance); written again in float. The user: the FM-1's
+ * speaker is bright, the noise was hissy; each level is matched by its A-weighted loudness to the one he tuned.) */
+enum { ATM_NONE, ATM_WIND, ATM_SURF, ATM_SPACE, ATM_AIR, ATM_TAPE, ATM_RAIN };
 static inline float svf_lp(const float *c, float *s, float x, float *bp);
 static float atm_gate, atm_w[2] = {0.3f, 0.6f}, atm_wt[2] = {0.5f, 0.5f}, atm_gu = 0.5f, atm_gt = 0.5f, atm_s[2][2],
              atm_c[2][4], atm_sw[2] = {0.0f, 0.4f}, atm_swr[2] = {0.11f, 0.13f}, atm_lp[2], bl_ph, bl_dt, bl_env,
              bl_gl, bl_gr, bl_wait, atm_hl, atm_hr, bl_dt1, bl_glk, bl_idx, bl_dk = 0.999f, bl_step;
 static int bl_burst;
+/* (the voices batch) Wind's pink poles and its level now (each side's), Surf's top low-pass; Rain's drops: RN_N rings,
+ * each a sine (its phase, its step now and the step it rises to) under two decays, a slow one (the ring) less a quick
+ * one (its 3 ms onset: soft, not a click), panned; the wait to the next drop (samples) */
+#define RN_N 4
+static float atm_pk[2][3], atm_lv[2], atm_lq[2], rn_ph[RN_N], rn_dt[RN_N], rn_dt1[RN_N], rn_es[RN_N], rn_ef[RN_N],
+             rn_ds[RN_N], rn_gl[RN_N], rn_gr[RN_N], rn_wait;
+/* the constants, by ear and by measure (each level: its A-weighted loudness the shipped one's, in the piece the user
+ * tuned it in: Timewind's Wind at 7, Sunrain's Surf at 5; Rain as loud as Wind at the same level) */
+#define WD_G 0.20f                               /* Wind's level (pink through the band) */
+#define WD_LV0 0.3f                              /* Wind's level at the bottom of its wander (x1 at the top: -10 dB) */
+#define SF_G 16.8f                               /* Surf's level (brown, swelling) */
+#define SF_BR 110.0f                             /* Surf's brown corner (Hz): flat below, -6 dB an octave above */
+#define SF_TOP 1200.0f                           /* Surf's top low-pass at Colour 0 (Hz), x0.5 .. x1.5 as a wave
+                                                  * swells to its crest: -12 dB an octave above */
+#define RN_G 3.2f                                /* Rain's drops' level */
+#define RN_BED 0.04f                             /* its hush, under the drops */
+#define RN_LO 700.0f                             /* its drops' lowest pitch at Colour 0 (Hz; two octaves up from it) */
+#define RN_RATE 8.0f                             /* its drops a second at Density 0, the shower at its middle */
+#define RN_DF 0.9492f                            /* (a drop's onset: the quick decay, -60 dB in 3 ms) */
+#define RN_GLK 0.004f                            /* (a drop's rise onto its pitch, from 3 semitones under: ~6 ms) */
+/* (the voices batch) the Atmosphere from the top, as en_init's dice (a reset plays the same again): its wanderings,
+ * waves and filters as the program starts them (so a piece played alone sounds as it did); its gate, the transport's,
+ * kept. Wind's level now follows its wander: without this its loudness in the first minutes hung on where the piece
+ * before left the wander */
+static void atm_reset(void)
+{
+    int ch, k;
+    for (ch = 0; ch < 2; ch++) {
+        atm_w[ch] = ch ? 0.6f : 0.3f, atm_wt[ch] = 0.5f, atm_sw[ch] = ch ? 0.4f : 0.0f, atm_swr[ch] = ch ? 0.13f : 0.11f;
+        atm_s[ch][0] = atm_s[ch][1] = atm_lp[ch] = atm_lq[ch] = atm_lv[ch] = 0.0f;
+        atm_pk[ch][0] = atm_pk[ch][1] = atm_pk[ch][2] = 0.0f;
+    }
+    atm_gu = atm_gt = 0.5f;
+    atm_hl = atm_hr = 0.0f;
+    bl_ph = bl_dt = bl_env = bl_gl = bl_gr = bl_wait = bl_dt1 = bl_glk = bl_idx = bl_step = 0.0f;
+    bl_dk = 0.999f, bl_burst = 0;
+    for (k = 0; k < RN_N; k++)
+        rn_ph[k] = rn_dt[k] = rn_dt1[k] = rn_es[k] = rn_ef[k] = rn_ds[k] = rn_gl[k] = rn_gr[k] = 0.0f;
+    rn_wait = 0.0f;
+}
 static float atm_u(void) { return (float)(seq_rand(&atm_rng) >> 8) * (1.0f / 16777216.0f); }
 static float atm_noise(void) { return (float)(int32_t)seq_rand(&atm_rng) * (1.0f / 2147483648.0f); }
+/* (the voices batch) a new drop on the quietest ring: a pitch at random over two octaves from RN_LO (Colour moves
+ * them), rising onto it from 3 semitones under (a bubble's chirp), loud now and then but mostly soft, its ring Ring's
+ * (0.3 .. 0.9 of it, each its own), here or there; the next one at random (a Poisson rain: rate a second) */
+static void rain_drop(float col, float ring, float rate)
+{
+    const float u = atm_u(), p = atm_u() * (FM_PI / 2.0f), v = atm_u(), a = atm_u(), w = atm_u();
+    int k = 0, i;
+    for (i = 1; i < RN_N; i++)                   /* (the quietest ring: a free one, or the one nearly done) */
+        if (rn_es[i] < rn_es[k])
+            k = i;
+    rn_dt1[k] = RN_LO * fm_exp2f(2.0f * u) * col * (1.0f / EN_SR);
+    rn_dt[k] = 0.84f * rn_dt1[k];
+    rn_ph[k] = 0.0f;
+    rn_es[k] = rn_ef[k] = 0.25f + 0.75f * a * a;
+    rn_ds[k] = fm_expf(-6.9f / (ring * (0.3f + 0.6f * v) * EN_SR));
+    rn_gl[k] = fm_cosf(p), rn_gr[k] = fm_sinf(p);
+    rn_wait += -fm_logf(fm_maxf(w, 1e-6f)) * EN_SR / rate;
+}
 static void render_atmos(uint32_t n)
 {
     const int c = atm_char;
@@ -4279,9 +4347,9 @@ static void render_atmos(uint32_t n)
                 rv = (float)par[P_NPLATE] * 0.02f, ec = (float)par[P_NECHO] * 0.02f,
                 col = fm_exp2f(fm_clampf(nctl.colour + fo[FO_ATM], -1.0f, 1.0f)), busy = fm_exp2f(fm_clampf(nctl.grain, -1.0f, 1.0f)),
                 spd = fm_exp2f(fm_clampf(nctl.drift, -1.0f, 1.0f)), sec_n = (float)n * (1.0f / EN_SR);
-    float g;
+    float g, sa[2] = {0.0f, 0.0f}, sd[2] = {0.0f, 0.0f}, kb = 0.0f, kt = 0.0f, bed = 0.0f, rate = 1.0f;
     uint32_t j;
-    int ch;
+    int ch, k;
     atm_gate += ((en_playing ? 1.0f : 0.0f) - atm_gate) * fm_minf((float)n / (0.5f * EN_SR), 1.0f);
     g = mutes & EN_M_NOISE || c == ATM_NONE ? 0.0f : crackle_vol * atm_gate;   /* (its level: nothing more) */
     atm_g_out = g;
@@ -4291,37 +4359,69 @@ static void render_atmos(uint32_t n)
             crl[j] = crr[j] = 0.0f;
         return;
     }
-    for (ch = 0; ch < 2; ch++) {                 /* the wanderings: a new aim now and then, eased to */
-        if (atm_u() < sec_n * 0.35f * spd)
+    for (ch = 0; ch < 2; ch++) {                 /* the wanderings: a new aim now and then (Wind's: more often with
+                                                  * Density, its gusts), eased to */
+        if (atm_u() < sec_n * 0.35f * spd * (c == ATM_WIND ? busy : 1.0f))
             atm_wt[ch] = atm_u();
         atm_w[ch] += (atm_wt[ch] - atm_w[ch]) * fm_minf(sec_n * 0.25f * spd, 1.0f);
         svf_coefs(atm_c[ch], 250.0f * fm_exp2f(3.0f * atm_w[ch]) * col, 0.32f - 0.28f * (float)par[P_NTUNE] * 0.01f);
+        atm_lv[ch] = WD_G * (WD_LV0 + (1.0f - WD_LV0) * atm_w[ch]);   /* (Wind: its level follows the band, as
+                                                  * Skiff's DRFT: the gusts climb and swell together) */
     }
-    if (atm_u() < sec_n * 0.5f * spd * busy)     /* (the gusts) */
+    if (atm_u() < sec_n * 0.5f * spd * busy)     /* (the gusts; Air's breathing, Rain's showers) */
         atm_gt = atm_u();
     atm_gu += (atm_gt - atm_gu) * fm_minf(sec_n * 0.6f * spd, 1.0f);
+    if (c == ATM_SURF) {                         /* (its swell: the block's ends, a straight line between: the
+                                                  * waves are seconds long) */
+        kb = SF_BR * (FM_TWO_PI / EN_SR);
+        kt = fm_minf(SF_TOP * col * (FM_TWO_PI / EN_SR), 0.6f);
+        for (ch = 0; ch < 2; ch++) {
+            const float s0 = 0.5f - 0.5f * sine(atm_sw[ch] + 0.75f),
+                        s1 = 0.5f - 0.5f * sine(atm_sw[ch] + 0.75f + (float)n * atm_swr[ch] * spd * (1.0f / EN_SR));
+            sa[ch] = s0 * s0;
+            sd[ch] = (s1 * s1 - s0 * s0) / (float)n;
+        }
+    } else if (c == ATM_RAIN) {                  /* (the shower: Density's rate, the gusts' swell; its hush with it) */
+        kb = fm_minf(800.0f * col * (FM_TWO_PI / EN_SR), 1.0f);
+        rate = RN_RATE * busy * (0.3f + 1.4f * atm_gu);
+        bed = RN_BED * (0.5f + atm_gu);
+    }
     for (j = 0; j < n; j++) {
-        float l = 0.0f, r = 0.0f, bp;
+        float l = 0.0f, r = 0.0f, bp, xl = 0.0f, xr = 0.0f;
         switch (c) {
-        case ATM_WIND:
-            svf_lp(atm_c[0], atm_s[0], atm_noise(), &bp);
-            l = bp * (0.25f + 0.75f * atm_gu);
-            svf_lp(atm_c[1], atm_s[1], atm_noise(), &bp);
-            r = bp * (0.25f + 0.75f * atm_gu);
+        case ATM_WIND: {                         /* (one draw, two 16-bit noises: one a side, the hiss's too) */
+            const uint32_t rr = seq_rand(&atm_rng);
+            xl = (float)(int32_t)(rr << 16) * (1.0f / 2147483648.0f);
+            xr = (float)(int32_t)(rr & 0xFFFF0000u) * (1.0f / 2147483648.0f);
+            for (ch = 0; ch < 2; ch++) {         /* pink: three leaky poles and the noise itself (Kellet) */
+                float *p = atm_pk[ch];
+                const float x = ch ? xr : xl;
+                p[0] = 0.99765f * p[0] + 0.0990460f * x;
+                p[1] = 0.96300f * p[1] + 0.2965164f * x;
+                p[2] = 0.57000f * p[2] + 1.0526913f * x;
+                svf_lp(atm_c[ch], atm_s[ch], p[0] + p[1] + p[2] + 0.1848f * x, &bp);
+                if (ch)
+                    r = bp * atm_lv[1];
+                else
+                    l = bp * atm_lv[0];
+            }
             break;
-        case ATM_SURF:
+        }
+        case ATM_SURF:                           /* (each side's draws as before: the noise, a new wave's length) */
             for (ch = 0; ch < 2; ch++) {
-                const float sw = 0.5f - 0.5f * sine(atm_sw[ch] + 0.75f), a = sw * sw;
-                atm_lp[ch] += fm_minf(900.0f * col * (1.0f / EN_SR) * FM_TWO_PI, 1.0f) * (atm_noise() - atm_lp[ch]);
+                const float a = sa[ch];
+                sa[ch] += sd[ch];
+                atm_lp[ch] += kb * (atm_noise() - atm_lp[ch]);   /* brown, from SF_BR up */
+                atm_lq[ch] += kt * (0.5f + a) * (atm_lp[ch] - atm_lq[ch]);   /* (a wave breaking: brighter) */
                 atm_sw[ch] += atm_swr[ch] * spd * (1.0f / EN_SR);
                 if (atm_sw[ch] >= 1.0f) {        /* (a wave done: the next one 6 .. 12 s) */
                     atm_sw[ch] -= 1.0f;
                     atm_swr[ch] = 1.0f / (6.0f + 6.0f * atm_u());
                 }
                 if (ch)
-                    r = 2.2f * atm_lp[ch] * a;
+                    r = SF_G * atm_lq[ch] * a;
                 else
-                    l = 2.2f * atm_lp[ch] * a;
+                    l = SF_G * atm_lq[ch] * a;
             }
             break;
         case ATM_SPACE:                          /* (the Synthi's sample-and-hold, twittering: no two bleeps alike) */
@@ -4358,6 +4458,34 @@ static void render_atmos(uint32_t n)
                 bl_ph -= 1.0f;
             esend[j] += 0.9f * ec * (l + r) * g;  /* (into the echo, twittering) */
             break;
+        case ATM_RAIN: {                         /* (one draw, two noises, as Wind's) */
+            const uint32_t rr = seq_rand(&atm_rng);
+            xl = (float)(int32_t)(rr << 16) * (1.0f / 2147483648.0f);
+            xr = (float)(int32_t)(rr & 0xFFFF0000u) * (1.0f / 2147483648.0f);
+            atm_lp[0] += kb * (xl - atm_lp[0]);   /* the hush: the shower far off */
+            atm_lp[1] += kb * (xr - atm_lp[1]);
+            l = bed * atm_lp[0], r = bed * atm_lp[1];
+            if ((rn_wait -= 1.0f) <= 0.0f) {
+                if (SHED)                        /* (shedding: no new drop; the rings die) */
+                    rn_wait = 0.0f;
+                else
+                    rain_drop(col, ring, rate);
+            }
+            for (k = 0; k < RN_N; k++)
+                if (rn_es[k] > 0.0f) {
+                    const float x = RN_G * sine(rn_ph[k]) * (rn_es[k] - rn_ef[k]);
+                    l += x * rn_gl[k], r += x * rn_gr[k];
+                    rn_es[k] *= rn_ds[k];
+                    rn_ef[k] *= RN_DF;
+                    if (rn_es[k] < 1e-4f)        /* (done: the ring free, never into denormals) */
+                        rn_es[k] = rn_ef[k] = 0.0f;
+                    rn_dt[k] += (rn_dt1[k] - rn_dt[k]) * RN_GLK;
+                    rn_ph[k] += rn_dt[k];
+                    if (rn_ph[k] >= 1.0f)
+                        rn_ph[k] -= 1.0f;
+                }
+            break;
+        }
         default:                                 /* Air: what a low-pass leaves, breathing with the gusts */
             for (ch = 0; ch < 2; ch++) {
                 const float x = atm_noise();
@@ -4369,8 +4497,10 @@ static void render_atmos(uint32_t n)
             }
             break;
         }
-        if (c != ATM_AIR) {                      /* Air: a hiss under the others */
-            const float hl = atm_noise(), hr = atm_noise();
+        if (c != ATM_AIR) {                      /* Air: a hiss under the others (Wind's and Rain's from their own
+                                                  * noise: a draw saved) */
+            const float hl = c == ATM_WIND || c == ATM_RAIN ? xl : atm_noise(),
+                        hr = c == ATM_WIND || c == ATM_RAIN ? xr : atm_noise();
             atm_hl += 0.35f * (hl - atm_hl), atm_hr += 0.35f * (hr - atm_hr);
             l += 0.12f * air * (hl - atm_hl), r += 0.12f * air * (hr - atm_hr);
         }
@@ -4384,7 +4514,27 @@ static void render_atmos(uint32_t n)
         if (c != ATM_SPACE)
             esend[j] += 0.15f * ec * (l + r) * g;   /* (a little into the echo; the bleeps, more: above) */
     }
+    for (ch = 0; ch < 2; ch++)                   /* (the poles' and the onsets' tails: never into denormals; a block
+                                                  * takes a quick onset down by 1e-6 at most) */
+        atm_lq[ch] = fm_flush(atm_lq[ch]);
+    for (k = 0; k < RN_N; k++)
+        rn_ef[k] = fm_flush(rn_ef[k]);
 }
+#ifdef EN_HOST
+static int atm_fine(float x) { return x == x && fm_fabsf(x) < 1e30f && (x == 0.0f || fm_fabsf(x) > 1.2e-38f); }
+int en_atm_ok(void)                              /* (host tests) the Atmosphere's float state finite, no denormals */
+{
+    int ok = atm_fine(atm_gate) && atm_fine(atm_gu) && atm_fine(atm_hl) && atm_fine(atm_hr) && atm_fine(bl_env) &&
+             atm_fine(bl_ph) && atm_fine(bl_dt) && atm_fine(rn_wait), ch, k;
+    for (ch = 0; ch < 2; ch++)
+        ok &= atm_fine(atm_w[ch]) && atm_fine(atm_s[ch][0]) && atm_fine(atm_s[ch][1]) && atm_fine(atm_lp[ch]) &&
+              atm_fine(atm_sw[ch]) && atm_fine(atm_lq[ch]) && atm_fine(atm_pk[ch][0]) && atm_fine(atm_pk[ch][1]) &&
+              atm_fine(atm_pk[ch][2]);
+    for (k = 0; k < RN_N; k++)
+        ok &= atm_fine(rn_es[k]) && atm_fine(rn_ef[k]) && atm_fine(rn_ph[k]) && atm_fine(rn_dt[k]);
+    return ok;
+}
+#endif
 
 static void render_crackle(uint32_t n)
 {

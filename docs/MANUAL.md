@@ -252,9 +252,16 @@ backwards, its last notes carried on, then only its rhythm with new notes. After
 about 45 seconds at Memory 0, a minute and a half at 50, two and a half minutes at 100. Your theme itself keeps coming
 back where the theme does, and a new figure on the keys starts it all again from that one.
 
-**The Atmosphere** (SAVE) is a background: **None**, **Wind** (a breath of noise through a narrow band, swept
-slowly), **Surf** (waves), **Space** (chirps and bursts, far away), **Air**, or **Tape** (a crackle ringing on
-the chord, DUB-1's).
+**The Atmosphere** (SAVE) is a background: **None**, **Wind** (a breath of soft, pink noise through a narrow
+band, swept slowly, louder as it climbs: gusts), **Surf** (waves of dark, deep noise, each brighter as it breaks),
+**Space** (chirps and bursts, far away), **Air**, **Tape** (a crackle ringing on the chord, DUB-1's), or **Rain**
+(soft drops, each a short ring at its own pitch, over a quiet hush). Wind and Surf are darker than they were, as
+loud as before.
+
+Its knobs keep their jobs whatever it is: Density, how busy (on Wind, how often its band turns; on Rain, how many
+drops); Drift, how quickly it changes (Wind's band, Surf's waves, Rain's showers coming and going); Colour, darker
+or brighter (where Wind's band wanders, the drops' pitch); Ring, how much it rings (how narrow Wind's band, how
+long each drop); Air, the hiss under it; Width, Reverb and Echo as everywhere.
 
 ---
 
@@ -602,6 +609,10 @@ must also share its source code.
 - The granular cloud (Freeze) follows the design of CLOUD in [JIANT](https://github.com/juanjiant-bit/JIANT)
   (GPL-3.0), another FM-1 firmware.
 - The Tape atmosphere is DUB-1's crackle, after Bahadirhan Kocer's "Using Resonators in Live".
+- Wind's pink noise and its band whose level follows its wandering, Surf's brown noise and Rain's drops follow
+  NOISE in [Skiff](https://github.com/illuminus5/skiff) (`eng_noise.c`, Leo Kuroshita, Hügelton Instruments,
+  GPL-3.0): its colour from white to pink (Paul Kellet's filter) to brown, its drift and its dust; written again
+  in floating point.
 - The chord walk is a weighted random walk over the scale's degrees, from AMB-1's `chord_change`.
 - The platform (hardware layer, USB, update loader, installer and storage) is from **Felucca** by Leo
   Kuroshita, Hügelton Instruments, by way of [X0X](https://github.com/charlesvestal/fm1-x0x), FoMni-1,

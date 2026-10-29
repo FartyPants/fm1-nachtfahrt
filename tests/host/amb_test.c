@@ -1113,6 +1113,293 @@ static float ch_click(const float *x, int n)
     return nw ? top / fmaxf(w[nw * 99 / 100], 1e-12f) : 0.0f;
 }
 
+/* (the voices batch, item 4: the Atmospheres) the Atmosphere alone: a piece's settings (pc < 0: every knob at its
+ * default), character ch at level lv, every other layer's level 0; stopped until silent first (a tail from the tests
+ * before), then playing, its 2 s fade-in let pass. at_cap then plays secs: the mono mix into at_x, the two sides'
+ * mean square into at_ms */
+#define AT_MAX (46 * 44100)
+static float at_x[AT_MAX];
+static int at_n;
+static double at_ms;
+static void at_solo(int pc, int ch, int lv, int dry)   /* (dry: its own reverb and echo sends 0) */
+{
+    int k;
+    en_play(0);                                  /* (stopped until silent and 5 s more first, so the Atmosphere's gate,
+                                                  * the transport's and not reset by en_init, is shut: its fading out
+                                                  * would move its wander and draw its dice, and each test would hear
+                                                  * another wind) */
+    for (k = 0; k < 40; k++) {
+        peak = 0.0f;
+        run(0.5f);
+        if (peak < 1e-5f)
+            break;
+    }
+    run(5.0f);
+    fresh();
+    for (k = 0; k < P_NPARAMS; k++)
+        en_set(k, en_param_info(k)->def);
+    en_pool(EN_MODE_POOL[en_param_info(P_MODE)->def]);
+    if (pc >= 0)
+        piece(pc);
+    en_regrow();
+    en_set(P_CHORD, 0), en_set(P_SEQ, 0), en_set(P_LEAD, 0), en_set(P_SEQ2, 0);
+    en_set(P_NCHAR, ch), en_set(P_CRACKLE, lv);
+    if (dry)
+        en_set(P_NPLATE, 0), en_set(P_NECHO, 0);
+    en_play(1);
+    run(2.0f);
+}
+static void at_cap(float secs)
+{
+    int blocks = (int)(secs * 44100.0f / 256.0f), b, j;
+    double s = 0.0;
+    at_n = 0;
+    for (b = 0; b < blocks; b++) {
+        en_render(buf, 256, 2048);
+        for (j = 0; j < 256; j++) {
+            const double l = (double)buf[2 * j] / 8388608.0, r = (double)buf[2 * j + 1] / 8388608.0;
+            if (fabs(l) > (double)peak || fabs(r) > (double)peak)
+                peak = (float)fmax(fabs(l), fabs(r));
+            if (l != l || r != r)
+                bad++;
+            s += l * l + r * r;
+            if (at_n < AT_MAX)
+                at_x[at_n++] = (float)(0.5 * (l + r));
+        }
+    }
+    at_ms = s / (2.0 * (double)(at_n > 0 ? at_n : 1));
+}
+static void at_fft(double *re, double *im, int n)   /* (radix 2, in place) */
+{
+    int i, j, k, m;
+    for (i = 1, j = 0; i < n; i++) {
+        int bit = n >> 1;
+        for (; j & bit; bit >>= 1)
+            j ^= bit;
+        j ^= bit;
+        if (i < j) {
+            double t = re[i];
+            re[i] = re[j], re[j] = t;
+            t = im[i], im[i] = im[j], im[j] = t;
+        }
+    }
+    for (m = 2; m <= n; m <<= 1)
+        for (i = 0; i < m / 2; i++) {
+            const double w = -6.283185307179586 * (double)i / (double)m, c = cos(w), s = sin(w);
+            for (k = i; k < n; k += m) {
+                const double tr = c * re[k + m / 2] - s * im[k + m / 2], ti = s * re[k + m / 2] + c * im[k + m / 2];
+                re[k + m / 2] = re[k] - tr, im[k + m / 2] = im[k] - ti;
+                re[k] += tr, im[k] += ti;
+            }
+        }
+}
+static double aw2(double f)                      /* the A-weighting's power gain at f (IEC 61672: 0 dB at 1 kHz) */
+{
+    const double f2 = f * f, a = 12194.0 * 12194.0 * f2 * f2 /
+                                 ((f2 + 20.6 * 20.6) * sqrt((f2 + 107.7 * 107.7) * (f2 + 737.9 * 737.9)) * (f2 + 12194.0 * 12194.0)) *
+                                 1.2589254;     /* (+2.00 dB) */
+    return a * a;
+}
+/* at_x's spectrum: Welch, 8192-point Hann frames half overlapped, the mean power per bin into at_pw; each frame's own
+ * level (dB) and its centroid (the power-weighted mean of log2 f over 150 Hz .. 4 kHz) into at_fl, at_fc (at most
+ * AT_NF frames: how many) */
+#define AT_FN 8192
+#define AT_NF 512
+static double at_pw[AT_FN / 2], at_fl[AT_NF], at_fc[AT_NF];
+static int at_spec(void)
+{
+    static double re[AT_FN], im[AT_FN];
+    int f, i, nf = 0;
+    memset(at_pw, 0, sizeof at_pw);
+    for (f = 0; f + AT_FN <= at_n && nf < AT_NF; f += AT_FN / 2, nf++) {
+        double all = 0.0, cw = 0.0, cs = 0.0;
+        for (i = 0; i < AT_FN; i++)
+            re[i] = (0.5 - 0.5 * cos(6.283185307179586 * (double)i / AT_FN)) * (double)at_x[f + i], im[i] = 0.0;
+        at_fft(re, im, AT_FN);
+        for (i = 1; i < AT_FN / 2; i++) {
+            const double p = re[i] * re[i] + im[i] * im[i], hz = (double)i * 44100.0 / AT_FN;
+            at_pw[i] += p;
+            all += p;
+            if (hz >= 150.0 && hz <= 4000.0)
+                cw += p, cs += p * log2(hz);
+        }
+        at_fl[nf] = 10.0 * log10(all + 1e-300);
+        at_fc[nf] = cw > 0.0 ? cs / cw : 0.0;
+    }
+    for (i = 1; i < AT_FN / 2; i++)
+        at_pw[i] /= (double)(nf > 0 ? nf : 1);
+    return nf;
+}
+static double at_band(double f0, double f1)       /* at_pw's mean over f0 .. f1, dB */
+{
+    double s = 0.0;
+    int i, n = 0;
+    for (i = (int)(f0 * AT_FN / 44100.0); i <= (int)(f1 * AT_FN / 44100.0); i++)
+        s += at_pw[i], n++;
+    return 10.0 * log10(s / (double)(n > 0 ? n : 1) + 1e-300);
+}
+static double at_slope(double fa, double fb)      /* dB an octave from fa to fb (each a +-5% band) */
+{
+    return (at_band(fb * 0.95, fb * 1.05) - at_band(fa * 0.95, fa * 1.05)) / log2(fb / fa);
+}
+static double at_alevel(void)                    /* the level heard: the two sides' mean square, A-weighted by the mono
+                                                  * mix's spectrum (dB, 0: full scale) */
+{
+    double a = 0.0, all = 0.0;
+    int i;
+    for (i = 1; i < AT_FN / 2; i++)
+        a += at_pw[i] * aw2((double)i * 44100.0 / AT_FN), all += at_pw[i];
+    return 10.0 * log10(at_ms + 1e-300) + 10.0 * log10(a / (all + 1e-300) + 1e-300);
+}
+static double at_corr(const double *a, const double *b, int n)   /* (Pearson's) */
+{
+    double ma = 0.0, mb = 0.0, sab = 0.0, saa = 0.0, sbb = 0.0;
+    int i;
+    for (i = 0; i < n; i++)
+        ma += a[i], mb += b[i];
+    ma /= (double)(n > 0 ? n : 1), mb /= (double)(n > 0 ? n : 1);
+    for (i = 0; i < n; i++)
+        sab += (a[i] - ma) * (b[i] - mb), saa += (a[i] - ma) * (a[i] - ma), sbb += (b[i] - mb) * (b[i] - mb);
+    return sab / sqrt(saa * sbb + 1e-300);
+}
+static int at_dcmp(const void *a, const void *b) { return *(const double *)a < *(const double *)b ? -1 : *(const double *)a > *(const double *)b; }
+static double at_pct(const double *a, int n, int pct)   /* a's pct-th percentile */
+{
+    static double t[AT_NF > 22050 ? AT_NF : 22050];
+    memcpy(t, a, sizeof(double) * (size_t)n);
+    qsort(t, (size_t)n, sizeof t[0], at_dcmp);
+    return n ? t[n * pct / 100 < n ? n * pct / 100 : n - 1] : 0.0;
+}
+/* Rain's drops in at_x: its 2 ms frames' levels (dB); an onset where a frame stands 9 dB over the most of the three
+ * before it and 12 dB over the median frame; each onset's peak (the most of the 5 frames from it), how long from
+ * there it takes to fall 20 dB (ms; an onset whose fall another onset cuts short is not timed), and its pitch: the
+ * strongest bin of the 23 ms from 2 ms after it (Hz). Out: the onsets' count, their median fall, the median frame
+ * under the median peak (dB), the share of pitches within 300 Hz .. 6 kHz */
+static void at_drops(int *ons, double *fall, double *over, double *inr)
+{
+    static double fr[22050], falls[4000], pks[4000];
+    static double re[1024], im[1024];
+    const int nfr = at_n / 88 < 22050 ? at_n / 88 : 22050;
+    int k, i, nfa = 0, npk = 0, inside = 0, pitched = 0;
+    double med;
+    for (k = 0; k < nfr; k++) {
+        double s = 0.0;
+        for (i = 0; i < 88; i++)
+            s += (double)at_x[88 * k + i] * (double)at_x[88 * k + i];
+        fr[k] = 10.0 * log10(s / 88.0 + 1e-30);
+    }
+    med = at_pct(fr, nfr, 50);
+    *ons = 0;
+    for (k = 3; k + 5 < nfr; k++) {
+        const double before = fmax(fr[k - 1], fmax(fr[k - 2], fr[k - 3]));
+        double pk = fr[k];
+        int at = k, e;
+        if (fr[k] < before + 9.0 || fr[k] < med + 12.0)
+            continue;
+        ++*ons;
+        for (i = k; i < k + 5; i++)
+            if (fr[i] > pk)
+                pk = fr[i], at = i;
+        if (npk < 4000)
+            pks[npk++] = pk;
+        for (e = at + 1; e < nfr && fr[e] > pk - 20.0; e++)
+            if (fr[e] > fr[e - 1] + 9.0)          /* (another drop: not timed) */
+                break;
+        if (e < nfr && fr[e] <= pk - 20.0 && nfa < 4000)
+            falls[nfa++] = 2.0 * (double)(e - at);
+        if (88 * k + 88 + 1024 <= at_n) {
+            int b = 1;
+            double bp = 0.0;
+            for (i = 0; i < 1024; i++)
+                re[i] = (0.5 - 0.5 * cos(6.283185307179586 * (double)i / 1024.0)) * (double)at_x[88 * k + 88 + i], im[i] = 0.0;
+            at_fft(re, im, 1024);
+            for (i = 2; i < 512; i++)
+                if (re[i] * re[i] + im[i] * im[i] > bp)
+                    bp = re[i] * re[i] + im[i] * im[i], b = i;
+            pitched++;
+            inside += (double)b * 44100.0 / 1024.0 >= 300.0 && (double)b * 44100.0 / 1024.0 <= 6000.0;
+        }
+        k += 4;                                  /* (one onset a drop) */
+    }
+    *fall = nfa ? at_pct(falls, nfa, 50) : 0.0;
+    *over = npk ? at_pct(pks, npk, 50) - med : 0.0;
+    *inr = pitched ? (double)inside / (double)pitched : 0.0;
+}
+
+/* (the voices batch, item 4: the Atmospheres, after Skiff's NOISE) about three minutes, each alone:
+ * - Wind (Timewind's, at its 7): pink noise into the drifting band-pass. Below the band (50 .. 150 Hz) its skirt
+ *   rises +3 dB an octave on pink, +6 on white; its centre (the frames' centroid) wanders, 10th to 90th percentile
+ *   over 3/4 of an octave and more (the wander itself is the shipped one's: it measured 0.98 so);
+ *   its level follows the centre (the frames' level against their centroid: correlated);
+ * - Surf (Sunrain's, at its 5): browner, its spectrum falling 6 dB an octave or more over 300 Hz .. 3 kHz;
+ * - both as loud as the user tuned them: the A-weighted level within 1.5 dB of the shipped engine's (measured
+ *   here with the same helper: AT_WIND7, AT_SURF5);
+ * - Rain, after Tape (every character before it keeps its number): drops (sparse onsets standing well over the
+ *   bed, each ringing tens of ms, pitched within 300 Hz .. 6 kHz) over a quiet bed; as loud as Wind at the same
+ *   level (within 3 dB);
+ * - the float state (en_atm_ok: finite, no denormals) after each has played and stopped */
+static void test_atmospheres(void)
+{
+#define AT_WIND7 (-47.5)                         /* (the shipped engine's, dB(A): the user's level for each) */
+#define AT_SURF5 (-52.2)
+    char t[16];
+    int nf, ons, c;
+    double lo, span, cor, al, wind25, fall, over, inr;
+    en_param_text(P_NCHAR, 5, t);
+    CHECK(!strcmp(t, "Tape"), "test_rain_listed: atmosphere 5 %s", t);
+    en_param_text(P_NCHAR, 6, t);
+    CHECK(en_param_info(P_NCHAR)->hi == 6 && !strcmp(t, "Rain"), "test_rain_listed: atmosphere 6 %s, hi %d", t,
+          en_param_info(P_NCHAR)->hi);
+    at_solo(0, 1, 7, 0);                         /* Wind, Timewind's */
+    at_cap(45.0f);
+    nf = at_spec();
+    lo = at_slope(50.0, 150.0);
+    span = at_pct(at_fc, nf, 90) - at_pct(at_fc, nf, 10);
+    cor = at_corr(at_fc, at_fl, nf);
+    al = at_alevel();
+    printf("  wind: skirt %.1f dB/oct (50..150 Hz), centre wanders %.2f oct (10..90%%), level vs centre r %.2f, "
+           "%.1f dB(A) (shipped %.1f)\n", lo, span, cor, al, AT_WIND7);
+    CHECK(lo < 4.5, "test_wind_pink: the skirt below the band %.1f dB/oct (white +6, pink +3)", lo);
+    CHECK(span > 0.75, "test_wind_wanders: its centre over %.2f octaves", span);
+    CHECK(cor > 0.7, "test_wind_follows: its level against its centre r %.2f", cor);
+    CHECK(fabs(al - AT_WIND7) < 1.5, "test_atmos_level_kept: Timewind's Wind %.1f dB(A), shipped %.1f", al, AT_WIND7);
+    at_solo(5, 2, 5, 0);                         /* Surf, Sunrain's */
+    at_cap(45.0f);
+    at_spec();
+    lo = at_slope(300.0, 3000.0);
+    al = at_alevel();
+    printf("  surf: %.1f dB/oct (300 Hz..3 kHz), %.1f dB(A) (shipped %.1f)\n", lo, al, AT_SURF5);
+    CHECK(lo < -6.0, "test_surf_brown: %.1f dB/oct over 300 Hz .. 3 kHz", lo);
+    CHECK(fabs(al - AT_SURF5) < 1.5, "test_atmos_level_kept: Sunrain's Surf %.1f dB(A), shipped %.1f", al, AT_SURF5);
+    at_solo(-1, 1, 25, 1);                       /* (Wind at 25, dry, for Rain's level) */
+    at_cap(20.0f);
+    at_spec();
+    wind25 = at_alevel();
+    at_solo(-1, EN_NNCHAR - 1, 25, 1);           /* Rain, dry: its drops as they are */
+    peak = 0.0f;
+    bad = 0;
+    at_cap(30.0f);
+    at_spec();
+    al = at_alevel();
+    at_drops(&ons, &fall, &over, &inr);
+    printf("  rain: %d drops in 30 s, falling 20 dB in %.0f ms, %.1f dB over the bed, %.0f%% pitched in range, "
+           "peak %.3f, %.1f dB(A) (Wind %.1f)\n", ons, fall, over, 100.0 * inr, (double)peak, al, wind25);
+    CHECK(!bad && ons >= 30 && ons <= 1200, "test_rain_sparse: %d drops in 30 s", ons);
+    CHECK(over > 15.0, "test_rain_sparse: the drops %.1f dB over the bed", over);
+    CHECK(fall > 10.0 && fall < 400.0, "test_rain_rings: a drop falls 20 dB in %.0f ms", fall);
+    CHECK(inr > 0.9, "test_rain_range: %.0f%% of the drops pitched within 300 Hz .. 6 kHz", 100.0 * inr);
+    CHECK(peak > 0.005f && peak < 0.5f, "test_rain_range: peak %.3f", (double)peak);
+    CHECK(fabs(al - wind25) < 3.0, "test_rain_level: %.1f dB(A), Wind at the same level %.1f", al, wind25);
+    for (c = 1; c < EN_NNCHAR; c++) {            /* (each character played, stopped, the gate shut) */
+        at_solo(-1, c, 60, 0);
+        run(3.0f);
+        en_play(0);
+        run(5.0f);
+        CHECK(en_atm_ok(), "test_atmos_state: %s: its state not finite, or denormal, after it stopped",
+              EN_NCHAR_NAME[c]);
+    }
+}
+
 int main(void)
 {
     int pcs[4], n, i;
@@ -1257,7 +1544,8 @@ int main(void)
      * af050088 then, re-recorded for the echo's x2 send and 1/4. time, which alone moved it: checked by reverting them;
      * 1d4f1422 then, re-recorded for Timewind's own recipe: Sequence 2 at 60, Reverb 50, the user's; f09ec04f then,
      * re-recorded for Timewind's Length 2 at 15, the user's 16/15, the recipe alone; 1cd60c54 then, re-recorded for
-     * its Atmosphere 30 -> 7, the user's: the FM-1 sounds bright) */
+     * its Atmosphere 30 -> 7, the user's: the FM-1 sounds bright; 4bd3f4dc then, re-recorded for the voices batch's
+     * Wind, pink, its level following its band: its Atmosphere's sound alone) */
     {   /* (in a child: this process stays as it started, for the render's tests below) */
         int k, fd[2];
         pid_t pid;
@@ -1291,7 +1579,7 @@ int main(void)
             close(fd[0]);
             waitpid(pid, 0, 0);
         }
-        CHECK(r.h == 0x4bd3f4dcu, "test_fm_zero: Timewind's first minute %08x, not 4bd3f4dc (the engine before)", r.h);
+        CHECK(r.h == 0xcfe23fbeu, "test_fm_zero: Timewind's first minute %08x, not cfe23fbe (the engine before)", r.h);
         for (k = 0; k < 5; k++)
             CHECK(r.fo[k] == 0.0f, "test_fm_zero: layer %d's offset %f", k, (double)r.fo[k]);
     }
@@ -4237,6 +4525,8 @@ int main(void)
         }
     }
 
+    test_atmospheres();
+
     /* (BERLIN) the white keys play the Lead: degree d of D Aeolian (from D4 up), rising, in the scale, one at a time,
      * let go with its note-off; the Lead's own phrases wait while a key is held and two bars after */
     {
@@ -4862,7 +5152,8 @@ int main(void)
         /* (the user, 2026-10-28: the FM-1's speaker and headphones bright, the noise far too loud) the Atmosphere's
          * level by its type: Surf 5, Wind 7, Tape and Space 10; none: the default kept */
         for (a = 0; a < EN_NPIECES; a++) {
-            static const int LV[EN_NNCHAR] = {25, 7, 5, 10, -1, 10};   /* (None Wind Surf Space Air Tape; Air: unused) */
+            static const int LV[EN_NNCHAR] = {25, 7, 5, 10, -1, 10, -1};   /* (None Wind Surf Space Air Tape Rain; Air, Rain:
+                                                                           * unused) */
             const int c = pa[a][P_NCHAR];
             CHECK(c >= 0 && c < EN_NNCHAR && LV[c] >= 0 && pa[a][P_CRACKLE] == LV[c],
                   "test_pieces_atmos_levels: %s: %s at %d", en_piece_name(a), c >= 0 && c < EN_NNCHAR ? EN_NCHAR_NAME[c] : "?",
