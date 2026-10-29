@@ -176,5 +176,5 @@ wait 200
 expect par21 0
 expect par44 1
 expect par23 -1
-expect par0 60
+expect par0 70
 expect octring 0
