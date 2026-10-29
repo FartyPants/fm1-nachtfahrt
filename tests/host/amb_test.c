@@ -213,6 +213,48 @@ static uint32_t hash_child(uint32_t fx, float secs)
     return h;
 }
 
+/* (Shimmer) secs played, the output (mono) through four band-passes (each two RBJ band-passes in a row, Q 6: a
+ * shifted tone's crossfade sidebands, +-20 Hz, inside) at f[0..3]: each one's mean energy into e; the biggest step
+ * between two samples (either side) into *step */
+static void run_bands(float secs, const float *f, float *e, float *step)
+{
+    static float z[4][2][2], last[2];
+    float c[4][3], acc[4] = {0.0f, 0.0f, 0.0f, 0.0f}, st = 0.0f;
+    int blocks = (int)(secs * 44100.0f / 256.0f), b, j, k, s, cnt = 0;
+    memset(z, 0, sizeof z);
+    for (k = 0; k < 4; k++) {
+        const float w = 6.2831853f * f[k] / 44100.0f, al = sinf(w) / (2.0f * 6.0f), a0 = 1.0f + al;
+        c[k][0] = al / a0;                       /* b0 (b1 0, b2 -b0) */
+        c[k][1] = -2.0f * cosf(w) / a0;          /* a1 */
+        c[k][2] = (1.0f - al) / a0;              /* a2 */
+    }
+    for (b = 0; b < blocks; b++) {
+        en_render(buf, 256, 2048);
+        for (j = 0; j < 256; j++) {
+            const float l = (float)buf[2 * j] / 8388608.0f, r = (float)buf[2 * j + 1] / 8388608.0f;
+            float x = 0.5f * (l + r);
+            if (cnt++)
+                st = fmaxf(st, fmaxf(fabsf(l - last[0]), fabsf(r - last[1])));
+            last[0] = l, last[1] = r;
+            if (x != x)
+                bad++;
+            for (k = 0; k < 4; k++) {
+                float y = x;
+                for (s = 0; s < 2; s++) {        /* (transposed direct form II) */
+                    const float o = c[k][0] * y + z[k][s][0];
+                    z[k][s][0] = -c[k][1] * o + z[k][s][1];
+                    z[k][s][1] = -c[k][0] * y - c[k][2] * o;
+                    y = o;
+                }
+                acc[k] += y * y;
+            }
+        }
+    }
+    for (k = 0; k < 4; k++)
+        e[k] = acc[k] / (float)(cnt > 0 ? cnt : 1);
+    *step = st;
+}
+
 /* a new engine, stopped, the count from the top (en_init leaves the transport, en_bars, as they were) */
 
 static void fresh(void)
@@ -1218,7 +1260,7 @@ int main(void)
 
     /* (BERLIN) the grid's sixteen, in its order */
     {
-        static const char *const FX[EN_NFX] = {"Repeat", "Time", "Tape stop", "Swell", "Low-pass", "High-pass", "Sweep",
+        static const char *const FX[EN_NFX] = {"Repeat", "Time", "Tape stop", "Shimmer", "Low-pass", "High-pass", "Sweep",
                                                "Phaser", "Reverb", "Take-off", "Freeze", "Wash", "Octave", "Return",
                                                "Twitter", "Supernova"};
         int e;
@@ -1363,6 +1405,69 @@ int main(void)
         run(3.0f);
         en_fx(0);
         CHECK(peak < 1e-4f, "test_fx_supernova: from silence, held: %.4f", (double)peak);
+    }
+
+    /* (the voices batch, item 0) Shimmer, where Swell was (the grid's fourth, black key 5): a sine Lead alone, a key
+     * held. At rest the shifter does no work (en_shm_work stays 0). Held, the plate's tail climbs: energy an octave
+     * over the Lead's pitch where there was next to none, the third octave well under the first (the climb capped).
+     * Let go: no step in the output, the octave still in the tail at first (no cut), then gone with the plate; and
+     * the shifter stops working once its tail is out */
+    {
+        static const int OFF[4] = {P_CHORD, P_SEQ, P_SEQ2, P_NCHAR};
+        float f[4], bn[4], bh[4], br[4], bt[4], stn, sth, str, stt, f0, rn, rh;
+        uint32_t w0, w_rest, w_held, w_tail;   /* (the work counted from here: the tests before held it too) */
+        int k;
+        fresh();
+        for (k = 0; k < 4; k++)
+            en_set(OFF[k], 0);
+        en_set(P_MOTION, 0);
+        en_set(P_ECHO, 0);
+        en_set(P_LDECHO, 0);
+        en_set(P_LDREV, 100);
+        en_set(P_LVOICE, 2);                     /* (a sine, its breath a whisper; vibrato 0) */
+        en_set(P_VIB, 0);
+        en_set(P_LDIN, 0);
+        en_play(1);
+        w0 = en_shm_work;
+        run(2.0f);
+        w_rest = en_shm_work - w0;
+        en_lead_key(0, 1);
+        run(1.5f);
+        f0 = 440.0f * powf(2.0f, ((float)last_lead - 69.0f) / 12.0f);
+        for (k = 0; k < 4; k++)
+            f[k] = f0 * (float)(1 << k);         /* the pitch, an octave, two, three over it */
+        run_bands(2.0f, f, bn, &stn);
+        en_fx(1u << EN_FX_SHIMMER);
+        run(3.0f);
+        run_bands(1.0f, f, bh, &sth);
+        w_held = en_shm_work - w0;
+        en_fx(0);
+        run_bands(0.3f, f, br, &str);
+        run(4.0f);
+        run_bands(1.0f, f, bt, &stt);
+        w_tail = en_shm_work - w0;
+        run(1.0f);
+        en_lead_key(0, 0);
+        rn = bn[1] / fmaxf(bn[0], 1e-20f), rh = bh[1] / fmaxf(bh[0], 1e-20f);
+        printf("  shimmer: Lead %d (%.0f Hz); energy at f 2f 4f 8f: not held %.2e %.2e %.2e %.2e, held %.2e %.2e %.2e "
+               "%.2e, let go %.2e %.2e, 4 s on %.2e %.2e; steps %.4f %.4f %.4f %.4f; work %u %u %u %u\n",
+               last_lead, (double)f0, (double)bn[0], (double)bn[1], (double)bn[2], (double)bn[3], (double)bh[0],
+               (double)bh[1], (double)bh[2], (double)bh[3], (double)br[0], (double)br[1], (double)bt[0],
+               (double)bt[1], (double)stn, (double)sth, (double)str, (double)stt, w_rest, w_held, w_tail,
+               en_shm_work - w0);
+        CHECK(!bad, "test_shimmer: NaN");
+        CHECK(rh > 0.003f && rh > 30.0f * rn, "test_shimmer_octave: the octave against the pitch, held %.2e, not %.2e",
+              (double)rh, (double)rn);
+        CHECK(bh[3] < bh[1] / 16.0f, "test_shimmer_cap: three octaves up %.2e, not well under one %.2e",
+              (double)bh[3], (double)bh[1]);
+        CHECK(br[1] > 0.2f * bh[1] && bt[1] < 0.1f * bh[1],
+              "test_shimmer_release: the octave held %.2e, let go %.2e (a cut?), 4 s on %.2e (still there?)",
+              (double)bh[1], (double)br[1], (double)bt[1]);
+        CHECK(str <= 1.25f * sth, "test_shimmer_release: a step %.4f as it's let go (held: %.4f)", (double)str,
+              (double)sth);
+        CHECK(w_rest == 0u && w_held > 0u && en_shm_work - w0 == w_tail,
+              "test_shimmer_rest: the shifter's work at rest %u, held %u, after its tail %u then %u", w_rest, w_held,
+              w_tail, en_shm_work - w0);
     }
 
     /* (BERLIN) the black keys' Transpose: a written pattern played with Transpose held is the same pattern written three

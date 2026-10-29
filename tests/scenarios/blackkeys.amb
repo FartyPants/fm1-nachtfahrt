@@ -1,4 +1,4 @@
-# (BERLIN) the black keys in normal playing: an effect each while held (Take-off, Supernova, Twitter, Repeat, Swell,
+# (BERLIN) the black keys in normal playing: an effect each while held (Take-off, Supernova, Twitter, Repeat, Shimmer,
 # Freeze, Octave, Return, Rise, Close, Transpose), said, lit; let go, gone, whatever took the keys meanwhile; in PERFORM
 # they still solo (on Stratosfear: both sequences from the first bar)
 wait 300
@@ -12,6 +12,14 @@ wait 300
 said Take-off
 expect bfx >0
 key b0 up
+wait 300
+expect bfx 0
+# (the voices batch) the fifth, Shimmer (where Swell was): said, held, let go
+key b4 down
+wait 300
+said Shimmer
+expect bfx 8
+key b4 up
 wait 300
 expect bfx 0
 # Rise (b8): the filters open, the Sequence's offset up; Close (b9): down

@@ -154,7 +154,7 @@ int en_heard(int p);
 void en_lock(int on);                          /* PERFORM's Lock: each phrase keeps the kick's shape, the noise's groove,
                                                 * the drums' and the bass's plan, the shaker's pattern */
 /* the effects grid (REC held): the effects held now, a bit each (EN_FX_*), in the grid's order */
-enum { EN_FX_REPEAT, EN_FX_TIME, EN_FX_TAPESTOP, EN_FX_SWELL, EN_FX_LOWPASS, EN_FX_HIGHPASS, EN_FX_SWEEP, EN_FX_PHASER,
+enum { EN_FX_REPEAT, EN_FX_TIME, EN_FX_TAPESTOP, EN_FX_SHIMMER, EN_FX_LOWPASS, EN_FX_HIGHPASS, EN_FX_SWEEP, EN_FX_PHASER,
        EN_FX_REVERB, EN_FX_TAKEOFF, EN_FX_FREEZE, EN_FX_WASH, EN_FX_OCTAVE, EN_FX_RETURN, EN_FX_TWITTER, EN_FX_SUPERNOVA,
        EN_NFX };
 extern const char *const EN_FX_NAME[EN_NFX];
@@ -205,6 +205,7 @@ extern volatile uint8_t en_lead_slot, en_lead_blk, en_lead_int;
  * is near its limit: never more than 1); the notes in the white keys' capture buffer now; the theme (slot 0): its
  * entries (degrees from the chord root's, LD_REST: a rest; lengths in sixteenths) into off and dur, its count */
 extern volatile uint8_t en_lead_dmax;
+extern volatile uint32_t en_shm_work;            /* (Shimmer) the shifter's samples worked so far (0 at rest) */
 int en_lead_cap(void);
 int en_lead_theme(int8_t *off, uint8_t *dur);
 int en_lead_played(void);                        /* (the theme the keys played: LD_PLAYED on slot 0, 1 or 0) */

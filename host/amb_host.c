@@ -644,6 +644,17 @@ static int expect(const char *what, const char *val)
                     printf("  too wide: %s\n", hp), got++;
             }
     }
+    else if (!strcmp(what, "gridfit")) {          /* (the voices batch) the effects grid's cells whose name is wider
+                                                  * than the cell (55 px; TWITTER fills it) (0: all fit) */
+        int e;
+        char t[12];
+        got = 0;
+        for (e = 0; e < EN_NFX; e++) {
+            caps(t, GRID_CELL[e], sizeof t);
+            if (text_w(&FONT_S, t) > 55)
+                printf("  too wide: %s (%d px)\n", t, (int)text_w(&FONT_S, t)), got++;
+        }
+    }
     else if (!strcmp(what, "nev"))                /* the noise's events that show, so far */
         got = (int)en_nev_w;
     else if (!strcmp(what, "blits")) {           /* the screen's draws since the last ask */

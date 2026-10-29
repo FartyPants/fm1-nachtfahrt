@@ -63,7 +63,7 @@ NACHTFAHRT is not connected with any of these artists.
 | | |
 |---|---|
 | White keys | Play the Lead, in the piece's scale (the key it sounds is lit) |
-| Black keys | Eleven effects, each while held (lit; dark while held): Take-off, Supernova, Twitter, Repeat, Swell, Freeze, Octave, Return, then Rise, Close, Transpose (in PERFORM: the solos) |
+| Black keys | Eleven effects, each while held (lit; dark while held): Take-off, Supernova, Twitter, Repeat, Shimmer, Freeze, Octave, Return, then Rise, Close, Transpose (in PERFORM: the solos) |
 | PLAY · REC · EDIT | Play / rest · a tap: hold (the echo repeats what it holds), held: the effects grid (16 effects on the white keys) · a tap: the Chords page, held: the next chord |
 | SEL | PERFORM: the knobs Filter, Wet, Energy, Sweep; white 1–5 mute the Drone, Sequence, Lead, Sequence 2, Atmosphere; black 1–5 solo them; white 6 held: the levels; white 7–11 held: Sweep, Open, Shut, Drop (both sequences out), Echo; the top key (G): the Lead forgets its ideas and its theme. Held: Lock |
 | HOME | The Nachtfahrt page (Filter, Evolve, Motion, Drift); again, the Key page (Tempo, Root, Mode, Transpose) |
@@ -101,7 +101,9 @@ renders the engine alone.
 NACHTFAHRT is a fork of [DUB-1](https://github.com/sbegueria/fm1-dub), a fork of
 [AMB-1](https://github.com/charlesvestal/fm1-amb) by Charles Vestal (GPL-3.0-only): the echo chain, the plate,
 the pieces system, the chord walk, the UI and the platform come from there. The reverb is Jon Dattorro's plate
-("Effect Design, Part 1", JAES 1997), as in [FoMni-1](https://github.com/charlesvestal/fm1-fomni); the granular
+("Effect Design, Part 1", JAES 1997), as in [FoMni-1](https://github.com/charlesvestal/fm1-fomni); Shimmer's
+octave shifter follows OCT UP and its SHIMMER in [Felucca](https://github.com/hugelton/Felucca)'s performance layer
+(Leo Kuroshita, Hügelton Instruments; also in [Skiff](https://github.com/illuminus5/skiff)); the granular
 cloud (Freeze) follows the design of CLOUD in [JIANT](https://github.com/juanjiant-bit/JIANT) (GPL-3.0); the Tape
 atmosphere is DUB-1's crackle, after Bahadirhan Kocer's "Using Resonators in Live". The way the sequence is
 played (a root accented, sparse notes, a dotted-eighth repeat as loud as the note, two delays) owes much to

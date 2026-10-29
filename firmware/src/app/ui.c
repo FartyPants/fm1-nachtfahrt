@@ -945,10 +945,10 @@ static const uint8_t STEP_KEY[16] = {0, 2, 4, 6, 7, 9, 11, 12, 14, 16, 18, 19, 2
  * (EN_MV_*, coded 100 + the move) */
 #define NBLACK 11
 static const uint8_t BLACK_KEY[NBLACK] = {1, 3, 5, 8, 10, 13, 15, 17, 20, 22, 25};
-static const uint8_t BLACK_DO[NBLACK] = {EN_FX_TAKEOFF, EN_FX_SUPERNOVA, EN_FX_TWITTER, EN_FX_REPEAT, EN_FX_SWELL,
+static const uint8_t BLACK_DO[NBLACK] = {EN_FX_TAKEOFF, EN_FX_SUPERNOVA, EN_FX_TWITTER, EN_FX_REPEAT, EN_FX_SHIMMER,
                                          EN_FX_FREEZE, EN_FX_OCTAVE, EN_FX_RETURN, 100 + EN_MV_RISE, 100 + EN_MV_CLOSE,
                                          100 + EN_MV_TRANSPOSE};
-static const char *const BLACK_NAME[NBLACK] = {"Take-off", "Supernova", "Twitter", "Repeat", "Swell", "Freeze",
+static const char *const BLACK_NAME[NBLACK] = {"Take-off", "Supernova", "Twitter", "Repeat", "Shimmer", "Freeze",
                                                "Octave", "Return", "Rise", "Close", "Transpose"};
 static int black_of(uint32_t key)                /* the black key's index (0..10), or -1 */
 {
@@ -2066,11 +2066,13 @@ static void draw_lanes(void)
     }
 }
 
+/* the grid's cells, in its order (the host's gridfit checks each fits its 55 px) */
+static const char *const GRID_CELL[EN_NFX] = {"Repeat", "Time", "Stop", "Shimmer", "Low", "High", "Sweep", "Phaser",
+                                              "Reverb", "Takeoff", "Freeze", "Wash", "Octave", "Return", "Twitter",
+                                              "Nova"};
 static void grid_band(int32_t oy)                 /* the whole screen, in two bands of 240 x 120 */
 {
     static const char *const GROUP[4] = {"ECHO", "FILTER", "SPACE", "MOVES"};   /* (BERLIN's) */
-    static const char *const CELL[EN_NFX] = {"Repeat", "Time", "Stop", "Swell", "Low", "High", "Sweep", "Phaser",
-                                             "Reverb", "Takeoff", "Freeze", "Wash", "Octave", "Return", "Twitter", "Nova"};
     int r, c;
     cv_begin(240, 120, K_BG);
     text_c(120, 2 - oy, &FONT_S, "EFFECTS", K_ACC);
@@ -2085,7 +2087,7 @@ static void grid_band(int32_t oy)                 /* the whole screen, in two ba
             cv_round(x, y, 55, 33, 5, on ? K_ACC : c == 0 ? K_PANEL : mix(K_BG, K_PANEL, 8));
             if (c == 0 && !on)                   /* (the first of a group: its key is lit) */
                 cv_rect(x + 4, y + 29, 47, 2, K_ACC);
-            caps(t, CELL[e], sizeof t);
+            caps(t, GRID_CELL[e], sizeof t);
             text_c(x + 28, y + 8, &FONT_S, t, on ? K_BG : K_TEXT);
         }
     }

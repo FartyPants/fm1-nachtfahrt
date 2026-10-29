@@ -108,7 +108,7 @@ second.
 | OCT− / OCT+ | On the Sequence's, the Lead's and Sequence 2's pages, the layer's octave, a step a press (the Sequence −2 to 2, the Lead and Sequence 2 −2 to 1): the page's Octave knob shows it, the header says it ("SEQ OCTAVE −1"). OCT+ is lit while that octave is above where the piece was loaded, OCT− while it's below. On the other pages they do nothing. Both held 5 s: the update mode |
 | KNOB 1–4 | The four values at the bottom of the page. The line above them says what the one turning does |
 | White keys | Play the Lead in the piece's scale: the first white key is the root, the next the scale's second step, and so on up. While the Lead sounds a note, that key is lit. Three notes or more and a pause become the Lead's theme (see [The layers](#5-the-layers)). On the Pattern page they write the steps instead; in PERFORM they mute, play moves, and the top one makes the Lead forget; with REC held they're the effects |
-| Black keys | Eleven effects, each while the key is held. They stay lit, so they stand apart from the Lead's white keys; a key goes dark while its effect is held: Take-off, Supernova, Twitter, Repeat, Swell, Freeze, Octave, Return, Rise, Close, Transpose (see [The effects grid](#9-the-effects-grid)). In PERFORM, the solos; on the Pattern page, the accents |
+| Black keys | Eleven effects, each while the key is held. They stay lit, so they stand apart from the Lead's white keys; a key goes dark while its effect is held: Take-off, Supernova, Twitter, Repeat, Shimmer, Freeze, Octave, Return, Rise, Close, Transpose (see [The effects grid](#9-the-effects-grid)). In PERFORM, the solos; on the Pattern page, the accents |
 | PLAY | Play / rest |
 | REC | A tap: hold (the echo and the cloud repeat what they hold). Held: the effects grid |
 | EDIT | A tap: the Chords page. Held: the next chord, on the next bar. Held on (1.5 s): new chords |
@@ -419,10 +419,15 @@ they're let go.
 
 | | | | | |
 |---|---|---|---|---|
-| **Echo** | Repeat: the Sequence thrown into the echo | Time: the echo's time doubled | Tape stop: the tape slowing to a quarter | Swell: everything into the echo |
+| **Echo** | Repeat: the Sequence thrown into the echo | Time: the echo's time doubled | Tape stop: the tape slowing to a quarter | Shimmer: the plate climbing, its tail an octave up and again (see below) |
 | **Filter** | Low-pass: down to 350 Hz | High-pass: up to 1.3 kHz | Sweep: the Sequence's filter swept two octaves each way | Phaser: a deep phaser on all the music |
 | **Space** | Reverb: the dry music into the plate | Take-off: a burst of noise falling into the echo | Freeze: the cloud holds what it has | Wash: everything into the echo and the plate, the dry down |
 | **Moves** | Octave: the Sequence an octave up | Return: both sequences round their first four steps | Twitter: a burst of bleeps into the echo | Supernova: the echo's feedback past full |
+
+**Shimmer** is a shimmer reverb, played. While it is held, the plate's tail is pitched an octave up and fed back
+into the plate, so each time round it climbs another octave, darker as it climbs (the FM-1's speaker is bright) and
+fading out after about two octaves. Some of the music goes into the plate with it, so it works in every piece. Let
+go and the climbing stops; what is already in the plate dies away with its tail, not cut off.
 
 ### The black keys
 
@@ -436,7 +441,7 @@ are:
 | 2 | **Supernova** (the grid's) |
 | 3 | **Twitter** (the grid's) |
 | 4 | **Repeat** (the grid's: the Sequence thrown into the echo) |
-| 5 | **Swell** (the grid's: everything into the echo) |
+| 5 | **Shimmer** (the grid's: the plate climbing in octaves) |
 | 6 | **Freeze** (the grid's: the cloud holds) |
 | 7 | **Octave** (the grid's: the Sequence an octave up) |
 | 8 | **Return** (the grid's: both sequences round their first four steps) |
@@ -575,6 +580,9 @@ must also share its source code.
   sequencing.
 - The reverb is Jon Dattorro's plate ("Effect Design, Part 1", JAES 1997), by way of
   [FoMni-1](https://github.com/charlesvestal/fm1-fomni).
+- Shimmer's octave shifter (a rotating delay) follows OCT UP and its SHIMMER in **Felucca**'s performance layer
+  by Leo Kuroshita, Hügelton Instruments (GPL-3.0), also in [Skiff](https://github.com/illuminus5/skiff);
+  written again in floating point.
 - The granular cloud (Freeze) follows the design of CLOUD in [JIANT](https://github.com/juanjiant-bit/JIANT)
   (GPL-3.0), another FM-1 firmware.
 - The Tape atmosphere is DUB-1's crackle, after Bahadirhan Kocer's "Using Resonators in Live".

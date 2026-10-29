@@ -13,6 +13,7 @@ derived from it, you must give your recipients its complete corresponding source
 | Platform: `firmware/hal/`, `firmware/loader/`, `firmware/src/{libc,lcd,gfx,usb,storage,ota,midi_uart}.c`, `tools/` (build, package, install, rescue), `web/fm1*.js` | [Felucca](https://github.com/hugelton/Felucca), Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments, as changed for [X0X](https://github.com/charlesvestal/fm1-x0x) and FoMni, then AMB-1, DUB-1 and NACHTFAHRT | GPL-3.0-only |
 | `firmware/src/app/{panel,plat_fm1,main_fm1}.c`, `host/amb_host.c`, `web/emu/`, `tools/{make_pages,manual_html}.py`, `tools/publish_pages.sh` | adapted from X0X (itself from Felucca's `panel.c`, `main.c`, `audio.c`) | GPL-3.0-only |
 | Dattorro's plate reverb in `firmware/src/dsp/amb.c` | from [FoMni](https://github.com/charlesvestal/fm1-fomni) | GPL-3.0-only |
+| Shimmer's octave shifter (a rotating delay) in `firmware/src/dsp/amb.c` | after OCT UP and its SHIMMER in [Felucca](https://github.com/hugelton/Felucca)'s `perform.c` (Leo Kuroshita, Hügelton Instruments; also in [Skiff](https://github.com/illuminus5/skiff)), written again in floating point | GPL-3.0-only |
 | The idea of a browser emulator for FM-1 firmware (`web/emu/`) | [Groove OS](https://www.groove-os.com/) by Peter Gombos, whose site runs its firmware in the browser; no code from it | credit only |
 | Everything else in `firmware/src/{app,dsp}`, `tests/` | AMB-1, as changed for DUB-1 and then NACHTFAHRT | GPL-3.0-only |
 
