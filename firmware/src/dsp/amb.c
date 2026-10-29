@@ -1028,6 +1028,7 @@ static uint32_t ar_rng;
 volatile uint8_t en_swell;
 #ifdef EN_HOST
 volatile uint32_t en_shm_work;
+volatile float en_shm_ret = 1.0f;
 #endif
 static uint32_t s2o_rng;                         /* (Sequence 2's octave move: its own dice, the arc's kept as they were) */
 static int ar_len(void) { return par[P_ARC] ? 128 + 640 * par[P_ARC] / 100 : 0; }
@@ -3012,21 +3013,32 @@ static void plate_init(void)
  * half a sweep apart, each coming a sample nearer every sample (the pitch doubled) from ~49 ms back to ~3 ms, then
  * jumping back; a raised-cosine crossfade hides each one's jump (its weight 0 there; the curve a smoothstep, near a
  * raised cosine, the two always summing to one); read between samples, linear. It runs inside the plate's loop,
- * mono (as the plate's input is) and at a quarter of the rate, 11.025 kHz (every other plate sample: its input the
- * mean of two, its output held for two; nothing of it above ~2 kHz is kept): 1024 floats from the pool. In the loop
- * two one-pole low-passes (~2.2 kHz: the FM-1's speaker is bright) darken each climb, and a gain under one with a
- * soft clip holds it: the third octave well under the first. Let go, the feedback eases out (~0.15 s) and what is in
- * the plate dies with it, not cut; once out, the shifter stops (no work at rest), and the next press starts from an
- * empty line (the taps read nothing older than the press; its first samples faded in: no step where they begin) */
+ * mono (as the plate's input is) and at a quarter of the rate, 11.025 kHz (every other plate sample: its input
+ * low-passed at ~2.5 kHz first, one pole, then the mean of two, so less folds over; its output held for two):
+ * 1024 floats from the pool. After it two one-pole low-passes (~2.2 kHz: the FM-1's speaker is bright) darken each
+ * climb, and a gain under one holds it: the third octave well under the first.
+ * (fix round 1: the review) A gain under one isn't enough: the plate gathers what goes in, and at Size ~70 and over
+ * the loop fed itself until the master's clip held it (Mirage as it is, then the music stopped: it rang on for ever).
+ * So the return is bounded by the music: what goes back in is never more than SHM_R times what the music sends into
+ * the plate (their levels followed once a chunk: the music's up in ~50 ms and down over ~1 s, the return's both ways
+ * in ~0.1 s), and the plate holds at most about that much more than the music gives it. The music stopped, the
+ * return falls with it and the tail dies as the plate's own; a soft clip after it is the last guard.
+ * Let go, the feedback eases out (~0.15 s) and what is in the plate dies with it, not cut; once out, the shifter
+ * stops (no work at rest), and the next press starts from an empty line (the taps read nothing older than the press;
+ * its first samples faded in: no step where they begin) */
 #define SHM_N 1024
 #define SHM_LO 32.0f                            /* the taps' shortest delay, samples at 11.025 kHz; the sweep 512 */
 #define SHM_SPAN 512.0f
 #define SHM_FADE 32u
 #define SHM_G 0.6f                              /* the feedback: an octave's pass under the last */
-#define SHM_DRY 0.25f                           /* (held, the dry into the plate too: something to climb) */
+#define SHM_HPC 0.0846f                         /* (1 - e^(-2 pi 150 / 11025)) */
+#define SHM_R 1.0f                              /* the return at most this times the music into the plate (levels) */
+#define SHM_DRY 0.25f                           /* (held, the dry into the plate too: something to climb; the one
+                                                 * place it is set, for the user's ear) */
 static float shm_buf[SHM_N] EN_POOL;
-static uint32_t shm_w, shm_len, shm_odd;
-static float shm_ph, shm_in, shm_out, shm_lp1, shm_lp2, fx_shm;
+static uint32_t shm_w, shm_len, shm_odd, shm_nm, shm_ns;
+static float shm_ph, shm_in, shm_out, shm_p1, shm_lp1, shm_lp2, shm_hp1, shm_hp2, fx_shm;
+static float shm_em, shm_es, shm_envm, shm_envs, shm_k = SHM_G;   /* (the levels: sums this chunk, followed; the gain) */
 static inline float shm_tap(float d)            /* d samples back from the newest, between two; 0 before the press */
 {
     const uint32_t i = (uint32_t)d;
@@ -3042,11 +3054,12 @@ static inline float shimmer(float x, float g)   /* one sample at the plate's rat
                                                  * back into it (g: the feedback now) */
 {
     float t, wa, y;
+    shm_p1 += 0.51f * (x - shm_p1);             /* (a pole at ~2.5 kHz, at 22.05 kHz: before the line's half rate) */
     if ((shm_odd ^= 1u) != 0u) {                /* (the first of two: kept, the last output held) */
-        shm_in = x;
+        shm_in = shm_p1;
         return shm_out;
     }
-    x = 0.5f * (shm_in + x);
+    x = 0.5f * (shm_in + shm_p1);
     if (shm_len < SHM_FADE)
         x *= (float)shm_len * (1.0f / (float)SHM_FADE);
     shm_buf[shm_w & (SHM_N - 1u)] = x;
@@ -3062,18 +3075,48 @@ static inline float shimmer(float x, float g)   /* one sample at the plate's rat
         shm_ph -= 1.0f;
     shm_lp1 += 0.715f * (y - shm_lp1);          /* (two poles at ~2.2 kHz, at 11.025 kHz) */
     shm_lp2 += 0.715f * (shm_lp1 - shm_lp2);
+    shm_hp1 += SHM_HPC * (shm_lp2 - shm_hp1);   /* (and the lows out, two poles at ~150 Hz: the crossfade's 21 Hz and */
+    shm_hp2 += SHM_HPC * (shm_lp2 - shm_hp1 - shm_hp2);   /* what is under it would build in the plate unheard) */
+    y = shm_lp2 - shm_hp1 - shm_hp2;
+    shm_es += y * y;                            /* (the return's level, before its gain) */
+    shm_ns++;
 #ifdef EN_HOST
     en_shm_work++;
 #endif
-    shm_out = 0.5f * sat(2.0f * g * shm_lp2);   /* (no more than +-0.5 back in) */
+    shm_out = 0.5f * sat(2.0f * g * y);         /* (no more than +-0.5 back in) */
     return shm_out;
+}
+static void shm_level(float t)                  /* once a chunk (t: its length, s): the levels followed, the gain */
+{
+    float m = shm_nm ? shm_em / (float)shm_nm : 0.0f, s = shm_ns ? shm_es / (float)shm_ns : shm_envs;
+    shm_envm += (m - shm_envm) * fm_minf(t / (m > shm_envm ? 0.05f : 1.0f), 1.0f);
+    shm_envs += (s - shm_envs) * fm_minf(t / 0.1f, 1.0f);
+    shm_envm = fm_flush(shm_envm), shm_envs = fm_flush(shm_envs);
+    shm_k = shm_envs * SHM_G * SHM_G > SHM_R * SHM_R * shm_envm ? SHM_R * fm_sqrtf(shm_envm / shm_envs) : SHM_G;
+#ifdef EN_HOST
+    shm_k *= en_shm_ret;                         /* (host tests: 0, the dry's lift alone, nothing back in) */
+#endif
+    shm_em = shm_es = 0.0f;
+    shm_nm = shm_ns = 0;
+    shm_p1 = fm_flush(shm_p1);                   /* (the one-poles' tails, as the engine's others) */
+    shm_lp1 = fm_flush(shm_lp1), shm_lp2 = fm_flush(shm_lp2), shm_hp1 = fm_flush(shm_hp1), shm_hp2 = fm_flush(shm_hp2);
 }
 static void shm_stop(void)                      /* out: the line empty, from the top */
 {
     fx_shm = 0.0f;
-    shm_len = shm_w = shm_odd = 0;
-    shm_ph = shm_in = shm_out = shm_lp1 = shm_lp2 = 0.0f;
+    shm_len = shm_w = shm_odd = shm_nm = shm_ns = 0;
+    shm_ph = shm_in = shm_out = shm_p1 = shm_lp1 = shm_lp2 = shm_hp1 = shm_hp2 = 0.0f;
+    shm_em = shm_es = shm_envm = shm_envs = 0.0f;
+    shm_k = SHM_G;
 }
+#ifdef EN_HOST
+static int fin(float x) { return x == x && fm_fabsf(x) < 1e30f; }
+int en_state_ok(void)                           /* (host tests) the plate's and the shifter's state finite */
+{
+    return fin(pl_ol) && fin(pl_or) && fin(pl_acc) && fin(pl_damp_l) && fin(pl_damp_r) && fin(shm_out) &&
+           fin(shm_lp1) && fin(shm_lp2) && fin(shm_hp1) && fin(shm_hp2) && fin(fx_shm);
+}
+#endif
 
 /* ------------------------------------------------------------ echo: tape --- */
 /* The dub echo: a tape loop (up to ~5.6 s, synced to the tempo) at a quarter rate (11 kHz, 16-bit,
@@ -4435,6 +4478,8 @@ static void fx_ctl(uint32_t n)                   /* once a chunk: the effects' e
         fx_shm += ((on >> EN_FX_SHIMMER & 1u ? 1.0f : 0.0f) - fx_shm) * fm_minf(t / (on >> EN_FX_SHIMMER & 1u ? 0.05f : 0.15f), 1.0f);
         if (!(on >> EN_FX_SHIMMER & 1u) && fx_shm < 0.001f)
             shm_stop();
+        else
+            shm_level(t);
     }
 }
 
@@ -4787,7 +4832,8 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
     const float push = fm_maxf(perf_echo, ar_push);   /* (and the arc's swell) */
     float eg = (echo_send + (1.0f - echo_send) * push) * ein_gain, ca = cloud_amt;
     const int shm_on = fx_shm > 0.0f;            /* (Shimmer: held, or its feedback easing out) */
-    const float shm_g = SHM_G * fx_shm * rev_in_gain;   /* (closed with the plate's input in dub hold) */
+    const float shm_g = shm_k * fx_shm * rev_in_gain;   /* (bounded by the music; closed with the plate's input in
+                                                  * dub hold) */
     const float dry_pl = fx_vt + fx_wash + fx_shm > 0.001f ? 0.35f * fx_vt + 0.3f * fx_wash + SHM_DRY * fx_shm : 0.0f;
     /* PERFORM's Open and Shut on the music, the kick left out on top: Shut a low-pass down to ~230 Hz, Open a
      * resonant high-pass up to ~400 Hz (thin and bright), both swept with perf_sw */
@@ -4829,6 +4875,11 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
             const float pin = rin * (1.0f - 0.5f * cloud_amt) + (cl + cr) * 0.8f;
             if ((pl_ph ^= 1u) != 0u) {
                 pl_acc = pin;
+                if (shm_on) {                    /* (Shimmer: the music's level into the plate, every other sample;
+                                                  * the cloud's return left out: it carries the plate's own tail) */
+                    shm_em += rin * rin;
+                    shm_nm++;
+                }
                 wl = pl_ol, wr = pl_or;
             } else {
                 float nl, nr, x = 0.5f * (pl_acc + pin);

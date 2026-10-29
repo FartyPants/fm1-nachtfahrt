@@ -206,6 +206,8 @@ extern volatile uint8_t en_lead_slot, en_lead_blk, en_lead_int;
  * entries (degrees from the chord root's, LD_REST: a rest; lengths in sixteenths) into off and dur, its count */
 extern volatile uint8_t en_lead_dmax;
 extern volatile uint32_t en_shm_work;            /* (Shimmer) the shifter's samples worked so far (0 at rest) */
+extern volatile float en_shm_ret;                /* (Shimmer) its return's share, 1 (0: the dry's lift alone) */
+int en_state_ok(void);                           /* 1: the plate's and the shifter's state finite (no NaN, Inf) */
 int en_lead_cap(void);
 int en_lead_theme(int8_t *off, uint8_t *dur);
 int en_lead_played(void);                        /* (the theme the keys played: LD_PLAYED on slot 0, 1 or 0) */

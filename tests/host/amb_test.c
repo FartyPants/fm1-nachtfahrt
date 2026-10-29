@@ -230,14 +230,13 @@ static void run_bands(float secs, const float *f, float *e, float *step)
     }
     for (b = 0; b < blocks; b++) {
         en_render(buf, 256, 2048);
+        bad += !en_state_ok();                   /* (the float state: the output, an int, can't show a NaN) */
         for (j = 0; j < 256; j++) {
             const float l = (float)buf[2 * j] / 8388608.0f, r = (float)buf[2 * j + 1] / 8388608.0f;
             float x = 0.5f * (l + r);
             if (cnt++)
                 st = fmaxf(st, fmaxf(fabsf(l - last[0]), fabsf(r - last[1])));
             last[0] = l, last[1] = r;
-            if (x != x)
-                bad++;
             for (k = 0; k < 4; k++) {
                 float y = x;
                 for (s = 0; s < 2; s++) {        /* (transposed direct form II) */
@@ -253,6 +252,29 @@ static void run_bands(float secs, const float *f, float *e, float *step)
     for (k = 0; k < 4; k++)
         e[k] = acc[k] / (float)(cnt > 0 ? cnt : 1);
     *step = st;
+}
+
+/* (Shimmer, fix round 1) secs played: the output's level (dB of its mean square), its peak, the share of samples over
+ * 0.9; the engine's float state checked every block (en_state_ok: no NaN or Inf in the plate or the shifter) */
+static void run_lvl(float secs, float *db, float *pk, float *hot)
+{
+    int blocks = (int)(secs * 44100.0f / 256.0f), b, j;
+    float s = 0.0f, p = 0.0f;
+    long n = 0, h = 0;
+    for (b = 0; b < blocks; b++) {
+        en_render(buf, 256, 2048);
+        bad += !en_state_ok();
+        for (j = 0; j < 512; j++) {
+            const float x = fabsf((float)buf[j] / 8388608.0f);
+            p = fmaxf(p, x);
+            h += x > 0.9f;
+            s += x * x;
+            n++;
+        }
+    }
+    *db = 10.0f * log10f(s / (float)(n > 0 ? n : 1) + 1e-30f);
+    *pk = p;
+    *hot = (float)h / (float)(n > 0 ? n : 1);
 }
 
 /* a new engine, stopped, the count from the top (en_init leaves the transport, en_bars, as they were) */
@@ -1457,7 +1479,7 @@ int main(void)
                (double)bh[1], (double)bh[2], (double)bh[3], (double)br[0], (double)br[1], (double)bt[0],
                (double)bt[1], (double)stn, (double)sth, (double)str, (double)stt, w_rest, w_held, w_tail,
                en_shm_work - w0);
-        CHECK(!bad, "test_shimmer: NaN");
+        CHECK(!bad && en_state_ok(), "test_shimmer: NaN or Inf in the plate or the shifter (%d blocks)", bad);
         CHECK(rh > 0.003f && rh > 30.0f * rn, "test_shimmer_octave: the octave against the pitch, held %.2e, not %.2e",
               (double)rh, (double)rn);
         CHECK(bh[3] < bh[1] / 16.0f, "test_shimmer_cap: three octaves up %.2e, not well under one %.2e",
@@ -1470,6 +1492,83 @@ int main(void)
         CHECK(w_rest == 0u && w_held > 0u && en_shm_work - w0 == w_tail,
               "test_shimmer_rest: the shifter's work at rest %u, held %u, after its tail %u then %u", w_rest, w_held,
               w_tail, en_shm_work - w0);
+    }
+
+    /* (Shimmer, fix round 1: the review found the loop running away at Size >= ~70) held 60 s, the plate stays bounded:
+     * (i) Mirage as it is and (ii) Mirage at Size and Reverb 100: the level (5 s windows) never more than 6 dB over
+     * the same piece held with nothing returned (en_shm_ret 0: the dry's lift alone, SHM_DRY, the user's to rule;
+     * Mirage's is ~+13 dB over not held by itself), the peak under 0.995, almost nothing over 0.9; (iv) let go:
+     * nothing louder than while held; (iii) Size 100, held, the music stopped and muted: it dies away, it doesn't
+     * feed itself */
+    {
+        int t, r, k;
+        for (t = 0; t < 2; t++) {
+            float lift = -200.0f;
+            for (r = 0; r < 2; r++) {
+                float db, pk, hot, ref = -200.0f, hmax = -200.0f, hpk = 0.0f, hhot = 0.0f, rmax = -200.0f, rpk = 0.0f;
+                fresh();
+                piece(6);
+                if (t)
+                    en_set(P_SIZE, 100), en_set(P_REVERB, 100);
+                en_shm_ret = (float)r;
+                en_play(1);
+                run(15.0f);
+                for (k = 0; k < 2; k++) {
+                    run_lvl(5.0f, &db, &pk, &hot);
+                    ref = fmaxf(ref, db);
+                }
+                en_fx(1u << EN_FX_SHIMMER);
+                for (k = 0; k < 12; k++) {
+                    run_lvl(5.0f, &db, &pk, &hot);
+                    hmax = fmaxf(hmax, db), hpk = fmaxf(hpk, pk), hhot = fmaxf(hhot, hot);
+                }
+                en_fx(0);
+                for (k = 0; k < 2; k++) {
+                    run_lvl(2.0f, &db, &pk, &hot);
+                    rmax = fmaxf(rmax, db), rpk = fmaxf(rpk, pk);
+                }
+                en_shm_ret = 1.0f;
+                if (!r) {
+                    lift = hmax;
+                    continue;
+                }
+                printf("  shimmer held 60 s, Mirage%s: not held %.1f dB, the dry's lift alone %.1f dB, held at most %.1f "
+                       "dB, peak %.3f, over 0.9 %.4f; let go %.1f dB, peak %.3f\n", t ? " at Size/Reverb 100" : "",
+                       (double)ref, (double)lift, (double)hmax, (double)hpk, (double)hhot, (double)rmax, (double)rpk);
+                CHECK(!bad && hmax < lift + 6.0f && hpk < 0.995f && hhot < 0.001f,
+                      "test_shimmer_bounded%s: held %.1f dB against %.1f (the lift alone), peak %.3f, over 0.9 %.4f "
+                      "(NaN blocks %d)", t ? "_size100" : "", (double)hmax, (double)lift, (double)hpk, (double)hhot, bad);
+                CHECK(rmax < hmax + 0.5f && rpk <= hpk * 1.05f,
+                      "test_shimmer_release_burst%s: let go %.1f dB peak %.3f, held %.1f dB peak %.3f",
+                      t ? "_size100" : "", (double)rmax, (double)rpk, (double)hmax, (double)hpk);
+            }
+        }
+        {
+            float db, pk, hot, first = 0.0f, last = 0.0f;
+            fresh();
+            piece(6);
+            en_set(P_SIZE, 100), en_set(P_REVERB, 100), en_set(P_ECHO, 0), en_set(P_FEEDBACK, 0);
+            en_play(1);
+            run(15.0f);
+            en_fx(1u << EN_FX_SHIMMER);
+            run(10.0f);
+            en_play(0);
+            en_mute(0xFFu);
+            printf("  shimmer held, Size 100, the music stopped and muted (5 s windows):");
+            for (k = 0; k < 8; k++) {
+                run_lvl(5.0f, &db, &pk, &hot);
+                printf(" %.1f", (double)db);
+                if (!k)
+                    first = db;
+                last = db;
+            }
+            printf(" dB\n");
+            en_fx(0);
+            en_mute(0);
+            CHECK(!bad && last < first - 30.0f && last < -70.0f,
+                  "test_shimmer_selfosc: held over silence %.1f dB, 35 s on %.1f dB (it feeds itself)", (double)first,
+                  (double)last);
+        }
     }
 
     /* (BERLIN) the black keys' Transpose: a written pattern played with Transpose held is the same pattern written three
