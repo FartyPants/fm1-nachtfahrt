@@ -112,7 +112,7 @@ Wet and Energy.</p>
 </ul>
 <img class="mood" src="img/site/night-drive.jpg" width="1200" height="900" alt="">
 <p>Eight pieces after the records of Tangerine Dream, Klaus Schulze and Ashra (Timewind, Wahnfried, Phaedra,
-Rubycon, Stratosfear, Sunrain, Mirage, Cyborg) and a ninth of its own (Umeda, after the rain in Osaka), each
+Rubycon, Stratosfear, Sunrain, Mirage, Cyborg) and a ninth of its own (Ryokuu, after early-summer rain (緑雨, "green rain")), each
 remembering how you left it. Every layer has its sound pages and
 a Move page, where its filter wanders relative to the knob you set.</p>
 <p class="small">To go back to the official firmware, use the installer's "Back to the stock firmware", or

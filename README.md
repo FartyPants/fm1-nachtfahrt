@@ -70,7 +70,7 @@ runs on the FM-1, installed from the [web installer](https://fartypants.github.i
 | 6 | Sunrain | Ashra, *New Age of Earth* | D major, 130 | The most hopeful: sequences of 8 and 7, both echo repeats at full, bright strings, surf; straight in |
 | 7 | Mirage | Schulze, *Mirage* | F♯ minor, 95 | Icy glass sequences of 12 and 11 opening slowly (16 and 24 bars), a deep phaser, a long reverb, sparse |
 | 8 | Cyborg | Schulze, *Cyborg* | C Phrygian, 70 | Early and raw: deep organ drones beating, a quiet sequence (level 20), no Sequence 2; the theremin Lead up front (level 70); the Drone's filter moves widely |
-| 9 | Umeda | after the rain in Osaka | B♭ Dorian, 80 | Calm: Jean-Michel Jarre's arps (2600 and Sub, low), strings walking the royal road, a theremin two octaves down gliding like a voice, rain outside |
+| 9 | Ryokuu | after early-summer rain (緑雨, "green rain") | B♭ Dorian, 80 | Calm: Jean-Michel Jarre's arps (2600 and Sub, low), strings walking the royal road, a theremin two octaves down gliding like a voice, rain outside |
 
 The names are working titles and the keys and tempos are starting points (from analysis sites, to tune by ear).
 NACHTFAHRT is not connected with any of these artists.

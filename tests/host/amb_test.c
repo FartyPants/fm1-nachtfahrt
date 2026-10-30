@@ -5334,12 +5334,12 @@ int main(void)
 
     /* (BERLIN) the pieces: their names; no two alike (at least 4 of Tempo, Root, Mode, the Sequence's voice, the
      * Drone's, the Lead's, Sequence 2 on, Repeat B on, the Atmosphere, Sequence 2's voice, the Lead's octave, the
-     * Sequence's octave differ: the "samey" anti-goal; the last three since Umeda, the user's Wahnfried variant, whose
+     * Sequence's octave differ: the "samey" anti-goal; the last three since Ryokuu, the user's Wahnfried variant, whose
      * difference is in its voices); not every piece
      * has an Atmosphere (three at least None, the user); the Lead dreamy in all of them (its reverb and echo 90) */
     {
         static const char *const NAME[EN_NPIECES] = {"Timewind", "Wahnfried", "Phaedra", "Rubycon", "Stratosfear",
-                                                     "Sunrain", "Mirage", "Cyborg", "Umeda"};
+                                                     "Sunrain", "Mirage", "Cyborg", "Ryokuu"};
         static const int KEY[] = {P_TEMPO, P_ROOT, P_MODE, P_SVOICE, P_CVOICE, P_LVOICE, P_NCHAR, P_MI1, P_MI3,
                                   P_S2VOICE, P_LOCT, P_SEQOCT};
         int16_t pa[EN_NPIECES][P_NPARAMS];
@@ -5367,7 +5367,7 @@ int main(void)
         /* (the user, 2026-10-28: the FM-1's speaker and headphones bright, the noise far too loud) the Atmosphere's
          * level by its type: Surf 5, Wind 7, Tape and Space 10; none: the default kept */
         for (a = 0; a < EN_NPIECES; a++) {
-            static const int LV[EN_NNCHAR] = {25, 7, 5, 10, -1, 10, -1, -1, 10};   /* (None Wind Surf Space Air Tape
+            static const int LV[EN_NNCHAR] = {25, 7, 5, 10, -1, 10, -1, -1, 6};   /* (None Wind Surf Space Air Tape
                                                                            * Drops Hail Rain; Air, Drops, Hail: unused) */
             const int c = pa[a][P_NCHAR];
             CHECK(c >= 0 && c < EN_NNCHAR && LV[c] >= 0 && pa[a][P_CRACKLE] == LV[c],
@@ -5376,24 +5376,24 @@ int main(void)
         }
     }
 
-    /* (2026-10-30) Umeda, the ninth piece (after the rain in Osaka), the user's: Wahnfried's (its Lead's melody, 80, B flat
+    /* (2026-10-30) Ryokuu, the ninth piece (after early-summer rain (緑雨, "green rain")), the user's: Wahnfried's (its Lead's melody, 80, B flat
      * Dorian, the Drone on Strings) with the Lead a Theremin two octaves down, gliding (70: "almost like singing"),
      * Jean-Michel Jarre's arps: the Sequence on 2600 an octave down (Cutoff 30), Sequence 2 on Sub two down (Cutoff 90);
-     * the Drone darker (Colour -20); Rain outside at 10 (Colour 20, Ring 70) */
+     * the Drone darker (Colour -30); Rain outside at 6 (Colour 20, Ring 70) */
     {
         int16_t p[P_NPARAMS];
         uint16_t pl;
         en_piece(8, p, &pl);
-        CHECK(!strcmp(en_piece_name(8), "Umeda") && p[P_TEMPO] == 80 && p[P_ROOT] == 10 && p[P_MODE] == MODE_DORIAN,
-              "test_umeda: %s, %d BPM, root %d, mode %d", en_piece_name(8), p[P_TEMPO], p[P_ROOT], p[P_MODE]);
-        CHECK(p[P_LVOICE] == 3 && p[P_LOCT] == -2 && p[P_GLIDE] == 70, "test_umeda_lead: voice %d, oct %d, glide %d",
+        CHECK(!strcmp(en_piece_name(8), "Ryokuu") && p[P_TEMPO] == 80 && p[P_ROOT] == 10 && p[P_MODE] == MODE_DORIAN,
+              "test_ryokuu: %s, %d BPM, root %d, mode %d", en_piece_name(8), p[P_TEMPO], p[P_ROOT], p[P_MODE]);
+        CHECK(p[P_LVOICE] == 3 && p[P_LOCT] == -2 && p[P_GLIDE] == 70, "test_ryokuu_lead: voice %d, oct %d, glide %d",
               p[P_LVOICE], p[P_LOCT], p[P_GLIDE]);
         CHECK(p[P_SVOICE] == 0 && p[P_SEQOCT] == -1 && p[P_CUTOFF] == 30 && p[P_S2VOICE] == 5 && p[P_SEQ2OCT] == -2 &&
-              p[P_S2CUT] == 90, "test_umeda_arps: seq %d oct %d cut %d, seq2 %d oct %d cut %d", p[P_SVOICE],
+              p[P_S2CUT] == 90, "test_ryokuu_arps: seq %d oct %d cut %d, seq2 %d oct %d cut %d", p[P_SVOICE],
               p[P_SEQOCT], p[P_CUTOFF], p[P_S2VOICE], p[P_SEQ2OCT], p[P_S2CUT]);
-        CHECK(p[P_CVOICE] == 1 && p[P_CCOL] == -20, "test_umeda_drone: voice %d, colour %d", p[P_CVOICE], p[P_CCOL]);
-        CHECK(p[P_NCHAR] == 8 && p[P_CRACKLE] == 10 && p[P_NCOL] == 20 && p[P_NTUNE] == 70,
-              "test_umeda_rain: %d at %d, colour %d, ring %d", p[P_NCHAR], p[P_CRACKLE], p[P_NCOL], p[P_NTUNE]);
+        CHECK(p[P_CVOICE] == 1 && p[P_CCOL] == -30, "test_ryokuu_drone: voice %d, colour %d", p[P_CVOICE], p[P_CCOL]);
+        CHECK(p[P_NCHAR] == 8 && p[P_CRACKLE] == 6 && p[P_NCOL] == 20 && p[P_NTUNE] == 70,
+              "test_ryokuu_rain: %d at %d, colour %d, ring %d", p[P_NCHAR], p[P_CRACKLE], p[P_NCOL], p[P_NTUNE]);
         {   /* (the user: "go for royal road progression and keep Bb Dorian"; the research's progression A,
              * research_notes/japanese-chords: A flat's royal road, IV maj7 - V7 - iii7 - vi7, in B flat Dorian's notes,
              * then home to B flat minor 11) written in the eight slots, looping (Free, Loop) */
@@ -5404,7 +5404,7 @@ int main(void)
             int k, ok = p[P_PMODE] == (EN_WALK_FREE | EN_PLOOP);
             for (k = 0; k < 8; k++)
                 ok &= p[P_CR0 + k] == R[k] && p[P_CQ0 + k] == Q[k] && p[P_CX0 + k] == X[k];
-            CHECK(ok, "test_umeda_chords: the royal road not in its slots, or not looping (play %d)", p[P_PMODE]);
+            CHECK(ok, "test_ryokuu_chords: the royal road not in its slots, or not looping (play %d)", p[P_PMODE]);
         }
     }
 
@@ -5460,7 +5460,7 @@ int main(void)
         /* (the Lead's memory, spec 3.3) each piece's Memory (the Arc page's fourth knob): the report's starting
          * values, to tune by ear */
         for (a = 0; a < EN_NPIECES; a++) {
-            static const int LMEM[EN_NPIECES] = {55, 40, 75, 45, 85, 60, 50, 35, 40};   /* (Umeda: Wahnfried's) */
+            static const int LMEM[EN_NPIECES] = {55, 40, 75, 45, 85, 60, 50, 35, 40};   /* (Ryokuu: Wahnfried's) */
             CHECK(pa[a][P_LMEM] == LMEM[a], "test_pieces_memory: %s Memory %d (spec 3.3: %d)", en_piece_name(a),
                   pa[a][P_LMEM], LMEM[a]);
         }

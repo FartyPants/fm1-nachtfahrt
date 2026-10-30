@@ -117,15 +117,16 @@ static const int16_t PC_WAHNFRIED[] = {       /* Schulze, Wahnfried 1883: roots 
     P_FEEDBACK, 75, P_REVERB, 45,
     P_MW0, 45, P_MT0, 60, P_MR0, 45, P_MW2, 15, P_BRIDGE, 30,
     P_ARC, 20, P_MOTION, 55, P_LMEM, 40, -1};
-static const int16_t PC_UMEDA[] = {           /* (2026-10-30) Umeda, after the rain in Osaka (the user's): Wahnfried's
-                                                * Lead melody, tempo, key and Strings, the Lead a Theremin two octaves
-                                                * down, gliding ("almost like singing"); Jean-Michel Jarre's arps (the
-                                                * Sequence on 2600 an octave down, dark; Sequence 2 on Sub two down,
-                                                * open); the Drone darker; Rain outside, quiet */
+static const int16_t PC_RYOKUU[] = {          /* (2026-10-30) Ryokuu (緑雨, "green rain": early-summer rain; first
+                                                * called Umeda), the user's: Wahnfried's Lead melody, tempo, key and
+                                                * Strings, the Lead a Theremin two octaves down, gliding ("almost like
+                                                * singing"); Jean-Michel Jarre's arps (the Sequence on 2600 an octave
+                                                * down, dark; Sequence 2 on Sub two down, open); the Drone darker
+                                                * (Colour -30, the user's ear); Rain outside, quiet */
     P_TEMPO, 80, P_ROOT, 10, P_MODE, MODE_DORIAN,
     P_SEQ, 30, P_MI1, 16, P_SVOICE, 0, P_SEQOCT, -1, P_CUTOFF, 30,
     P_SEQ2, 50, P_S2VOICE, 5, P_SEQ2OCT, -2, P_S2CUT, 90,
-    P_CHORD, 95, P_CVOICE, 1, P_CCOL, -20, P_PEDAL, 85, P_PHASER, 50, P_CRES, -5, P_DRIFT, 2,
+    P_CHORD, 95, P_CVOICE, 1, P_CCOL, -30, P_PEDAL, 85, P_PHASER, 50, P_CRES, -5, P_DRIFT, 2,
     /* (the user: "royal road progression, keep Bb Dorian"; research_notes/japanese-chords, progression A) A flat's
      * royal road in B flat Dorian's notes, IV maj7 - V7 - iii7 - vi7, again, then D flat over E flat and home to B flat
      * minor 11: the eight slots written, looping, a chord every Drift (8 bars) */
@@ -135,7 +136,7 @@ static const int16_t PC_UMEDA[] = {           /* (2026-10-30) Umeda, after the r
     P_CR4, 1, P_CQ4, EN_CQ_MAJOR, P_CX4, EN_CX_MAJ7, P_CR5, 3, P_CQ5, EN_CQ_SUS4, P_CX5, EN_CX_9,
     P_CR6, 0, P_CQ6, EN_CQ_MINOR, P_CX6, EN_CX_11, P_CR7, 10, P_CQ7, EN_CQ_MINOR, P_CX7, EN_CX_11,
     P_LEAD, 54, P_LVOICE, 3, P_LOCT, -2, P_GLIDE, 70, P_LTONE, 75, P_VIB, 55, P_LDENS, 60, P_LDIN, 8,
-    P_NCHAR, 8, P_CRACKLE, 10, P_NCOL, 20, P_NTUNE, 70,
+    P_NCHAR, 8, P_CRACKLE, 6, P_NCOL, 20, P_NTUNE, 70,
     P_FEEDBACK, 75, P_REVERB, 45,
     P_MW0, 45, P_MT0, 60, P_MR0, 45, P_MW2, 15, P_BRIDGE, 30,
     P_ARC, 20, P_MOTION, 55, P_LMEM, 40, -1};
@@ -205,7 +206,7 @@ static const struct {
 } PIECES[EN_NPIECES] = {
     {"Timewind", PC_TIMEWIND}, {"Wahnfried", PC_WAHNFRIED}, {"Phaedra", PC_PHAEDRA},   {"Rubycon", PC_RUBYCON},
     {"Stratosfear", PC_STRATOSFEAR}, {"Sunrain", PC_SUNRAIN}, {"Mirage", PC_MIRAGE}, {"Cyborg", PC_CYBORG},
-    {"Umeda", PC_UMEDA},
+    {"Ryokuu", PC_RYOKUU},
 };
 
 const char *en_piece_name(int i) { return PIECES[(unsigned)i < EN_NPIECES ? i : 0].name; }

@@ -364,6 +364,6 @@ const char *en_chord_label(int root, int kind, int type, char *buf);   /* "Fm7",
 
 /* the pieces: recipes for every parameter (Tune and MIDI out included, but they are the player's) */
 #define EN_NPIECES 9
-/* (2026-10-30: Umeda, the ninth piece, the user's: one more save slot of the two the project's sector holds) */
+/* (2026-10-30: Ryokuu, the ninth piece, the user's: one more save slot of the two the project's sector holds) */
 const char *en_piece_name(int i);
 void en_piece(int i, int16_t *par, uint16_t *pool);
