@@ -7,7 +7,7 @@ on USB) · **[Try it in the browser](https://fartypants.github.io/fm1-nachtfahrt
 **[Manual](https://fartypants.github.io/fm1-nachtfahrt/manual/)** ·
 **[Website](https://fartypants.github.io/fm1-nachtfahrt/)**
 
-## What?
+## What the fahrt?
 NACHTFAHRT turns the M-VAVE FM-1 into a generative Berlin School machine, after the 1970s music of
 Tangerine Dream, Klaus Schulze and Ashra: long, hypnotic pieces, repeating synthesizer sequences,
 slowly evolving hypnotic textures, a strong sense of space. It plays itself from the moment it's switched on, but you
