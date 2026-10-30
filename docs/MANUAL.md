@@ -125,7 +125,8 @@ second.
 
 **Nudges.** Hold a layer's button (ENV, ARP, LFO, SEQ) for half a second: its sound takes a small step
 somewhere new (its filter, envelope, tone or vibrato, never its sends or octave). Hold it on for 1.5 s: a
-shake, a new voice and bigger steps. HOME held on shakes every layer at once. Each step is pulled back
+shake, a new voice and bigger steps (a shake picks from the voices before the FM voices: those are on ALGORITHM).
+HOME held on shakes every layer at once. Each step is pulled back
 towards the piece's recipe, so nudges explore around the piece's sound rather than wander off. With Evolve
 over 40, NACHTFAHRT nudges a layer by itself now and then.
 
@@ -187,7 +188,11 @@ played on a plucked voice: **2600** (a saw), **Moog** (two saws a little apart),
 **Pulse** (a narrow pulse), **Glass** (an FM bell), each through two low-passes, the second resonant,
 swept down by a short envelope; or **Pluck**, a plucked string (Karplus-Strong: a burst of noise ringing round a
 delay line a period long), whose Cutoff is how bright the pluck is and Decay how long the string rings (in the
-highest octaves, from about C7, a string rings short whatever Decay is set to, as a real one does). The
+highest octaves, from about C7, a string rings short whatever Decay is set to, as a real one does). After Pluck
+come the **FM voices** (fm1_open's recipes: three pairs of sines, each one bending its partner's pitch, as a DX7
+does): **Neon Keys**, **OrbitBell** (Orbit Bell), **Soft EP**, **Dry Clav**, **FM Guitar**, **Marimba**, **Vibes**,
+**Metal Hit**, **RoundBass** (Round Bass) and **Sub Bass**; Decay is how long a note lasts and Cutoff how bright,
+as for the others. The
 root step is accented and the others quieter (Accent, on the Pattern page). Density decides how many of the steps sound, the least important dropping out first. Now and then
 (Evolve, Motion) a step changes, a note moves, an octave jumps, the sequence comes round early; it follows the Drone's chord
 (Transpose, on the Key page). Its cutoff wanders slowly over minutes, around the Cutoff you set (its Move page, below; its Width is the
@@ -201,7 +206,7 @@ quarter (1/4.), so Repeat A, a dotted eighth, doesn't land on the echo's first r
 
 **Sequence 2** (SEQ; channel 4) is a second line, by default an octave down and a step shorter (7 against
 8), so the two drift apart and come back together. It has the same voices and **Sub** (a sine and its
-octave below); on ALGORITHM, Pluck comes after Sub. Chance thins it at random. Its **Intro** (Move page) opens its filter, from closed, over that many bars: in Rubycon
+octave below); on ALGORITHM, Pluck comes after Sub, and the FM voices after Pluck, as on the Sequence. Chance thins it at random. Its **Intro** (Move page) opens its filter, from closed, over that many bars: in Rubycon
 it comes out of the drone after the Sequence. Motion changes its steps and octave jumps but never its length:
 an 8 against a 7 stays 8 against 7. And with **Motion**, at a change of section, Sequence 2 may move an octave up
 or down from where its Octave knob is set (at the range's ends, the other way), and back at the next change of
@@ -211,7 +216,8 @@ what you set is its octave again, the move gone; what's saved is always the octa
 
 **The Drone** (ENV; channel 1) holds the chord on two banks of five voices: the chord's four notes and the
 root an octave under (the **Pedal**). Voices: **Organ**, **Strings** (through an ensemble), **Horn** (a saw through two fixed formants), **Saws**,
-**Glass**, **Choir**. The Choir sings a vowel: each note is two voices a little apart, through three formants
+**Glass**, **Choir**, and three FM pads (fm1_open's recipes): **Warm Air**, **FMStrings** (FM Strings) and
+**SoftOrgan** (Soft Organ). The Choir sings a vowel: each note is two voices a little apart, through three formants
 (as a voice's mouth shapes it) and the Strings' ensemble. The vowel moves with the Drone's brightness: **Colour**
 chooses it ('oo' at −25, 'ah' at 0, 'ee' at +25, 'oh' and 'eh' between; past ±25 it only gets darker or
 brighter), and its **Move** page moves it, slowly, as it moves the other voices' filter (two vowels for each
@@ -219,7 +225,8 @@ octave the filter moves; the Intro opens it from 'oo'). Its **Reso** makes the f
 phaser sweeps it slowly (**Phaser**). The chord walks from degree to degree every **Drift** bars
 (the Nachtfahrt page), or follows the eight slots of the Chords page.
 
-**The Lead** (LFO; channel 3) is one voice, gliding: **Odyssey**, **Mini**, **Flute**, **Theremin**, **Synthi**. It plays
+**The Lead** (LFO; channel 3) is one voice, gliding: **Odyssey**, **Mini**, **Flute**, **Theremin**, **Synthi**, and three FM voices (fm1_open's recipes): **Soft Lead**,
+**Wood Reed** and **SoftBrass** (Soft Brass). It plays
 in pairs: a call that ends open, then, a beat or two later, its answer, the same rhythm ending on the chord's root or
 fifth, held longer. It remembers its motifs: it plays one for a few pairs, then keeps it, varies it a little (a note
 moved, a new tail, its first half twice, slower) or finds a new one. How much it keeps is **Memory** (the Arc page):
@@ -601,6 +608,9 @@ must also share its source code.
   men's means measured by Hillenbrand, Getty, Clark and Wheeler, JASA, 1995).
 - Pluck's string (Karplus-Strong) follows `pluck.c` in M-VAVE's [fm1_open](https://github.com/m-vave/fm1_open), an
   adaptation of DaisySP's String (Electrosmith, Emilie Gillet; MIT licence), written again for this engine.
+- The FM voices play the sixteen demo recipes of `app/presets.c` in M-VAVE's
+  [fm1_open](https://github.com/m-vave/fm1_open) (GPL-3.0), their envelopes after MSFA, Google's DX7 model
+  (Apache-2.0), as fm1_open has it; written again in floating point.
 - The reverb is Jon Dattorro's plate ("Effect Design, Part 1", JAES 1997), by way of
   [FoMni-1](https://github.com/charlesvestal/fm1-fomni).
 - Shimmer's octave shifter (a rotating delay) follows OCT UP and its SHIMMER in **Felucca**'s performance layer

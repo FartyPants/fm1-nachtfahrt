@@ -740,6 +740,7 @@ typedef struct {
     uint8_t note;
     float ph, ph2, dt, gl, gr, s[2], f1[2], f2[2], vp;   /* (vp: Choir's slow drift, its phase) */
     fm_v fm;                                     /* (an FM pad's note: fm.c) */
+    float fy0, fy1;                              /* (its last two outputs at half the rate: render_drone) */
 } drv_t;
 static drv_t drv[2][NDR];
 static uint8_t dr_bank, dr_on[2];
@@ -781,6 +782,7 @@ static void drone_chord(void)                    /* the chord as voiced (stab[].
         const float p = (PAN[i] + 1.0f) * (FM_PI / 4.0f);
         v->note = (uint8_t)n;
         v->dt = mtof((float)n) * (1.0f / EN_SR);
+        v->fy0 = v->fy1 = 0.0f;
         if (cvoice >= CV_FM0)                    /* (an FM pad: its recipe from the top at this note; any other voice:
                                                   * none yet, so turning onto a pad starts one, render_drone) */
             fm_start(&v->fm, CV_FM_REC[cvoice - CV_FM0], n);
@@ -5256,8 +5258,8 @@ static void render_drone(uint32_t n)
             for (i = 0; i < NDR; i++) {
                 drv_t *v = &drv[b][i];
                 if (v->fm.rec != CV_FM_REC[cv - CV_FM0])
-                    fm_start(&v->fm, CV_FM_REC[cv - CV_FM0], v->note);
-                fm_ctrl(&v->fm, 1, n);
+                    fm_start(&v->fm, CV_FM_REC[cv - CV_FM0], v->note), v->fy0 = v->fy1 = 0.0f;
+                fm_ctrl(&v->fm, 1, (n + 1) / 2);
             }
         for (j = 0; j < n; j++) {
             float a;
@@ -5278,7 +5280,16 @@ static void render_drone(uint32_t n)
                 }
                 case 3: x = 0.6f * (blep_saw(v->ph, v->dt) + blep_saw(v->ph2, v->dt * 1.006f)); break;
                 case 4: x = sine(v->ph + 2.0f + 0.7f * sine(v->ph2)); break;
-                default: x = CV_FM_G * fm_tick(&v->fm, v->dt); break;   /* (the FM pads) */
+                default:                         /* (the FM pads: at half the rate, every other sample between two
+                                                  * (the cost: a pad six sines a voice, ten voices in a crossfade);
+                                                  * the Drone's notes are low, Colour's low-pass after) */
+                    if (!(j & 1u)) {
+                        v->fy0 = v->fy1;
+                        v->fy1 = CV_FM_G * fm_tick(&v->fm, 2.0f * v->dt);
+                        x = v->fy0;
+                    } else
+                        x = 0.5f * (v->fy0 + v->fy1);
+                    break;
                 }
                 v->ph += v->dt;
                 if (v->ph >= 1.0f)

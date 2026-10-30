@@ -73,7 +73,8 @@ static const uint8_t FM_LVL[20] = {0, 5, 9, 13, 17, 20, 23, 25, 27, 29, 31, 33, 
 typedef struct {
     float ph[6], r[6], lv[6], inc[6], tg[6], g[6], dg[6], fb0, fb1, norm;
     int16_t ol[6];
-    uint8_t rs[6], ix[6], rec, down, on;         /* (on: the operators heard, a bit each) */
+    uint8_t rs[6], ix[6], rec, down, on, act;    /* (on: the operators the recipe has, a bit each; act: those loud
+                                                  * enough to count now, set at control rate: the rest not looked up) */
 } fm_v;
 
 static int fm_outlvl(int l) { return l >= 20 ? 28 + l : FM_LVL[l]; }
@@ -130,7 +131,7 @@ static void fm_start(fm_v *v, int rec, int note)
     const float lf = (float)note * (1.0f / 12.0f) + 3.03135f;   /* (log2 of its frequency, as MSFA's detune takes it) */
     float sum = 0.0f;
     int op;
-    v->rec = (uint8_t)rec, v->down = 1, v->on = 0;
+    v->rec = (uint8_t)rec, v->down = 1, v->on = v->act = 0;
     v->fb0 = v->fb1 = 0.0f;
     for (op = 0; op < 6; op++) {
         uint8_t rl[8], o[6];
@@ -158,7 +159,7 @@ static void fm_start(fm_v *v, int rec, int note)
 static void fm_ctrl(fm_v *v, int held, uint32_t n)
 {
     const float fn = (float)n, rn = 1.0f / fn;
-    int op;
+    int op, act = 0;
     if (!held && v->down) {
         v->down = 0;
         for (op = 0; op < 6; op++)
@@ -188,29 +189,39 @@ static void fm_ctrl(fm_v *v, int held, uint32_t n)
         if (v->rec == FM_SOFT_ORGAN || (op & 1))
             t *= v->norm;
         v->dg[op] = (t - v->g[op]) * rn;
+        if (fm_maxf(t, v->g[op]) > (v->rec == FM_SOFT_ORGAN || (op & 1) ? 1e-5f : 1e-4f))
+            act |= 1 << op;                      /* (a carrier under -100 dB, a modulator moving its carrier under
+                                                  * 1e-4 of a turn: inaudible, skipped; a struck recipe's modulators
+                                                  * die away, its note then three sines, not six) */
     }
+    v->act = (uint8_t)act;
 }
 
 /* one sample at dt turns a sample (the note's: it may move every call, as the Lead glides) */
 static inline float fm_tick(fm_v *v, float dt)
 {
+    const unsigned a = v->act;
     float y = 0.0f;
     int op;
     if (v->rec == FM_SOFT_ORGAN) {
         for (op = 0; op < 6; op++)
-            y += v->g[op] * sine(v->ph[op]);
-    } else {
-        float m = v->g[0] * sine(v->ph[0] + 4.0f + (v->fb0 + v->fb1) * (1.0f / 256.0f));
+            if (a >> op & 1u)
+                y += v->g[op] * sine(v->ph[op]);
+    } else {                                     /* (an operator not counting now (act): its sine not looked up) */
+        float m = a & 1u ? v->g[0] * sine(v->ph[0] + 4.0f + (v->fb0 + v->fb1) * (1.0f / 256.0f)) : 0.0f;
         if (FM_REC[v->rec].feedback)
             v->fb0 = v->fb1, v->fb1 = m;
-        y = v->g[1] * sine(v->ph[1] + 4.0f + m);
-        for (op = 2; op < 6; op += 2)            /* (a pair silent or unmodulated: its sines not looked up) */
-            if (v->on >> (op + 1) & 1u)
-                y += v->g[op + 1] * sine(v->ph[op + 1] + 4.0f + (v->on >> op & 1u ? v->g[op] * sine(v->ph[op]) : 0.0f));
+        if (a & 2u)
+            y = v->g[1] * sine(v->ph[1] + 4.0f + m);
+        for (op = 2; op < 6; op += 2)
+            if (a >> (op + 1) & 1u)
+                y += v->g[op + 1] * sine(v->ph[op + 1] + 4.0f + (a >> op & 1u ? v->g[op] * sine(v->ph[op]) : 0.0f));
     }
     for (op = 0; op < 6; op++) {
         float p = v->ph[op] + dt * v->r[op];
-        v->ph[op] = p - (float)(int)p;
+        if (p >= 1.0f)
+            p -= (float)(int)p;
+        v->ph[op] = p;
         v->g[op] += v->dg[op];
     }
     return y;

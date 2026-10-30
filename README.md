@@ -17,16 +17,16 @@ can play with it: the white keys give you the melody, always in the piece's key.
 
 [![NACHTFAHRT on the FM-1 — watch on YouTube](docs/img/site/video.jpg)](https://youtu.be/OLXYHRydniw)
 
-- a **Sequence** of up to 16 steps on a plucked analog-style voice (2600, Moog, Synthi, Pulse, Glass) or a
-  plucked string (Pluck),
+- a **Sequence** of up to 16 steps on a plucked analog-style voice (2600, Moog, Synthi, Pulse, Glass), a
+  plucked string (Pluck) or one of ten FM voices (fm1_open's recipes: Neon Keys, Marimba, Vibes and more),
   its filter wandering slowly, its notes **repeated** at the echo's times (a dotted eighth by default, the
   classic Berlin School echo), so sparse notes fill in the spaces;
 - **Sequence 2**, often a step shorter, so the two drift apart and meet again, and with Motion an octave up or
   down now and then, for a section;
 - a **Drone**: a chord on two banks of voices (Organ, Strings, Horn, Saws, Glass, or a Choir whose vowel moves
-  with the Drone's filter) with a pedal under it, a
+  with the Drone's filter, or three FM pads) with a pedal under it, a
   phaser and a slow walk from chord to chord;
-- a **Lead**: one gliding voice (Odyssey, Mini, Flute, Theremin, Synthi) playing dreamy calls and answers deep in
+- a **Lead**: one gliding voice (Odyssey, Mini, Flute, Theremin, Synthi, or three FM voices) playing dreamy calls and answers deep in
   the reverb and the echo; it remembers its motifs and returns to the piece's theme (how much it keeps: **Memory**).
   You can also play it on the white keys, in the scale: three notes or more and a pause become its theme, and its
   next ideas grow out of yours, straying further until they are its own again;
@@ -114,7 +114,8 @@ octave shifter follows OCT UP and its SHIMMER in [Felucca](https://github.com/hu
 follows VOICE in Felucca (`eng_formant.c`, GPL-3.0; Klatt's cascade; its vowel table, after Hillenbrand et al.); the granular
 cloud (Freeze) follows the design of CLOUD in [JIANT](https://github.com/juanjiant-bit/JIANT) (GPL-3.0); Pluck's
 string follows `pluck.c` in M-VAVE's [fm1_open](https://github.com/m-vave/fm1_open) (after DaisySP's String,
-Electrosmith and Emilie Gillet; MIT); Wind's pink and Surf's brown noise and Rain's drops follow NOISE in
+Electrosmith and Emilie Gillet; MIT); the FM voices play the demo recipes of `app/presets.c` in fm1_open (M-VAVE;
+GPL-3.0), their envelopes after MSFA (Google's DX7 model; Apache-2.0); Wind's pink and Surf's brown noise and Rain's drops follow NOISE in
 [Skiff](https://github.com/illuminus5/skiff) (`eng_noise.c`, Leo Kuroshita, Hügelton Instruments; GPL-3.0; Paul Kellet's
 pink filter); the Tape
 atmosphere is DUB-1's crackle, after Bahadirhan Kocer's "Using Resonators in Live". The way the sequence is
