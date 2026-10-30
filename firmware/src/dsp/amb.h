@@ -174,7 +174,11 @@ void en_render(int32_t *out_lr, uint32_t n, uint32_t gain_q12);
 void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2);
 
 /* the voices: each layer's sounds (ALGORITHM on the layer's page) */
-#define EN_NCV 6                         /* (BERLIN) the Drone's voices: Organ, Strings, Horn, Saws, Glass, Choir */
+#define EN_NCV 9                         /* (BERLIN) the Drone's voices: Organ, Strings, Horn, Saws, Glass, Choir, then
+                                          * the three FM pads (the voices batch, item 5): Warm Air, FM Strings, Soft
+                                          * Organ */
+#define EN_CV_FM 6                       /* the first of them on its knob (the voices before them: what a shake picks
+                                          * from) */
 #define EN_NBV 5
 #define EN_NSV 16                       /* (BERLIN) the Sequence's voices: 2600, Moog, Synthi, Pulse, Glass, Pluck,
                                          * then the ten FM voices (the voices batch, item 5): Neon Keys, Orbit Bell,

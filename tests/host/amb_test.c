@@ -1108,6 +1108,47 @@ static void ch_solo(int v, int col)
     en_play(1);
 }
 
+/* (the voices batch, item 5) the Drone's three FM pads, appended after Choir: named, Choir where it was (the saves);
+ * each alone through a change of chord (both banks sounding as one swells in over the other): every sample finite,
+ * heard, bounded, the state sound; then turned onto an FM pad while a chord holds on Organ (no new chord: its voices'
+ * FM state set there, from rest): no burst; the state sound once it has died away. The code only: how they sound is
+ * the user's, by ear */
+static void test_fm_drone(void)
+{
+    static const char *const DR_FM[3] = {"Warm Air", "FMStrings", "SoftOrgan"};
+    static float x[44100];
+    char t[16];
+    int k, i, n;
+    float st = 0.0f;
+    CHECK(en_param_info(P_CVOICE)->hi == 8, "test_fm_drone_listed: hi %d", en_param_info(P_CVOICE)->hi);
+    for (k = 0; k < 3; k++) {
+        en_param_text(P_CVOICE, 6 + k, t);
+        CHECK(!strcmp(t, DR_FM[k]), "test_fm_drone_listed: drone voice %d %s", 6 + k, t);
+    }
+    en_param_text(P_CVOICE, 5, t);
+    CHECK(!strcmp(t, "Choir"), "test_fm_old_kept: drone voice 5 %s", t);
+    for (k = 0; k < 3; k++) {
+        ch_solo(6 + k, 50);
+        en_set(P_DRIFT, 0);                      /* (a new chord every 2 bars: 4 s at 120) */
+        peak = 0.0f;
+        run(5.0f);
+        CHECK(!bad && peak > 1e-4f && peak < 4.0f && en_fm_ok(), "test_fm_drone_render: %s: peak %f, bad %d",
+              DR_FM[k], (double)peak, bad);
+    }
+    ch_solo(0, 50);
+    run(2.0f);
+    en_set(P_CVOICE, 6);
+    n = run_cap(1.0f, x, 44100);
+    for (i = 1; i < n; i++)
+        st = fmaxf(st, fabsf(x[i] - x[i - 1]));
+    CHECK(!bad && st < 0.5f && en_fm_ok(), "test_fm_drone_switch: Organ to Warm Air mid-chord: largest step %f, bad %d",
+          (double)st, bad);
+    en_set(P_CHORD, 0);
+    en_play(0);
+    run(6.0f);
+    CHECK(en_fm_ok(), "test_fm_drone_state: not finite, or denormal, after it died away");
+}
+
 /* x[0..CH_FN) (Hann) to its spectrum's envelope: the mean power over a quarter octave about each of 200 .. ~4 kHz in
  * 1/48-octave steps (ch_hz), dB, into env[0..CH_NE); *top: the share of the power above 4 kHz, dB */
 #define CH_FN 32768
@@ -1576,8 +1617,8 @@ int main(void)
         en_param_text(P_CVOICE, 4, t);
         CHECK(!strcmp(t, "Glass"), "ctone 4: %s", t);
         en_param_text(P_CVOICE, 5, t);
-        CHECK(!strcmp(t, "Choir") && en_param_info(P_CVOICE)->hi == 5, "test_choir_listed: drone voice 5 %s, hi %d", t,
-              en_param_info(P_CVOICE)->hi);
+        CHECK(!strcmp(t, "Choir"), "test_choir_listed: drone voice 5 %s", t);   /* (the FM pads after it since item 5:
+                                                                          * test_fm_drone has the count) */
         en_param_text(P_TAPAT, 1, t);
         CHECK(!strcmp(t, "1/8."), "repeat A time 1: %s", t);
         en_param_text(P_TAPBT, 2, t);
@@ -4610,6 +4651,7 @@ int main(void)
     test_atmospheres();
     test_fm_voice();
     test_fm_seq();
+    test_fm_drone();
 
     /* (BERLIN) the white keys play the Lead: degree d of D Aeolian (from D4 up), rising, in the scale, one at a time,
      * let go with its note-off; the Lead's own phrases wait while a key is held and two bars after */

@@ -1,15 +1,16 @@
 # (the voices batch, item 3) Choir, the Drone's formant choir, on its page's ALGORITHM: the Drone's sixth voice (after
-# Glass: one turn back from Organ), Horn still its third; said, kept in the project, heard (its vowel moving as Timewind
+# Glass: five turns on from Organ; the FM pads after it since item 5, so one turn back now lands on the last of
+# them), Horn still its third; said, kept in the project, heard (its vowel moving as Timewind
 # plays: the Drone's Move page), and kept over a restart
 wait 300
 listen
 tap ENV
 wait 300
-turn ALGO -1
+turn ALGO 5
 wait 300
 said VOICE Choir
 expect par22 5
-turn ALGO 1
+turn ALGO -5
 wait 300
 said VOICE Organ
 expect par22 0

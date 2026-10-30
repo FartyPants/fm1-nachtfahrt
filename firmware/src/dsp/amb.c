@@ -77,7 +77,7 @@ const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PAR
  * (its reverb and echo 90, the defaults: the user); an Atmosphere only where it suits, of the four the user likes.
  * (Voices: the Sequence's 2600 Moog Synthi Pulse Glass Pluck (0..5) and the FM voices (6..15), Sequence 2's the
  *  five, Sub, Pluck (0..6) and the FM voices (7..16);
- *  the Drone's Organ Strings Horn Saws Glass Choir; the Lead's Odyssey Mini Flute Theremin Synthi. Modes: 0 Ionian,
+ *  the Drone's Organ Strings Horn Saws Glass Choir and the FM pads Warm Air, FM Strings, Soft Organ (6..8); the Lead's Odyssey Mini Flute Theremin Synthi. Modes: 0 Ionian,
  *  1 Dorian, 2 Phrygian, 5 Aeolian. Repeat times: 1/8 1/8. 1/4 1/4. 1/2 1 bar. Drift: 2 4 8 16 32 64 bars, Hold.
  *  Play: the walk Home, Wander, Free. Grid: 8ths, 16ths. Atmosphere: None Wind Surf Space Air Tape Rain. The moves (filter motion spec 9): MW/MT/MR/MI a layer's
  *  Width, Time, Rate and Intro in bars (0 Drone, 1 Sequence, 2 Lead, 3 Sequence 2, 4 Atmosphere; the Sequence's Width
@@ -185,7 +185,8 @@ void en_piece(int i, int16_t *par, uint16_t *pool)
     *pool = EN_MODE_POOL[par[P_MODE]];
 }
 
-const char *const EN_CV_NAME[EN_NCV] = {"Organ", "Strings", "Horn", "Saws", "Glass", "Choir"};   /* (BERLIN: the Drone's;
+const char *const EN_CV_NAME[EN_NCV] = {"Organ", "Strings", "Horn", "Saws", "Glass", "Choir", "Warm Air", "FMStrings",
+                                        "SoftOrgan"};   /* (BERLIN: the Drone's;
                                                  * the voices batch: Horn was Choir, its place kept; the formant Choir
                                                  * appended: pieces and saves sound the same) */
 const char *const EN_BV_NAME[EN_NBV] = {"Odyssey", "Mini", "Flute", "Theremin", "Synthi"};   /* (BERLIN: the Lead's) */
@@ -672,8 +673,13 @@ typedef struct {
 static stab_t stab[EN_NPAD];
 static float chord_vol;
 static int shape, root_note = 55;               /* the voicing's shape, the chord's root as voiced (MIDI) */
-/* (the dub's chord voices, by number: a regrow's voicing still follows them, regrow; the Drone's own are EN_CV_NAME) */
-enum { CV_SAWS, CV_KEYS, CV_ORGAN, CV_PAD, CV_BELL };
+/* the Drone's voices by number (EN_CV_NAME; a regrow's voicing follows them, regrow: once the dub's names, the same
+ * numbers); Choir (CV_CHOIR) below; the FM pads (the voices batch, item 5) from CV_FM0: fm.c's recipes, and their
+ * level against the other voices', one constant, the user's to set by ear */
+enum { CV_ORGAN, CV_STRINGS, CV_HORN, CV_SAWS, CV_GLASS };
+#define CV_FM0 EN_CV_FM
+static const uint8_t CV_FM_REC[EN_NCV - CV_FM0] = {FM_WARM_AIR, FM_STRINGS, FM_SOFT_ORGAN};
+#define CV_FM_G 1.0f
 static int cvoice;                              /* the chord's voice now */
 
 /* ------------------------------------------------------------------ the grid --- */
@@ -714,11 +720,12 @@ static int chord_slot = -1;                     /* the slot whose chord sounds (
  * and away over Release; a new chord swells in on the other bank while the old one dies. Its voices: Organ
  * (drawbars), Strings (a saw, into the ensemble), Horn (a saw through two fixed formants, an 'ah': was Choir),
  * Saws (two, apart), Glass (FM), Choir (two saws a note through three moving formants, a vowel, into the ensemble:
- * choir(), below); the bus through the phaser. MIDI channel 1: a chord's notes on as it starts, off as it goes */
+ * choir(), below), the FM pads (fm.c: Warm Air, FM Strings, Soft Organ); the bus through the phaser. MIDI channel 1: a chord's notes on as it starts, off as it goes */
 #define NDR 5
 typedef struct {
     uint8_t note;
     float ph, ph2, dt, gl, gr, s[2], f1[2], f2[2], vp;   /* (vp: Choir's slow drift, its phase) */
+    fm_v fm;                                     /* (an FM pad's note: fm.c) */
 } drv_t;
 static drv_t drv[2][NDR];
 static uint8_t dr_bank, dr_on[2];
@@ -760,6 +767,11 @@ static void drone_chord(void)                    /* the chord as voiced (stab[].
         const float p = (PAN[i] + 1.0f) * (FM_PI / 4.0f);
         v->note = (uint8_t)n;
         v->dt = mtof((float)n) * (1.0f / EN_SR);
+        if (cvoice >= CV_FM0)                    /* (an FM pad: its recipe from the top at this note; any other voice:
+                                                  * none yet, so turning onto a pad starts one, render_drone) */
+            fm_start(&v->fm, CV_FM_REC[cvoice - CV_FM0], n);
+        else
+            v->fm.rec = FM_NREC;
         v->ph = (float)(seq_rand(&dr_rng) >> 8) * (1.0f / 16777216.0f);
         v->ph2 = (float)(seq_rand(&dr_rng) >> 8) * (1.0f / 16777216.0f);
         v->vp = v->ph;                           /* (Choir's drift from a place of its own: no new draw, so every
@@ -1441,6 +1453,8 @@ int en_fm_ok(void)                               /* (host tests, the voices batc
     int i, ok = 1;
     for (i = 0; i < NPLUCK; i++)
         ok &= fm_state_ok(&pluck[i].fm);
+    for (i = 0; i < 2 * NDR; i++)
+        ok &= fm_state_ok(&drv[i / NDR][i % NDR].fm);
     return ok;
 }
 #endif
@@ -3722,7 +3736,9 @@ static void regrow(void)                        /* a new piece: the home chord, 
     int k;
     chord_slot = -1;
     deg = 0;
-    shape = cvoice == CV_KEYS || cvoice == CV_PAD || cvoice == CV_BELL;   /* these like the 9th; the rest the open 7th */
+    shape = cvoice == CV_STRINGS || cvoice == CV_SAWS || cvoice == CV_GLASS || cvoice == CV_FM0 ||
+            cvoice == CV_FM0 + 1;               /* these like the 9th (Warm Air and FM Strings as Strings); the rest the
+                                                 * open 7th (Soft Organ as Organ) */
     walk_shape = shape;
     if (!PLAY_LOOP)                              /* Endless: a fresh piece's eight, from the walk */
         walk_fill();
@@ -5209,6 +5225,14 @@ static void render_drone(uint32_t n)
         const float to = dr_on[b] ? 1.0f : 0.0f;
         if (!dr_on[b] && lvl <= 0.0f)
             continue;
+        if (cv >= CV_FM0)                        /* (the FM pads: each voice on this pad's recipe, from rest if it was
+                                                  * on another (turned onto it mid-chord); its envelopes a chunk on) */
+            for (i = 0; i < NDR; i++) {
+                drv_t *v = &drv[b][i];
+                if (v->fm.rec != CV_FM_REC[cv - CV_FM0])
+                    fm_start(&v->fm, CV_FM_REC[cv - CV_FM0], v->note);
+                fm_ctrl(&v->fm, 1, n);
+            }
         for (j = 0; j < n; j++) {
             float a;
             lvl = to > lvl ? fm_minf(lvl + dr_up, 1.0f) : fm_maxf(lvl - dr_down, 0.0f);
@@ -5227,7 +5251,8 @@ static void render_drone(uint32_t n)
                     break;
                 }
                 case 3: x = 0.6f * (blep_saw(v->ph, v->dt) + blep_saw(v->ph2, v->dt * 1.006f)); break;
-                default: x = sine(v->ph + 2.0f + 0.7f * sine(v->ph2)); break;
+                case 4: x = sine(v->ph + 2.0f + 0.7f * sine(v->ph2)); break;
+                default: x = CV_FM_G * fm_tick(&v->fm, v->dt); break;   /* (the FM pads) */
                 }
                 v->ph += v->dt;
                 if (v->ph >= 1.0f)
