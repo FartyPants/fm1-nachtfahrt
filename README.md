@@ -2,7 +2,7 @@
 
 ![NACHTFAHRT](docs/img/site/banner.jpg)
 
-**[Install](https://fartypants.github.io/fm1-nachtfahrt/install/)** (Chrome or Edge, also Chrome on Android; the FM-1
+**[Install](https://fartypants.github.io/fm1-nachtfahrt/install/)** (Chrome or Edge, also Chrome on Android or Chromebook; the FM-1
 on USB) · **[Try it in the browser](https://fartypants.github.io/fm1-nachtfahrt/emu/)** ·
 **[Manual](https://fartypants.github.io/fm1-nachtfahrt/manual/)** ·
 **[Website](https://fartypants.github.io/fm1-nachtfahrt/)**
