@@ -1205,6 +1205,61 @@ static void test_shake_range(void)
           "test_shake_range: atmosphere %d", en_voice_shake_n(P_NCHAR));
 }
 
+/* (the voices batch, item 5; the final review, 1) the Drone's FM pads run at half the rate, but their envelopes keep
+ * the recipe's times: turned onto Warm Air while a chord holds (each voice's note from rest), its carrier's attack
+ * ends when the recipe's own does (fm.c alone, en_fm_probe_t1), within a block or two, not twice as late */
+static void test_fm_drone_times(void)
+{
+    uint32_t t = 0, want;
+    int b;
+    ch_solo(0, 50);
+    run(2.0f);
+    en_set(P_CVOICE, 6);
+    run(256.0f / 44100.0f + 1e-6f);              /* (the first chunk after the turn: each voice's FM note starts) */
+    t = 256u;
+    want = en_fm_probe_t1(4, en_fm_drone_note(), 1);   /* (4: Warm Air, fm.c's order; operator 1, its first carrier) */
+    for (b = 0; b < 1000 && en_fm_drone_stage(1) < 1; b++) {
+        run(256.0f / 44100.0f + 1e-6f);
+        t += 256u;
+    }
+    CHECK(t > 0.8f * (float)want && t < 1.25f * (float)want + 512.0f,
+          "test_fm_drone_times: Warm Air's attack %u samples on the Drone, %u alone", t, want);
+    en_play(0);
+}
+
+/* (the final review, 2) the Lead turned back onto an FM voice while a key holds a note it began on another voice: it
+ * sounds (its FM note starts again), not silent at the end of the last FM note's release */
+static void test_fm_lead_return(void)
+{
+    static const int OFF[13] = {P_CHORD, P_SEQ, P_SEQ2, P_CRACKLE, P_CLOUD, P_MOTION, P_ECHO, P_REVERB, P_LDECHO,
+                                P_LDREV, P_LDIN, P_LDENS, P_VIB};
+    float p1;
+    int i;
+    fresh();
+    for (i = 0; i < 13; i++)
+        en_set(OFF[i], 0);
+    en_set(P_LVOICE, 5);                         /* (Soft Lead) */
+    en_play(1);
+    run(0.5f);
+    en_lead_key(0, 1);
+    peak = 0.0f;
+    run(1.0f);
+    p1 = peak;
+    en_lead_key(0, 0);
+    run(1.5f);                                   /* (its release done) */
+    en_set(P_LVOICE, 0);                         /* (Odyssey: a note from silence) */
+    en_lead_key(0, 1);
+    run(0.5f);
+    en_set(P_LVOICE, 5);                         /* (back to Soft Lead, the key held) */
+    run(0.1f);                                   /* (Odyssey's tail in the Lead's filter dies first) */
+    peak = 0.0f;
+    run(0.4f);
+    CHECK(!bad && peak > 0.1f * p1, "test_fm_lead_return: Soft Lead again: peak %f (first %f)", (double)peak,
+          (double)p1);
+    en_lead_key(0, 0);
+    en_play(0);
+}
+
 /* x[0..CH_FN) (Hann) to its spectrum's envelope: the mean power over a quarter octave about each of 200 .. ~4 kHz in
  * 1/48-octave steps (ch_hz), dB, into env[0..CH_NE); *top: the share of the power above 4 kHz, dB */
 #define CH_FN 32768
@@ -4710,6 +4765,8 @@ int main(void)
     test_fm_drone();
     test_fm_lead();
     test_shake_range();
+    test_fm_drone_times();
+    test_fm_lead_return();
 
     /* (BERLIN) the white keys play the Lead: degree d of D Aeolian (from D4 up), rising, in the scale, one at a time,
      * let go with its note-off; the Lead's own phrases wait while a key is held and two bars after */

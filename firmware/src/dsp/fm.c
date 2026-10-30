@@ -155,10 +155,11 @@ static void fm_start(fm_v *v, int rec, int note)
 }
 
 /* (control rate) every envelope n samples on; held 0: the note let go (its release, once); the gains ramped from
- * where they are to the new levels' over the next n samples */
-static void fm_ctrl(fm_v *v, int held, uint32_t n)
+ * where they are to the new levels' over the next `ticks` calls of fm_tick (n, or fewer where it runs at a lower
+ * rate: the Drone's pads, half) */
+static void fm_ctrl(fm_v *v, int held, uint32_t n, uint32_t ticks)
 {
-    const float fn = (float)n, rn = 1.0f / fn;
+    const float fn = (float)n, rn = 1.0f / (float)(ticks ? ticks : 1u);
     int op, act = 0;
     if (!held && v->down) {
         v->down = 0;
@@ -259,7 +260,7 @@ int en_fm_probe(int rec, int note, uint32_t n, float *peak, int *ok)
     for (j = 0; j < n; j++) {
         float y;
         if (!(j & 15u))
-            fm_ctrl(&v, j < n / 2, 16);
+            fm_ctrl(&v, j < n / 2, 16, 16);
         y = fm_tick(&v, dt);
         if (y != y || fm_fabsf(y) > 1e9f)
             fin = 0;
@@ -268,5 +269,14 @@ int en_fm_probe(int rec, int note, uint32_t n, float *peak, int *ok)
     }
     *ok = fm_state_ok(&v);
     return fin;
+}
+uint32_t en_fm_probe_t1(int rec, int note, int op)
+{
+    static fm_v v;
+    uint32_t j;
+    fm_start(&v, rec, note);
+    for (j = 0; j < 10u * (uint32_t)EN_SR && v.ix[op] < 1; j += 16)
+        fm_ctrl(&v, 1, 16, 16);
+    return j;
 }
 #endif

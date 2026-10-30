@@ -220,6 +220,10 @@ extern volatile uint8_t en_lead_role, en_lead_phr;
  * first half and let go for the second: 1 if every sample was finite; its loudest into peak, 1 into ok if its state is
  * finite and has no denormal after */
 int en_fm_probe(int rec, int note, uint32_t n, float *peak, int *ok);
+uint32_t en_fm_probe_t1(int rec, int note, int op);   /* (host tests only) recipe rec alone at note: the samples until
+                                                       * operator op's attack ends (16 a step) */
+int en_fm_drone_stage(int op), en_fm_drone_note(void);   /* (host tests only) the Drone's sounding bank, its first
+                                                          * voice: its FM note's stage at operator op; its note */
 /* (host tests only) the phrase playing's motif slot (0: the theme), a count of its blocks so far (a block begins where
  * it moves), the intensity it was planned at (0..100) */
 extern volatile uint8_t en_lead_slot, en_lead_blk, en_lead_int;

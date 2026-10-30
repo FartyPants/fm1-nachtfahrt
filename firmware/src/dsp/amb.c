@@ -744,6 +744,8 @@ typedef struct {
 } drv_t;
 static drv_t drv[2][NDR];
 static uint8_t dr_bank, dr_on[2];
+static uint8_t dr_fmpar;                         /* (the FM pads' half rate: 1 if the next chunk's first sample is
+                                                  * between two, kept across chunks of any length) */
 static uint8_t ch_live;                          /* (Choir, below) 0: from rest (its states cleared, its vowel where it
                                                   * should be) */
 static float dr_lvl[2], dr_up = 0.0001f, dr_down = 0.00005f, ph_depth, ph_lfo, phz[2][6], ph_last[2];
@@ -1742,6 +1744,8 @@ int en_fm_ok(void)                               /* (host tests, the voices batc
         ok &= fm_state_ok(&drv[i / NDR][i % NDR].fm);
     return ok;
 }
+int en_fm_drone_stage(int op) { return drv[dr_bank][0].fm.ix[op]; }
+int en_fm_drone_note(void) { return drv[dr_bank][0].note; }
 #endif
 static float lead_vol, ld_gk = 0.004f, ld_tone = 1.0f, ld_att = 0.0009f, ld_rev = 1.0f, ld_echo = 1.0f;
 #define CP_MAX EN_LEAD_CPMAX                     /* (the keys' figure: the most entries kept, amb.h) */
@@ -2946,9 +2950,13 @@ static void lead_note(int n)                     /* the next note: legato (it gl
         return;
     if (!legato && lead.env < 0.05f)
         lead.cur = (float)n;                     /* (from silence: no glide) */
-    if (!legato && (unsigned)par[P_LVOICE] < EN_NBV && par[P_LVOICE] >= BV_FM0)   /* (an FM voice: its recipe from
-                                                  * the top; legato, it glides on as it is) */
-        fm_start(&lead.fm, BV_FM_REC[par[P_LVOICE] - BV_FM0], n);
+    if ((unsigned)par[P_LVOICE] < EN_NBV && par[P_LVOICE] >= BV_FM0) {   /* (an FM voice: its recipe from the top;
+                                                  * legato, it glides on as it is) */
+        if (!legato)
+            fm_start(&lead.fm, BV_FM_REC[par[P_LVOICE] - BV_FM0], n);
+    } else                                       /* (another voice: no FM note, so turning back onto an FM voice
+                                                  * starts one: render_lead) */
+        lead.fm.rec = FM_NREC;
     lead.note = (uint8_t)n;
     lead.on = 1;
     lead.vt = 0.0f;
@@ -4979,7 +4987,7 @@ static void render_plucks(uint32_t n)           /* (and Pluck's strings: render_
                 svf_coefs(v->c1, f, 1.4f);
                 svf_coefs(v->c2, f, 0.6f);
                 if (v->voice >= SV_FM0)          /* (an FM voice's envelopes: held, the layer ends the note) */
-                    fm_ctrl(&v->fm, 1, 16);
+                    fm_ctrl(&v->fm, 1, 16, 16);
             }
             switch (v->voice) {
             case 0: x = blep_saw(ph, dt); break;
@@ -5259,7 +5267,7 @@ static void render_drone(uint32_t n)
                 drv_t *v = &drv[b][i];
                 if (v->fm.rec != CV_FM_REC[cv - CV_FM0])
                     fm_start(&v->fm, CV_FM_REC[cv - CV_FM0], v->note), v->fy0 = v->fy1 = 0.0f;
-                fm_ctrl(&v->fm, 1, (n + 1) / 2);
+                fm_ctrl(&v->fm, 1, n, (n + 1u - dr_fmpar) / 2u);   /* (n samples on; ticked on half of them) */
             }
         for (j = 0; j < n; j++) {
             float a;
@@ -5283,7 +5291,7 @@ static void render_drone(uint32_t n)
                 default:                         /* (the FM pads: at half the rate, every other sample between two
                                                   * (the cost: a pad six sines a voice, ten voices in a crossfade);
                                                   * the Drone's notes are low, Colour's low-pass after) */
-                    if (!(j & 1u)) {
+                    if (!((j + dr_fmpar) & 1u)) {
                         v->fy0 = v->fy1;
                         v->fy1 = CV_FM_G * fm_tick(&v->fm, 2.0f * v->dt);
                         x = v->fy0;
@@ -5304,6 +5312,7 @@ static void render_drone(uint32_t n)
         }
         dr_lvl[b] = lvl;
     }
+    dr_fmpar = (uint8_t)((dr_fmpar + n) & 1u);
     if (cv == 1 || cv == CV_CHOIR) {             /* Strings and Choir: the ensemble */
         const float r = 0.6f * (1.0f / EN_SR), r2 = 6.0f * (1.0f / EN_SR);
         for (j = 0; j < n; j++) {
@@ -5368,7 +5377,7 @@ static void render_lead(uint32_t n)
                 lead.vph -= 1.0f;
             lead.fenv *= 0.985f;                 /* (~0.4 s) */
             if (lv >= BV_FM0)                    /* (an FM voice's envelopes: let go with the Lead) */
-                fm_ctrl(&lead.fm, lead.on, 16);
+                fm_ctrl(&lead.fm, lead.on, 16, 16);
         }
         lead.cur += ((float)lead.note - lead.cur) * ld_gk;
         switch (lv) {
