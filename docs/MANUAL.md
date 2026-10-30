@@ -370,9 +370,10 @@ filter's usable range.
 | 6 | **Sunrain** | Ashra, *New Age of Earth* | D major, 130 | Pulse 8, Glass 7, both repeats at 100 | Strings, Odyssey | Surf | Straight in, no Intros; Sequence 2 and the Atmosphere wander a little wider |
 | 7 | **Mirage** | Schulze, *Mirage* | F♯ minor, 95 | Glass 12 and 11, sparse, in 16ths | Glass + deep phaser, Theremin; a long reverb | Space | A slow opening: the Sequence's Intro 16 bars, Sequence 2's 24; the Atmosphere moves widest |
 | 8 | **Cyborg** | Schulze, *Cyborg* | C Phrygian, 70 | One, quiet (level 20): 2600, 8 steps in 8ths; no Sequence 2 | Organ, deep and beating; Theremin, low and up front (level 70) | None | The Drone's filter moves widely and slowly (Width 50, Time 70) |
+| 9 | **Umeda** | after the rain in Osaka (Cranky Man's) | B♭ Dorian, 80 | Jean-Michel Jarre's arps: 2600 an octave down, dark (Cutoff 30); Sequence 2 on Sub two octaves down, open (Cutoff 90) | Strings, darker (Colour −20), the royal road (A♭'s IV△7–V7–iii7–vi7 in B♭ Dorian's notes, looping); Theremin two octaves down, gliding (70): almost singing | Rain (10; Colour 20, Ring 70) | Wahnfried's melody and moves |
 
 In every piece the Lead's Width is low: it stays gentle. Its **Memory** (the Arc page): Timewind 55, Wahnfried
-40, Phaedra 75, Rubycon 45, Stratosfear 85, Sunrain 60, Mirage 50, Cyborg 35 (Stratosfear's and Phaedra's Leads hold
+40, Phaedra 75, Rubycon 45, Stratosfear 85, Sunrain 60, Mirage 50, Cyborg 35, Umeda 40 (Stratosfear's and Phaedra's Leads hold
 on to their ideas, Cyborg's and Wahnfried's wander). The names are working titles. The keys and tempos are
 starting points from music analysis sites, to be tuned by ear; fast readings such as Phaedra's 149 and
 Rubycon's 144 may be double the felt tempo (they run in eighths, which feel like sixteenths at half the speed).
@@ -535,7 +536,7 @@ screen again, with the section of the arc and its bar, and how far a filter has 
 
 ## 12. Saving
 
-NACHTFAHRT keeps all eight pieces in the FM-1's memory, each as you left it, with Tune, MIDI out and Lights.
+NACHTFAHRT keeps all nine pieces in the FM-1's memory, each as you left it, with Tune, MIDI out and Lights.
 
 - **By itself:** a few seconds after a change, while resting (writing to the memory interrupts the sound
   for a moment, so it never happens while the music plays). A dot at the top means unsaved changes.

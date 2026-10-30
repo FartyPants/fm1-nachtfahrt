@@ -1,4 +1,4 @@
-# the pieces: PRESETS through all eight and round; each keeps what's changed on it; GLO held saves; a reboot brings
+# the pieces: PRESETS through all nine and round (Umeda the ninth since 2026-10-30); each keeps what's changed on it; GLO held saves; a reboot brings
 # them back as they were left; GLO held on, a piece back to its recipe
 wait 500
 expect piece 0
@@ -9,6 +9,9 @@ expect piece 1
 turn PRESET 6
 wait 300
 expect piece 7
+turn PRESET 1
+wait 300
+expect piece 8
 turn PRESET 1
 wait 300
 expect piece 0
@@ -33,7 +36,7 @@ wait 300
 expect dirty 0
 reboot
 wait 1000
-expect format 8
+expect format 9
 expect piece 0
 expect par28 12
 # GLO held on (1.5 s): back to its recipe

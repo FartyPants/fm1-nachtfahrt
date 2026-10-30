@@ -56,6 +56,6 @@ expect dirty 0
 expect store_writes >0
 reboot
 wait 500
-expect format 8
+expect format 9
 expect par33 5
 expect par35 6

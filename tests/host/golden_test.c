@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// The golden renders: each of the eight pieces played 60 s from en_init, the samples FNV-1a hashed, compared
+// The golden renders: each of the pieces played 60 s from en_init, the samples FNV-1a hashed, compared
 // with tests/host/golden.txt ("<piece> <hash8hex>" per line). A change that should not change the sound
 // (a clean-up, a refactor) must keep all eight; a change to the sound on purpose re-records them and says so:
 //   golden_test [--write] [golden.txt]

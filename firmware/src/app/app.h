@@ -10,7 +10,8 @@
 #define EN_VERSION "DEV"
 #endif
 #define PROJ_MAGIC 0x314C5242u           /* "BRL1": DUB-1's ("DUB1") and AMB-1's ("ENO1") projects give the recipes */
-#define PROJ_FORMAT 8u                   /* (8: the Lead's Memory (P_LMEM) appended; 7: the filter motion: the Move pages' and Bridge's slots, no Emerge, Seq2 in, Ending; 6: BERLIN's eight pieces; 5: the arc: Emerge, Arc, Ending; 4: an Atmosphere in half the pieces; 3: Sequence 2 heard by default; 2: the pages' new parameters, the Lead's sends; while BERLIN is built, a
+#define PROJ_FORMAT 9u                   /* (9: a ninth piece, Umeda: its slot appended, saves reset (the user: "saves -
+                                          * reset", 2026-10-30); 8: the Lead's Memory (P_LMEM) appended; 7: the filter motion: the Move pages' and Bridge's slots, no Emerge, Seq2 in, Ending; 6: BERLIN's eight pieces; 5: the arc: Emerge, Arc, Ending; 4: an Atmosphere in half the pieces; 3: Sequence 2 heard by default; 2: the pages' new parameters, the Lead's sends; while BERLIN is built, a
                                          * slot that changes meaning moves the format on, so a save from before gives the
                                          * recipes) */
 #define NPIECES EN_NPIECES

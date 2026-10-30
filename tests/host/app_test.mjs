@@ -10,7 +10,7 @@ if (ex._initialize) ex._initialize();
 const cstr = (p) => { const m = new Uint8Array(ex.memory.buffer); let e = p; while (m[e]) e++; return new TextDecoder().decode(m.subarray(p, e)); };
 let fails = 0;
 const check = (ok, what) => { if (!ok) { console.log("FAIL", what); fails++; } };
-check(ex.app_npieces() === 8, "eight pieces");
+check(ex.app_npieces() === 9, "nine pieces");
 for (let i = 0; i < 8; i++) {                    /* (BERLIN) each piece named, its tempo in the range (60 .. 160) */
   check(cstr(ex.app_piece_name(i)).length > 0, `piece ${i} named`);
   const t = ex.app_piece_par(i, 18);
