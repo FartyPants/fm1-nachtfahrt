@@ -21,7 +21,7 @@ It was called BERLIN while it was being built; but NACHTFAHRT (however you want 
 ## Why?
 Cranky Man loves this "Berlin School" thing, with all its repetition and echoing, evolving plucks and drones and whatnots, because it puts him to sleep, and if there is one thing that a Cranky Man needs, it is sleep. Lots of it. Usually around 15 hours per week. And now it can put you to sleep, too!
 
-<img width="1243" height="798" alt="image" src="https://github.com/user-attachments/assets/8da7f5e7-a253-4c19-8e8c-7660568af8ea" />
+<img width="1102" height="709" alt="image" src="https://github.com/user-attachments/assets/f64bdf21-ec1d-4225-835f-0af762f5a676" />
 
 The whole idea behind this music generator is that IF you are NOT put to sleep by the lead sound (which invents its own melody), then when you start playing, it will listen, and then respond to your musical "call" with its own version of the musical phrase.
 
