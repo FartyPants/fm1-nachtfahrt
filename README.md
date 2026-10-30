@@ -128,9 +128,10 @@ Electrosmith and Emilie Gillet; MIT); Wind's pink and Surf's brown noise and Rai
 pink filter); the Tape
 atmosphere is DUB-1's crackle, after Bahadirhan Kocer's "Using Resonators in Live". The way the sequence is
 played (a root accented, sparse notes, a dotted-eighth repeat as loud as the note, two delays) owes much to
-Synth Seeker's videos on Berlin School sequencing. The platform (hardware layer, USB, update loader, storage,
+Synth Seeker's videos on Berlin School sequencing. (The Bob Ross of Berlin School) The platform (hardware layer, USB, update loader, storage,
 installer) is [Felucca](https://github.com/hugelton/Felucca)'s by Leo Kuroshita (Hügelton Instruments), by way
 of [X0X](https://github.com/charlesvestal/fm1-x0x), FoMni-1, AMB-1 and DUB-1. The idea of running FM-1 firmware
 in the browser comes from [Groove OS](https://www.groove-os.com/). GPL-3.0-only; see [LICENSING.md](LICENSING.md).
+The snoring you hear in your head is Cranky Man himself.
 
 M-VAVE and FM-1 are trademarks of their owners. NACHTFAHRT is not affiliated with M-VAVE or Hügelton Instruments.
