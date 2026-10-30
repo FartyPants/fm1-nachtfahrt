@@ -30,11 +30,13 @@
 enum { FM_NEON_KEYS, FM_ORBIT_BELL, FM_SOFT_ORGAN, FM_ROUND_BASS, FM_WARM_AIR, FM_WOOD_REED, FM_SOFT_EP, FM_DRY_CLAV,
        FM_GUITAR, FM_MARIMBA, FM_VIBES, FM_SOFT_BRASS, FM_STRINGS, FM_SUB_BASS, FM_METAL_HIT, FM_SOFT_LEAD, FM_NREC };
 typedef char fm_nrec_ok[FM_NREC == FM_NREC_HOST ? 1 : -1];   /* (amb.h's count for the tests) */
-/* their names as the screen shows them (en_param_text: 9 characters at most, so a ten-letter name loses its space;
- * the screen reader says it whole: firmware/words.tsv) */
-static const char *const FM_NAME[FM_NREC] = {"Neon Keys", "OrbitBell", "SoftOrgan", "RoundBass", "Warm Air",
-    "Wood Reed", "Soft EP", "Dry Clav", "FM Guitar", "Marimba", "Vibes", "SoftBrass", "FMStrings", "Sub Bass",
+#ifdef EN_HOST
+/* (host tests only) fm1_open's names for them (the panel's are amb.c's, "FM ..." so they read as FM: EN_SV_NAME,
+ * EN_BV_NAME) */
+static const char *const FM_NAME[FM_NREC] = {"Neon Keys", "Orbit Bell", "Soft Organ", "Round Bass", "Warm Air",
+    "Wood Reed", "Soft EP", "Dry Clav", "FM Guitar", "Marimba", "Vibes", "Soft Brass", "FM Strings", "Sub Bass",
     "Metal Hit", "Soft Lead"};
+#endif
 
 /* presets.c's recipe fields: a pair's carrier level, its ratio (coarse), detune (7: none), the modulator's level,
  * ratio and fine ratio, its decay rate and body level; a voice's carrier rates and levels, its modulators' attack and
@@ -155,11 +157,10 @@ static void fm_start(fm_v *v, int rec, int note)
 }
 
 /* (control rate) every envelope n samples on; held 0: the note let go (its release, once); the gains ramped from
- * where they are to the new levels' over the next `ticks` calls of fm_tick (n, or fewer where it runs at a lower
- * rate: the Drone's pads, half) */
-static void fm_ctrl(fm_v *v, int held, uint32_t n, uint32_t ticks)
+ * where they are to the new levels' over the next n samples */
+static void fm_ctrl(fm_v *v, int held, uint32_t n)
 {
-    const float fn = (float)n, rn = 1.0f / (float)(ticks ? ticks : 1u);
+    const float fn = (float)n, rn = 1.0f / fn;
     int op, act = 0;
     if (!held && v->down) {
         v->down = 0;
@@ -260,7 +261,7 @@ int en_fm_probe(int rec, int note, uint32_t n, float *peak, int *ok)
     for (j = 0; j < n; j++) {
         float y;
         if (!(j & 15u))
-            fm_ctrl(&v, j < n / 2, 16, 16);
+            fm_ctrl(&v, j < n / 2, 16);
         y = fm_tick(&v, dt);
         if (y != y || fm_fabsf(y) > 1e9f)
             fin = 0;
@@ -269,14 +270,5 @@ int en_fm_probe(int rec, int note, uint32_t n, float *peak, int *ok)
     }
     *ok = fm_state_ok(&v);
     return fin;
-}
-uint32_t en_fm_probe_t1(int rec, int note, int op)
-{
-    static fm_v v;
-    uint32_t j;
-    fm_start(&v, rec, note);
-    for (j = 0; j < 10u * (uint32_t)EN_SR && v.ix[op] < 1; j += 16)
-        fm_ctrl(&v, 1, 16, 16);
-    return j;
 }
 #endif

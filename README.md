@@ -18,13 +18,13 @@ can play with it: the white keys give you the melody, always in the piece's key.
 [![NACHTFAHRT on the FM-1 — watch on YouTube](docs/img/site/video.jpg)](https://youtu.be/OLXYHRydniw)
 
 - a **Sequence** of up to 16 steps on a plucked analog-style voice (2600, Moog, Synthi, Pulse, Glass), a
-  plucked string (Pluck) or one of ten FM voices (fm1_open's recipes: Neon Keys, Marimba, Vibes and more),
+  plucked string (Pluck) or one of ten FM voices (fm1_open's recipes: FM Keys, FMMarimba, FM Vibes and more),
   its filter wandering slowly, its notes **repeated** at the echo's times (a dotted eighth by default, the
   classic Berlin School echo), so sparse notes fill in the spaces;
 - **Sequence 2**, often a step shorter, so the two drift apart and meet again, and with Motion an octave up or
   down now and then, for a section;
 - a **Drone**: a chord on two banks of voices (Organ, Strings, Horn, Saws, Glass, or a Choir whose vowel moves
-  with the Drone's filter, or three FM pads) with a pedal under it, a
+  with the Drone's filter) with a pedal under it, a
   phaser and a slow walk from chord to chord;
 - a **Lead**: one gliding voice (Odyssey, Mini, Flute, Theremin, Synthi, or three FM voices) playing dreamy calls and answers deep in
   the reverb and the echo; it remembers its motifs and returns to the piece's theme (how much it keeps: **Memory**).

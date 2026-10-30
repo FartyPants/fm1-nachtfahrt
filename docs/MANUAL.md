@@ -190,9 +190,9 @@ swept down by a short envelope; or **Pluck**, a plucked string (Karplus-Strong: 
 delay line a period long), whose Cutoff is how bright the pluck is and Decay how long the string rings (in the
 highest octaves, from about C7, a string rings short whatever Decay is set to, as a real one does). After Pluck
 come the **FM voices** (fm1_open's recipes: three pairs of sines, each one bending its partner's pitch, as a DX7
-does): **Neon Keys**, **OrbitBell** (Orbit Bell), **Soft EP**, **Dry Clav**, **FM Guitar**, **Marimba**, **Vibes**,
-**Metal Hit**, **RoundBass** (Round Bass) and **Sub Bass**; Decay is how long a note lasts and Cutoff how bright,
-as for the others. The
+does): **FM Keys**, **FM Bell**, **FM EP** (an electric piano), **FM Clav**, **FM Guitar**, **FMMarimba**,
+**FM Vibes**, **FM Metal**, **FM Bass** and **FM Sub**; Decay is how long a note lasts and Cutoff how bright, as
+for the others. The
 root step is accented and the others quieter (Accent, on the Pattern page). Density decides how many of the steps sound, the least important dropping out first. Now and then
 (Evolve, Motion) a step changes, a note moves, an octave jumps, the sequence comes round early; it follows the Drone's chord
 (Transpose, on the Key page). Its cutoff wanders slowly over minutes, around the Cutoff you set (its Move page, below; its Width is the
@@ -216,8 +216,7 @@ what you set is its octave again, the move gone; what's saved is always the octa
 
 **The Drone** (ENV; channel 1) holds the chord on two banks of five voices: the chord's four notes and the
 root an octave under (the **Pedal**). Voices: **Organ**, **Strings** (through an ensemble), **Horn** (a saw through two fixed formants), **Saws**,
-**Glass**, **Choir**, and three FM pads (fm1_open's recipes): **Warm Air**, **FMStrings** (FM Strings) and
-**SoftOrgan** (Soft Organ). The Choir sings a vowel: each note is two voices a little apart, through three formants
+**Glass**, **Choir**. The Choir sings a vowel: each note is two voices a little apart, through three formants
 (as a voice's mouth shapes it) and the Strings' ensemble. The vowel moves with the Drone's brightness: **Colour**
 chooses it ('oo' at −25, 'ah' at 0, 'ee' at +25, 'oh' and 'eh' between; past ±25 it only gets darker or
 brighter), and its **Move** page moves it, slowly, as it moves the other voices' filter (two vowels for each
@@ -225,8 +224,8 @@ octave the filter moves; the Intro opens it from 'oo'). Its **Reso** makes the f
 phaser sweeps it slowly (**Phaser**). The chord walks from degree to degree every **Drift** bars
 (the Nachtfahrt page), or follows the eight slots of the Chords page.
 
-**The Lead** (LFO; channel 3) is one voice, gliding: **Odyssey**, **Mini**, **Flute**, **Theremin**, **Synthi**, and three FM voices (fm1_open's recipes): **Soft Lead**,
-**Wood Reed** and **SoftBrass** (Soft Brass). It plays
+**The Lead** (LFO; channel 3) is one voice, gliding: **Odyssey**, **Mini**, **Flute**, **Theremin**, **Synthi**, and three FM voices (fm1_open's recipes): **FM Lead**,
+**FM Reed** and **FM Brass**. It plays
 in pairs: a call that ends open, then, a beat or two later, its answer, the same rhythm ending on the chord's root or
 fifth, held longer. It remembers its motifs: it plays one for a few pairs, then keeps it, varies it a little (a note
 moved, a new tail, its first half twice, slower) or finds a new one. How much it keeps is **Memory** (the Arc page):
@@ -608,7 +607,7 @@ must also share its source code.
   men's means measured by Hillenbrand, Getty, Clark and Wheeler, JASA, 1995).
 - Pluck's string (Karplus-Strong) follows `pluck.c` in M-VAVE's [fm1_open](https://github.com/m-vave/fm1_open), an
   adaptation of DaisySP's String (Electrosmith, Emilie Gillet; MIT licence), written again for this engine.
-- The FM voices play the sixteen demo recipes of `app/presets.c` in M-VAVE's
+- The FM voices play demo recipes of `app/presets.c` in M-VAVE's
   [fm1_open](https://github.com/m-vave/fm1_open) (GPL-3.0), their envelopes after MSFA, Google's DX7 model
   (Apache-2.0), as fm1_open has it; written again in floating point.
 - The reverb is Jon Dattorro's plate ("Effect Design, Part 1", JAES 1997), by way of

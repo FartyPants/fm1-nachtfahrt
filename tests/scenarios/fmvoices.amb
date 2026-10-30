@@ -1,5 +1,5 @@
 # (the voices batch, item 5) the FM voices on each layer's ALGORITHM, after the voices that were there before them:
-# said, and at their numbers (the Sequence's 6..15, Sequence 2's 7..16, the Drone's 6..8, the Lead's 5..7); a shot of
+# said, and at their numbers (the Sequence's 6..15, Sequence 2's 7..16, the Lead's 5..7; none on the Drone since the user's ear); a shot of
 # a long name on each page (the screen's field holds 9 characters: build/scenarios/fmvoices/)
 wait 300
 listen
@@ -8,20 +8,20 @@ wait 300
 expect view 2
 turn ALGO 6
 wait 300
-said VOICE Neon Keys
+said VOICE FM Keys
 expect par33 6
 turn ALGO 1
 wait 300
-said VOICE OrbitBell
+said VOICE FM Bell
 expect par33 7
 shot fm_seq.png
 turn ALGO 1
 wait 300
-said VOICE Soft EP
+said VOICE FM EP
 expect par33 8
 turn ALGO 1
 wait 300
-said VOICE Dry Clav
+said VOICE FM Clav
 expect par33 9
 turn ALGO 1
 wait 300
@@ -29,23 +29,23 @@ said VOICE FM Guitar
 expect par33 10
 turn ALGO 1
 wait 300
-said VOICE Marimba
+said VOICE FMMarimba
 expect par33 11
 turn ALGO 1
 wait 300
-said VOICE Vibes
+said VOICE FM Vibes
 expect par33 12
 turn ALGO 1
 wait 300
-said VOICE Metal Hit
+said VOICE FM Metal
 expect par33 13
 turn ALGO 1
 wait 300
-said VOICE RoundBass
+said VOICE FM Bass
 expect par33 14
 turn ALGO 1
 wait 300
-said VOICE Sub Bass
+said VOICE FM Sub
 expect par33 15
 turn ALGO 1
 wait 300
@@ -57,31 +57,22 @@ wait 300
 expect view 4
 spin ALGO 6
 wait 300
-said VOICE Neon Keys
+said VOICE FM Keys
 expect par35 7
 spin ALGO 9
 wait 300
-said VOICE Sub Bass
+said VOICE FM Sub
 expect par35 16
 spin ALGO -9
 wait 300
 expect par35 7
-# the Drone: from Organ, six on
+# the Drone: none (the user, 2026-10-30): Choir its last, one turn on from it Organ again
 tap ENV
 wait 300
-turn ALGO 6
+turn ALGO 5
 wait 300
-said VOICE Warm Air
-expect par22 6
-turn ALGO 1
-wait 300
-said VOICE FMStrings
-expect par22 7
-shot fm_drone.png
-turn ALGO 1
-wait 300
-said VOICE SoftOrgan
-expect par22 8
+said VOICE Choir
+expect par22 5
 turn ALGO 1
 wait 300
 said VOICE Organ
@@ -92,15 +83,15 @@ wait 300
 expect view 3
 turn ALGO 5
 wait 300
-said VOICE Soft Lead
+said VOICE FM Lead
 expect par34 5
 turn ALGO 1
 wait 300
-said VOICE Wood Reed
+said VOICE FM Reed
 expect par34 6
 turn ALGO 1
 wait 300
-said VOICE SoftBrass
+said VOICE FM Brass
 expect par34 7
 shot fm_lead.png
 turn ALGO 1

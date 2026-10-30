@@ -176,19 +176,15 @@ void en_render(int32_t *out_lr, uint32_t n, uint32_t gain_q12);
 void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2);
 
 /* the voices: each layer's sounds (ALGORITHM on the layer's page) */
-#define EN_NCV 9                         /* (BERLIN) the Drone's voices: Organ, Strings, Horn, Saws, Glass, Choir, then
-                                          * the three FM pads (the voices batch, item 5): Warm Air, FM Strings, Soft
-                                          * Organ */
-#define EN_CV_FM 6                       /* the first of them on its knob (the voices before them: what a shake picks
-                                          * from) */
+#define EN_NCV 6                         /* (BERLIN) the Drone's voices: Organ, Strings, Horn, Saws, Glass, Choir (no FM
+                                          * voices: the user's ear, 2026-10-30) */
 #define EN_NBV 8                         /* (BERLIN) the Lead's voices: Odyssey, Mini, Flute, Theremin, Synthi, then the
-                                          * three FM voices (the voices batch, item 5): Soft Lead, Wood Reed, Soft
-                                          * Brass */
+                                          * three FM voices (the voices batch, item 5): FM Lead, FM Reed, FM Brass */
 #define EN_BV_FM 5                       /* the first of them on its knob (the voices before them: what a shake picks
                                           * from) */
 #define EN_NSV 16                       /* (BERLIN) the Sequence's voices: 2600, Moog, Synthi, Pulse, Glass, Pluck,
-                                         * then the ten FM voices (the voices batch, item 5): Neon Keys, Orbit Bell,
-                                         * Soft EP, Dry Clav, FM Guitar, Marimba, Vibes, Metal Hit, Round Bass, Sub Bass */
+                                         * then the ten FM voices (the voices batch, item 5): FM Keys, FM Bell, FM EP,
+                                         * FM Clav, FM Guitar, FMMarimba, FM Vibes, FM Metal, FM Bass, FM Sub */
 #define EN_NS2V 17                      /* Sequence 2's: the same five, Sub, Pluck, the ten FM voices (the voices batch:
                                          * Pluck, then the FM voices, appended to both, so every saved value keeps its
                                          * voice; the Sequence's 5 is Pluck, Sequence 2's 5 Sub and 6 Pluck) */
@@ -220,10 +216,6 @@ extern volatile uint8_t en_lead_role, en_lead_phr;
  * first half and let go for the second: 1 if every sample was finite; its loudest into peak, 1 into ok if its state is
  * finite and has no denormal after */
 int en_fm_probe(int rec, int note, uint32_t n, float *peak, int *ok);
-uint32_t en_fm_probe_t1(int rec, int note, int op);   /* (host tests only) recipe rec alone at note: the samples until
-                                                       * operator op's attack ends (16 a step) */
-int en_fm_drone_stage(int op), en_fm_drone_note(void);   /* (host tests only) the Drone's sounding bank, its first
-                                                          * voice: its FM note's stage at operator op; its note */
 /* (host tests only) the phrase playing's motif slot (0: the theme), a count of its blocks so far (a block begins where
  * it moves), the intensity it was planned at (0..100) */
 extern volatile uint8_t en_lead_slot, en_lead_blk, en_lead_int;
@@ -240,7 +232,7 @@ extern volatile float en_pl_steal;               /* the loudest a sounding seque
 int en_ks_ok(void);                              /* 1: Pluck's strings' float state finite, no denormals */
 int en_pl_on(void);                              /* the sequences' voices sounding now (of the six) */
 int en_fm_ok(void);                              /* (the voices batch, item 5) 1: every FM voice's state (the sequences',
-                                                  * the Drone's, the Lead's) finite, no denormals */
+                                                  * the Lead's) finite, no denormals */
 extern volatile float en_ch_vowel;               /* (Choir) the vowel heard: 0 'oo', 1 'oh', 2 'ah', 3 'eh', 4 'ee' */
 extern volatile uint32_t en_ch_work;             /* (Choir) its samples rendered so far */
 int en_ch_ok(void);                              /* 1: Choir's float state finite, no denormals */

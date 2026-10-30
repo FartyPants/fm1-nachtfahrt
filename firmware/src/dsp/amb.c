@@ -71,11 +71,11 @@ static const en_param_t PARAMS[P_NPARAMS] = {
 };
 const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PARAMS[i] : &PARAMS[0]; }
 /* (the voices batch, item 5) a shake's voices (the user, 2026-10-30: "currently only add the choir, we just want to
- * hear the fm voices"): those before the FM voices, the Drone's six with Choir; the FM voices only by ALGORITHM */
+ * hear the fm voices"): those before the FM voices, and the Drone's six with Choir (its old range left out its last);
+ * the FM voices only by ALGORITHM */
 int en_voice_shake_n(int p)
 {
     switch (p) {
-    case P_CVOICE: return EN_CV_FM;
     case P_SVOICE: return EN_SV_FM;
     case P_S2VOICE: return EN_S2V_FM;
     case P_LVOICE: return EN_BV_FM;
@@ -89,8 +89,8 @@ int en_voice_shake_n(int p)
  * (its reverb and echo 90, the defaults: the user); an Atmosphere only where it suits, of the four the user likes.
  * (Voices: the Sequence's 2600 Moog Synthi Pulse Glass Pluck (0..5) and the FM voices (6..15), Sequence 2's the
  *  five, Sub, Pluck (0..6) and the FM voices (7..16);
- *  the Drone's Organ Strings Horn Saws Glass Choir and the FM pads Warm Air, FM Strings, Soft Organ (6..8); the Lead's Odyssey Mini Flute Theremin Synthi
- *  and the FM voices Soft Lead, Wood Reed, Soft Brass (5..7). Modes: 0 Ionian,
+ *  the Drone's Organ Strings Horn Saws Glass Choir; the Lead's Odyssey Mini Flute Theremin Synthi and the FM voices
+ *  (5..7). Modes: 0 Ionian,
  *  1 Dorian, 2 Phrygian, 5 Aeolian. Repeat times: 1/8 1/8. 1/4 1/4. 1/2 1 bar. Drift: 2 4 8 16 32 64 bars, Hold.
  *  Play: the walk Home, Wander, Free. Grid: 8ths, 16ths. Atmosphere: None Wind Surf Space Air Tape Rain. The moves (filter motion spec 9): MW/MT/MR/MI a layer's
  *  Width, Time, Rate and Intro in bars (0 Drone, 1 Sequence, 2 Lead, 3 Sequence 2, 4 Atmosphere; the Sequence's Width
@@ -198,12 +198,11 @@ void en_piece(int i, int16_t *par, uint16_t *pool)
     *pool = EN_MODE_POOL[par[P_MODE]];
 }
 
-const char *const EN_CV_NAME[EN_NCV] = {"Organ", "Strings", "Horn", "Saws", "Glass", "Choir", "Warm Air", "FMStrings",
-                                        "SoftOrgan"};   /* (BERLIN: the Drone's;
+const char *const EN_CV_NAME[EN_NCV] = {"Organ", "Strings", "Horn", "Saws", "Glass", "Choir"};   /* (BERLIN: the Drone's;
                                                  * the voices batch: Horn was Choir, its place kept; the formant Choir
                                                  * appended: pieces and saves sound the same) */
-const char *const EN_BV_NAME[EN_NBV] = {"Odyssey", "Mini", "Flute", "Theremin", "Synthi", "Soft Lead", "Wood Reed",
-                                        "SoftBrass"};   /* (BERLIN: the Lead's) */
+const char *const EN_BV_NAME[EN_NBV] = {"Odyssey", "Mini", "Flute", "Theremin", "Synthi", "FM Lead", "FM Reed",
+                                        "FM Brass"};   /* (BERLIN: the Lead's) */
 const char *const EN_CQ_NAME[EN_NCQ] = {"Empty", "Major", "Minor", "Sus2", "Sus4", "Dim", "Aug"};
 const char *const EN_CX_NAME[EN_NCX] = {"Triad", "6", "7", "Maj7", "9", "11", "Add9"};
 static const char *const ETIME_NAME[6] = {"1/8", "1/8.", "1/4", "1/4.", "1/2", "1 bar"};
@@ -688,12 +687,8 @@ static stab_t stab[EN_NPAD];
 static float chord_vol;
 static int shape, root_note = 55;               /* the voicing's shape, the chord's root as voiced (MIDI) */
 /* the Drone's voices by number (EN_CV_NAME; a regrow's voicing follows them, regrow: once the dub's names, the same
- * numbers); Choir (CV_CHOIR) below; the FM pads (the voices batch, item 5) from CV_FM0: fm.c's recipes, and their
- * level against the other voices', one constant, the user's to set by ear */
+ * numbers); Choir (CV_CHOIR) below */
 enum { CV_ORGAN, CV_STRINGS, CV_HORN, CV_SAWS, CV_GLASS };
-#define CV_FM0 EN_CV_FM
-static const uint8_t CV_FM_REC[EN_NCV - CV_FM0] = {FM_WARM_AIR, FM_STRINGS, FM_SOFT_ORGAN};
-#define CV_FM_G 1.0f
 static int cvoice;                              /* the chord's voice now */
 
 /* ------------------------------------------------------------------ the grid --- */
@@ -734,18 +729,14 @@ static int chord_slot = -1;                     /* the slot whose chord sounds (
  * and away over Release; a new chord swells in on the other bank while the old one dies. Its voices: Organ
  * (drawbars), Strings (a saw, into the ensemble), Horn (a saw through two fixed formants, an 'ah': was Choir),
  * Saws (two, apart), Glass (FM), Choir (two saws a note through three moving formants, a vowel, into the ensemble:
- * choir(), below), the FM pads (fm.c: Warm Air, FM Strings, Soft Organ); the bus through the phaser. MIDI channel 1: a chord's notes on as it starts, off as it goes */
+ * choir(), below); the bus through the phaser. MIDI channel 1: a chord's notes on as it starts, off as it goes */
 #define NDR 5
 typedef struct {
     uint8_t note;
     float ph, ph2, dt, gl, gr, s[2], f1[2], f2[2], vp;   /* (vp: Choir's slow drift, its phase) */
-    fm_v fm;                                     /* (an FM pad's note: fm.c) */
-    float fy0, fy1;                              /* (its last two outputs at half the rate: render_drone) */
 } drv_t;
 static drv_t drv[2][NDR];
 static uint8_t dr_bank, dr_on[2];
-static uint8_t dr_fmpar;                         /* (the FM pads' half rate: 1 if the next chunk's first sample is
-                                                  * between two, kept across chunks of any length) */
 static uint8_t ch_live;                          /* (Choir, below) 0: from rest (its states cleared, its vowel where it
                                                   * should be) */
 static float dr_lvl[2], dr_up = 0.0001f, dr_down = 0.00005f, ph_depth, ph_lfo, phz[2][6], ph_last[2];
@@ -784,12 +775,6 @@ static void drone_chord(void)                    /* the chord as voiced (stab[].
         const float p = (PAN[i] + 1.0f) * (FM_PI / 4.0f);
         v->note = (uint8_t)n;
         v->dt = mtof((float)n) * (1.0f / EN_SR);
-        v->fy0 = v->fy1 = 0.0f;
-        if (cvoice >= CV_FM0)                    /* (an FM pad: its recipe from the top at this note; any other voice:
-                                                  * none yet, so turning onto a pad starts one, render_drone) */
-            fm_start(&v->fm, CV_FM_REC[cvoice - CV_FM0], n);
-        else
-            v->fm.rec = FM_NREC;
         v->ph = (float)(seq_rand(&dr_rng) >> 8) * (1.0f / 16777216.0f);
         v->ph2 = (float)(seq_rand(&dr_rng) >> 8) * (1.0f / 16777216.0f);
         v->vp = v->ph;                           /* (Choir's drift from a place of its own: no new draw, so every
@@ -1397,14 +1382,15 @@ volatile uint8_t en_seq_len[2];
 volatile int8_t en_s2oct_shift;
 volatile uint16_t en_seq_lane[5], en_seq_acc[2];   /* (the Pattern page's lanes as Auto plays them: each sequence's
                                                   * steps (as Density thins them), octaves; the Sequence's skips; accents) */
-const char *const EN_SV_NAME[EN_NS2V] = {"2600", "Moog", "Synthi", "Pulse", "Glass", "Sub", "Pluck", "Neon Keys",
-    "OrbitBell", "Soft EP", "Dry Clav", "FM Guitar", "Marimba", "Vibes", "Metal Hit", "RoundBass", "Sub Bass"};
+const char *const EN_SV_NAME[EN_NS2V] = {"2600", "Moog", "Synthi", "Pulse", "Glass", "Sub", "Pluck", "FM Keys",
+    "FM Bell", "FM EP", "FM Clav", "FM Guitar", "FMMarimba", "FM Vibes", "FM Metal", "FM Bass", "FM Sub"};
 /* (the voices batch, item 5) the sequences' FM voices, SV_FM0 on: fm.c's recipes, in the user's order (2026-10-30:
- * "plucked for arps", and the two basses); their level against the other voices', one constant, the user's to set
- * by ear */
+ * "plucked for arps", and the two basses); each one's level (the user: "quieter than normal voices"): matched to the
+ * mean of the Sequence's other six (+2.4 dB over 2600 there), by RMS on the Sequence alone (a note every quarter at
+ * 120, the knobs' defaults), each as 10^(dB/20); the user's ear has the last word */
 static const uint8_t SV_FM_REC[EN_NS2V - SV_FM0] = {FM_NEON_KEYS, FM_ORBIT_BELL, FM_SOFT_EP, FM_DRY_CLAV, FM_GUITAR,
                                                      FM_MARIMBA, FM_VIBES, FM_METAL_HIT, FM_ROUND_BASS, FM_SUB_BASS};
-#define SV_FM_G 1.0f
+static const float SV_FM_G[EN_NS2V - SV_FM0] = {1.18f, 1.58f, 1.29f, 3.16f, 1.60f, 1.74f, 1.33f, 1.74f, 1.84f, 1.23f};
 
 /* a piece's patterns, kept (en_seq_get, en_seq: EN_SEQ_N bytes): each one's degrees (16 + 16), steps, octaves and
  * accents (two bytes each, low first) and Density's order (16 + 16) */
@@ -1722,30 +1708,26 @@ static void seq_tick(void)                       /* a sixteenth: the sequences' 
 /* ------------------------------------------------------------------ the lead --- */
 /* (BERLIN) the Lead: one voice, gliding, its vibrato coming in late; it plays its motifs in pairs (below), never in
  * Emerge, a breath between pairs (Phrases: how often). Voices: Odyssey (a saw and a pulse), Mini (three saws), Flute
- * (a sine and breath), Theremin (a sine, always wavering), Synthi (a square), the FM voices (fm.c: Soft Lead, Wood
- * Reed, Soft Brass). MIDI channel 3 */
+ * (a sine and breath), Theremin (a sine, always wavering), Synthi (a square), the FM voices (fm.c: FM Lead, FM Reed,
+ * FM Brass: fm1_open's Soft Lead, Wood Reed, Soft Brass). MIDI channel 3 */
 static struct {
     uint8_t on, note;                            /* sounding (its gate); the note it glides to */
     float cur, ph, ph2, ph3, vph, env, fenv, vt, s1[2], s2[2], c1[4], c2[4];
     fm_v fm;                                     /* (an FM voice's note: fm.c) */
 } lead;
-/* (the voices batch, item 5) the Lead's FM voices, from BV_FM0: fm.c's recipes; their level against the other
- * voices', one constant, the user's to set by ear */
+/* (the voices batch, item 5) the Lead's FM voices, from BV_FM0: fm.c's recipes; each one's level matched to the mean
+ * of the Lead's other five (-0.7 dB under Odyssey), by RMS on the Lead alone (a key held), as the Sequences' are */
 #define BV_FM0 EN_BV_FM
 static const uint8_t BV_FM_REC[EN_NBV - BV_FM0] = {FM_SOFT_LEAD, FM_WOOD_REED, FM_SOFT_BRASS};
-#define BV_FM_G 1.0f
+static const float BV_FM_G[EN_NBV - BV_FM0] = {2.66f, 3.02f, 2.99f};
 #ifdef EN_HOST
 int en_fm_ok(void)                               /* (host tests, the voices batch, item 5) every FM voice's state sound */
 {
     int i, ok = fm_state_ok(&lead.fm);
     for (i = 0; i < NPLUCK; i++)
         ok &= fm_state_ok(&pluck[i].fm);
-    for (i = 0; i < 2 * NDR; i++)
-        ok &= fm_state_ok(&drv[i / NDR][i % NDR].fm);
     return ok;
 }
-int en_fm_drone_stage(int op) { return drv[dr_bank][0].fm.ix[op]; }
-int en_fm_drone_note(void) { return drv[dr_bank][0].note; }
 #endif
 static float lead_vol, ld_gk = 0.004f, ld_tone = 1.0f, ld_att = 0.0009f, ld_rev = 1.0f, ld_echo = 1.0f;
 #define CP_MAX EN_LEAD_CPMAX                     /* (the keys' figure: the most entries kept, amb.h) */
@@ -3772,9 +3754,8 @@ static void regrow(void)                        /* a new piece: the home chord, 
     int k;
     chord_slot = -1;
     deg = 0;
-    shape = cvoice == CV_STRINGS || cvoice == CV_SAWS || cvoice == CV_GLASS || cvoice == CV_FM0 ||
-            cvoice == CV_FM0 + 1;               /* these like the 9th (Warm Air and FM Strings as Strings); the rest the
-                                                 * open 7th (Soft Organ as Organ) */
+    shape = cvoice == CV_STRINGS || cvoice == CV_SAWS || cvoice == CV_GLASS;   /* these like the 9th; the rest the open
+                                                                                * 7th */
     walk_shape = shape;
     if (!PLAY_LOOP)                              /* Endless: a fresh piece's eight, from the walk */
         walk_fill();
@@ -4987,7 +4968,7 @@ static void render_plucks(uint32_t n)           /* (and Pluck's strings: render_
                 svf_coefs(v->c1, f, 1.4f);
                 svf_coefs(v->c2, f, 0.6f);
                 if (v->voice >= SV_FM0)          /* (an FM voice's envelopes: held, the layer ends the note) */
-                    fm_ctrl(&v->fm, 1, 16, 16);
+                    fm_ctrl(&v->fm, 1, 16);
             }
             switch (v->voice) {
             case 0: x = blep_saw(ph, dt); break;
@@ -4996,7 +4977,7 @@ static void render_plucks(uint32_t n)           /* (and Pluck's strings: render_
             case 3: x = blep_saw(ph, dt) - blep_saw(frac1(ph + 0.18f), dt); break;
             case 4: x = sine(ph + 2.0f + 1.8f * env * sine(ph2)); break;
             case 5: x = sine(ph) + 0.6f * sine(ph2); break;
-            default: x = SV_FM_G * fm_tick(&v->fm, dt); break;   /* (the FM voices: fm.c) */
+            default: x = SV_FM_G[v->voice - SV_FM0] * fm_tick(&v->fm, dt); break;   /* (the FM voices: fm.c) */
             }
             ph += dt;
             if (ph >= 1.0f)
@@ -5261,14 +5242,6 @@ static void render_drone(uint32_t n)
         const float to = dr_on[b] ? 1.0f : 0.0f;
         if (!dr_on[b] && lvl <= 0.0f)
             continue;
-        if (cv >= CV_FM0)                        /* (the FM pads: each voice on this pad's recipe, from rest if it was
-                                                  * on another (turned onto it mid-chord); its envelopes a chunk on) */
-            for (i = 0; i < NDR; i++) {
-                drv_t *v = &drv[b][i];
-                if (v->fm.rec != CV_FM_REC[cv - CV_FM0])
-                    fm_start(&v->fm, CV_FM_REC[cv - CV_FM0], v->note), v->fy0 = v->fy1 = 0.0f;
-                fm_ctrl(&v->fm, 1, n, (n + 1u - dr_fmpar) / 2u);   /* (n samples on; ticked on half of them) */
-            }
         for (j = 0; j < n; j++) {
             float a;
             lvl = to > lvl ? fm_minf(lvl + dr_up, 1.0f) : fm_maxf(lvl - dr_down, 0.0f);
@@ -5287,17 +5260,7 @@ static void render_drone(uint32_t n)
                     break;
                 }
                 case 3: x = 0.6f * (blep_saw(v->ph, v->dt) + blep_saw(v->ph2, v->dt * 1.006f)); break;
-                case 4: x = sine(v->ph + 2.0f + 0.7f * sine(v->ph2)); break;
-                default:                         /* (the FM pads: at half the rate, every other sample between two
-                                                  * (the cost: a pad six sines a voice, ten voices in a crossfade);
-                                                  * the Drone's notes are low, Colour's low-pass after) */
-                    if (!((j + dr_fmpar) & 1u)) {
-                        v->fy0 = v->fy1;
-                        v->fy1 = CV_FM_G * fm_tick(&v->fm, 2.0f * v->dt);
-                        x = v->fy0;
-                    } else
-                        x = 0.5f * (v->fy0 + v->fy1);
-                    break;
+                default: x = sine(v->ph + 2.0f + 0.7f * sine(v->ph2)); break;
                 }
                 v->ph += v->dt;
                 if (v->ph >= 1.0f)
@@ -5312,7 +5275,6 @@ static void render_drone(uint32_t n)
         }
         dr_lvl[b] = lvl;
     }
-    dr_fmpar = (uint8_t)((dr_fmpar + n) & 1u);
     if (cv == 1 || cv == CV_CHOIR) {             /* Strings and Choir: the ensemble */
         const float r = 0.6f * (1.0f / EN_SR), r2 = 6.0f * (1.0f / EN_SR);
         for (j = 0; j < n; j++) {
@@ -5377,7 +5339,7 @@ static void render_lead(uint32_t n)
                 lead.vph -= 1.0f;
             lead.fenv *= 0.985f;                 /* (~0.4 s) */
             if (lv >= BV_FM0)                    /* (an FM voice's envelopes: let go with the Lead) */
-                fm_ctrl(&lead.fm, lead.on, 16, 16);
+                fm_ctrl(&lead.fm, lead.on, 16);
         }
         lead.cur += ((float)lead.note - lead.cur) * ld_gk;
         switch (lv) {
@@ -5386,7 +5348,7 @@ static void render_lead(uint32_t n)
         case 2: x = sine(lead.ph) + 0.08f * lead.env * (frand() - 0.5f); break;
         case 3: x = sine(lead.ph); break;
         case 4: x = blep_saw(lead.ph, dt) - blep_saw(frac1(lead.ph + 0.5f), dt); break;
-        default: x = BV_FM_G * fm_tick(&lead.fm, dt); break;   /* (the FM voices) */
+        default: x = BV_FM_G[lv - BV_FM0] * fm_tick(&lead.fm, dt); break;   /* (the FM voices) */
         }
         lead.ph += dt;
         if (lead.ph >= 1.0f)

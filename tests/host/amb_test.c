@@ -943,8 +943,8 @@ static void ks_solo(int v, int oct, int deg, int tune, int decay)
  * 200, Decay 100: more notes than the six slots), and Sequence 2 on one of them. How they sound is the user's, by ear */
 static void test_fm_seq(void)
 {
-    static const char *const SEQ_FM[10] = {"Neon Keys", "OrbitBell", "Soft EP", "Dry Clav", "FM Guitar", "Marimba",
-                                           "Vibes", "Metal Hit", "RoundBass", "Sub Bass"};
+    static const char *const SEQ_FM[10] = {"FM Keys", "FM Bell", "FM EP", "FM Clav", "FM Guitar", "FMMarimba",
+                                           "FM Vibes", "FM Metal", "FM Bass", "FM Sub"};
     static const int8_t RUN[16] = {0, 2, 4, 7, 9, 7, 4, 2, 0, 4, 7, 11, 7, 4, 2, 0};
     char t[16];
     int k, i;
@@ -1108,45 +1108,14 @@ static void ch_solo(int v, int col)
     en_play(1);
 }
 
-/* (the voices batch, item 5) the Drone's three FM pads, appended after Choir: named, Choir where it was (the saves);
- * each alone through a change of chord (both banks sounding as one swells in over the other): every sample finite,
- * heard, bounded, the state sound; then turned onto an FM pad while a chord holds on Organ (no new chord: its voices'
- * FM state set there, from rest): no burst; the state sound once it has died away. The code only: how they sound is
- * the user's, by ear */
-static void test_fm_drone(void)
+/* (the voices batch, item 5) the Drone has no FM voices (the user, 2026-10-30: "we can remove the FM from the drone -
+ * they don't bring anything to the table"): its six voices as before, Choir the last */
+static void test_fm_drone_none(void)
 {
-    static const char *const DR_FM[3] = {"Warm Air", "FMStrings", "SoftOrgan"};
-    static float x[44100];
     char t[16];
-    int k, i, n;
-    float st = 0.0f;
-    CHECK(en_param_info(P_CVOICE)->hi == 8, "test_fm_drone_listed: hi %d", en_param_info(P_CVOICE)->hi);
-    for (k = 0; k < 3; k++) {
-        en_param_text(P_CVOICE, 6 + k, t);
-        CHECK(!strcmp(t, DR_FM[k]), "test_fm_drone_listed: drone voice %d %s", 6 + k, t);
-    }
+    CHECK(en_param_info(P_CVOICE)->hi == 5, "test_fm_drone_none: hi %d", en_param_info(P_CVOICE)->hi);
     en_param_text(P_CVOICE, 5, t);
-    CHECK(!strcmp(t, "Choir"), "test_fm_old_kept: drone voice 5 %s", t);
-    for (k = 0; k < 3; k++) {
-        ch_solo(6 + k, 50);
-        en_set(P_DRIFT, 0);                      /* (a new chord every 2 bars: 4 s at 120) */
-        peak = 0.0f;
-        run(5.0f);
-        CHECK(!bad && peak > 1e-4f && peak < 4.0f && en_fm_ok(), "test_fm_drone_render: %s: peak %f, bad %d",
-              DR_FM[k], (double)peak, bad);
-    }
-    ch_solo(0, 50);
-    run(2.0f);
-    en_set(P_CVOICE, 6);
-    n = run_cap(1.0f, x, 44100);
-    for (i = 1; i < n; i++)
-        st = fmaxf(st, fabsf(x[i] - x[i - 1]));
-    CHECK(!bad && st < 0.5f && en_fm_ok(), "test_fm_drone_switch: Organ to Warm Air mid-chord: largest step %f, bad %d",
-          (double)st, bad);
-    en_set(P_CHORD, 0);
-    en_play(0);
-    run(6.0f);
-    CHECK(en_fm_ok(), "test_fm_drone_state: not finite, or denormal, after it died away");
+    CHECK(!strcmp(t, "Choir"), "test_fm_drone_none: drone voice 5 %s", t);
 }
 
 /* (the voices batch, item 5) the Lead's three FM voices, appended after Synthi: named, Synthi where it was (the
@@ -1155,7 +1124,7 @@ static void test_fm_drone(void)
  * they sound is the user's, by ear */
 static void test_fm_lead(void)
 {
-    static const char *const LD_FM[3] = {"Soft Lead", "Wood Reed", "SoftBrass"};
+    static const char *const LD_FM[3] = {"FM Lead", "FM Reed", "FM Brass"};
     static const int OFF[13] = {P_CHORD, P_SEQ, P_SEQ2, P_CRACKLE, P_CLOUD, P_MOTION, P_ECHO, P_REVERB, P_LDECHO,
                                 P_LDREV, P_LDIN, P_LDENS, P_VIB};
     char t[16];
@@ -1203,28 +1172,6 @@ static void test_shake_range(void)
     CHECK(en_voice_shake_n(P_LVOICE) == 5, "test_shake_range: lead %d (Odyssey .. Synthi)", en_voice_shake_n(P_LVOICE));
     CHECK(en_voice_shake_n(P_NCHAR) == en_param_info(P_NCHAR)->hi - en_param_info(P_NCHAR)->lo + 1,
           "test_shake_range: atmosphere %d", en_voice_shake_n(P_NCHAR));
-}
-
-/* (the voices batch, item 5; the final review, 1) the Drone's FM pads run at half the rate, but their envelopes keep
- * the recipe's times: turned onto Warm Air while a chord holds (each voice's note from rest), its carrier's attack
- * ends when the recipe's own does (fm.c alone, en_fm_probe_t1), within a block or two, not twice as late */
-static void test_fm_drone_times(void)
-{
-    uint32_t t = 0, want;
-    int b;
-    ch_solo(0, 50);
-    run(2.0f);
-    en_set(P_CVOICE, 6);
-    run(256.0f / 44100.0f + 1e-6f);              /* (the first chunk after the turn: each voice's FM note starts) */
-    t = 256u;
-    want = en_fm_probe_t1(4, en_fm_drone_note(), 1);   /* (4: Warm Air, fm.c's order; operator 1, its first carrier) */
-    for (b = 0; b < 1000 && en_fm_drone_stage(1) < 1; b++) {
-        run(256.0f / 44100.0f + 1e-6f);
-        t += 256u;
-    }
-    CHECK(t > 0.8f * (float)want && t < 1.25f * (float)want + 512.0f,
-          "test_fm_drone_times: Warm Air's attack %u samples on the Drone, %u alone", t, want);
-    en_play(0);
 }
 
 /* (the final review, 2) the Lead turned back onto an FM voice while a key holds a note it began on another voice: it
@@ -4762,10 +4709,9 @@ int main(void)
     test_atmospheres();
     test_fm_voice();
     test_fm_seq();
-    test_fm_drone();
+    test_fm_drone_none();
     test_fm_lead();
     test_shake_range();
-    test_fm_drone_times();
     test_fm_lead_return();
 
     /* (BERLIN) the white keys play the Lead: degree d of D Aeolian (from D4 up), rising, in the scale, one at a time,
