@@ -2,21 +2,30 @@
 
 ![NACHTFAHRT](docs/img/site/banner.jpg)
 
-**[Install](https://fartypants.github.io/fm1-nachtfahrt/install/)** (Chrome or Edge, also Chrome on Android; the FM-1
+**[Install](https://fartypants.github.io/fm1-nachtfahrt/install/)** (Chrome or Edge, also Chrome on Android or Chromebook; the FM-1
 on USB) · **[Try it in the browser](https://fartypants.github.io/fm1-nachtfahrt/emu/)** ·
 **[Manual](https://fartypants.github.io/fm1-nachtfahrt/manual/)** ·
 **[Website](https://fartypants.github.io/fm1-nachtfahrt/)**
 
+## What?
 NACHTFAHRT turns the M-VAVE FM-1 into a generative Berlin School machine, after the 1970s music of
 Tangerine Dream, Klaus Schulze and Ashra: long, hypnotic pieces, repeating synthesizer sequences,
-slowly evolving textures, a strong sense of space. It plays itself from the moment it's switched on, and you
+slowly evolving hypnotic textures, a strong sense of space. It plays itself from the moment it's switched on, but you
 can play with it: the white keys give you the melody, always in the piece's key.
-(It was called BERLIN while it was being built; the code keeps that name.)
+It was called BERLIN while it was being built; but NACHTFAHRT (however you want to pronounce it) is just the right name.
 
 ## VIDEO (click to play)
 
 [![NACHTFAHRT on the FM-1 — watch on YouTube](docs/img/site/video.jpg)](https://youtu.be/OLXYHRydniw)
 
+## Why?
+Cranky Man loves this "Berlin School" thing, with all its repetition and echoing, evolving plucks and drones and whatnots, because it puts him to sleep, and if there is one thing that a Cranky Man needs, it is sleep. Lots of it. Usually around 15 hours per week. And now it can put you to sleep, too!
+
+<img width="1102" height="709" alt="image" src="https://github.com/user-attachments/assets/f64bdf21-ec1d-4225-835f-0af762f5a676" />
+
+The whole idea behind this music generator is that IF you are NOT put to sleep by the lead sound (which invents its own melody), then when you start playing, it will listen, and then respond to your musical "call" with its own version of the musical phrase.
+
+## What it does?
 - a **Sequence** of up to 16 steps on a plucked analog-style voice (2600, Moog, Synthi, Pulse, Glass), a
   plucked string (Pluck) or one of ten FM voices (fm1_open's recipes: FM Keys, FMMarimba, FM Vibes and more),
   its filter wandering slowly, its notes **repeated** at the echo's times (a dotted eighth by default, the
@@ -120,9 +129,10 @@ GPL-3.0), their envelopes after MSFA (Google's DX7 model; Apache-2.0); Wind's pi
 pink filter); the Tape
 atmosphere is DUB-1's crackle, after Bahadirhan Kocer's "Using Resonators in Live". The way the sequence is
 played (a root accented, sparse notes, a dotted-eighth repeat as loud as the note, two delays) owes much to
-Synth Seeker's videos on Berlin School sequencing. The platform (hardware layer, USB, update loader, storage,
+Synth Seeker's videos on Berlin School sequencing. (The Bob Ross of Berlin School) The platform (hardware layer, USB, update loader, storage,
 installer) is [Felucca](https://github.com/hugelton/Felucca)'s by Leo Kuroshita (Hügelton Instruments), by way
 of [X0X](https://github.com/charlesvestal/fm1-x0x), FoMni-1, AMB-1 and DUB-1. The idea of running FM-1 firmware
 in the browser comes from [Groove OS](https://www.groove-os.com/). GPL-3.0-only; see [LICENSING.md](LICENSING.md).
+The snoring you hear in your head is Cranky Man himself.
 
 M-VAVE and FM-1 are trademarks of their owners. NACHTFAHRT is not affiliated with M-VAVE or Hügelton Instruments.
