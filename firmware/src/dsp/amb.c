@@ -75,7 +75,8 @@ const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PAR
  * sets over the defaults (PARAMS), in pairs, to -1. Tune and MIDI out are never set here: they belong to the player.
  * Keys and tempos are starting points (spec 6: from analysis sites, to tune by ear); the Lead is dreamy in all of them
  * (its reverb and echo 90, the defaults: the user); an Atmosphere only where it suits, of the four the user likes.
- * (Voices: the Sequence's 2600 Moog Synthi Pulse Glass Pluck (0..5), Sequence 2's the five, Sub, Pluck (0..6);
+ * (Voices: the Sequence's 2600 Moog Synthi Pulse Glass Pluck (0..5) and the FM voices (6..15), Sequence 2's the
+ *  five, Sub, Pluck (0..6) and the FM voices (7..16);
  *  the Drone's Organ Strings Horn Saws Glass Choir; the Lead's Odyssey Mini Flute Theremin Synthi. Modes: 0 Ionian,
  *  1 Dorian, 2 Phrygian, 5 Aeolian. Repeat times: 1/8 1/8. 1/4 1/4. 1/2 1 bar. Drift: 2 4 8 16 32 64 bars, Hold.
  *  Play: the walk Home, Wander, Free. Grid: 8ths, 16ths. Atmosphere: None Wind Surf Space Air Tape Rain. The moves (filter motion spec 9): MW/MT/MR/MI a layer's
@@ -215,14 +216,15 @@ static char *itoa_s(int v, char *b)
 }
 
 /* (the voices batch) a sequence's voice knob (l: 0 the Sequence, 1 Sequence 2) as the engine's voice, EN_SV_NAME's
- * index: Pluck was appended to both lists, so the Sequence's 5 is Pluck (6 here) where Sequence 2's 5 is Sub; a value
- * out of range: 2600 */
+ * index: Pluck was appended to both lists, so the Sequence's 5 is Pluck (6 here) where Sequence 2's 5 is Sub; the FM
+ * voices after it (item 5), the Sequence's 6.. their 7..; a value out of range: 2600 */
 #define SV_PLUCK 6
+#define SV_FM0 7                                 /* (the engine's first FM voice: 7 .. 16, SV_FM_REC's) */
 static int sv_of(int l, int v)
 {
     if (l)
         return (unsigned)v < EN_NS2V ? v : 0;
-    return (unsigned)v < EN_NSV ? (v == EN_NSV - 1 ? SV_PLUCK : v) : 0;
+    return (unsigned)v < EN_NSV ? (v < EN_SV_FM - 1 ? v : v + 1) : 0;
 }
 
 void en_param_text(int i, int v, char *b)
@@ -1317,6 +1319,7 @@ typedef struct {
     float ks_fr, ks_fb, ks_a1, ks_x1, ks_g;      /* the delay's fraction; the loop's gain a period; the last sample
                                                   * read and the last read between two (the average's); the output's
                                                   * gain (the velocity's, from the line's units) */
+    fm_v fm;                                     /* (the voices batch, item 5) an FM voice's note (fm.c) */
 } pluck_t;
 static pluck_t pluck[NPLUCK];
 
@@ -1364,7 +1367,14 @@ volatile uint8_t en_seq_len[2];
 volatile int8_t en_s2oct_shift;
 volatile uint16_t en_seq_lane[5], en_seq_acc[2];   /* (the Pattern page's lanes as Auto plays them: each sequence's
                                                   * steps (as Density thins them), octaves; the Sequence's skips; accents) */
-const char *const EN_SV_NAME[EN_NS2V] = {"2600", "Moog", "Synthi", "Pulse", "Glass", "Sub", "Pluck"};
+const char *const EN_SV_NAME[EN_NS2V] = {"2600", "Moog", "Synthi", "Pulse", "Glass", "Sub", "Pluck", "Neon Keys",
+    "OrbitBell", "Soft EP", "Dry Clav", "FM Guitar", "Marimba", "Vibes", "Metal Hit", "RoundBass", "Sub Bass"};
+/* (the voices batch, item 5) the sequences' FM voices, SV_FM0 on: fm.c's recipes, in the user's order (2026-10-30:
+ * "plucked for arps", and the two basses); their level against the other voices', one constant, the user's to set
+ * by ear */
+static const uint8_t SV_FM_REC[EN_NS2V - SV_FM0] = {FM_NEON_KEYS, FM_ORBIT_BELL, FM_SOFT_EP, FM_DRY_CLAV, FM_GUITAR,
+                                                     FM_MARIMBA, FM_VIBES, FM_METAL_HIT, FM_ROUND_BASS, FM_SUB_BASS};
+#define SV_FM_G 1.0f
 
 /* a piece's patterns, kept (en_seq_get, en_seq: EN_SEQ_N bytes): each one's degrees (16 + 16), steps, octaves and
  * accents (two bytes each, low first) and Density's order (16 + 16) */
@@ -1417,6 +1427,20 @@ int en_ks_ok(void)                               /* (host tests) the strings' fl
         ok &= ks_fine(v->ks_fr) & ks_fine(v->ks_fb) & ks_fine(v->ks_a1) & ks_fine(v->ks_x1) & ks_fine(v->ks_g) &
               ks_fine(v->amp) & ks_fine(v->att) & ks_fine(v->last);
     }
+    return ok;
+}
+int en_pl_on(void)                               /* (host tests) the sequence voices sounding */
+{
+    int i, n = 0;
+    for (i = 0; i < NPLUCK; i++)
+        n += pluck[i].on;
+    return n;
+}
+int en_fm_ok(void)                               /* (host tests, the voices batch, item 5) every FM voice's state sound */
+{
+    int i, ok = 1;
+    for (i = 0; i < NPLUCK; i++)
+        ok &= fm_state_ok(&pluck[i].fm);
     return ok;
 }
 #endif
@@ -1488,6 +1512,8 @@ static void pluck_voice(int l, int n, int vel, int rep)   /* rep: a repeat, pann
     v->dt2 = v->dt * (v->voice == 1 ? 1.004f : v->voice == 4 ? 3.5f : 0.5f);   /* Moog's second saw, Glass's
                                                                                 * modulator, Sub's octave under */
     v->ph = v->ph2 = 0.0f;
+    if (v->voice >= SV_FM0)                      /* (an FM voice: its recipe from the top, at this note) */
+        fm_start(&v->fm, SV_FM_REC[v->voice - SV_FM0], n);
     v->amp = (float)vel * (1.0f / 127.0f);
     v->att = 0.0f;
     v->env = 1.0f;
@@ -4908,6 +4934,8 @@ static void render_plucks(uint32_t n)           /* (and Pluck's strings: render_
                 const float f = v->cut * fm_exp2f(3.5f * env) * fx_swm;   /* (the grid's Sweep) */
                 svf_coefs(v->c1, f, 1.4f);
                 svf_coefs(v->c2, f, 0.6f);
+                if (v->voice >= SV_FM0)          /* (an FM voice's envelopes: held, the layer ends the note) */
+                    fm_ctrl(&v->fm, 1, 16);
             }
             switch (v->voice) {
             case 0: x = blep_saw(ph, dt); break;
@@ -4915,7 +4943,8 @@ static void render_plucks(uint32_t n)           /* (and Pluck's strings: render_
             case 2: x = blep_saw(ph, dt) - blep_saw(frac1(ph + 0.5f), dt); break;
             case 3: x = blep_saw(ph, dt) - blep_saw(frac1(ph + 0.18f), dt); break;
             case 4: x = sine(ph + 2.0f + 1.8f * env * sine(ph2)); break;
-            default: x = sine(ph) + 0.6f * sine(ph2); break;
+            case 5: x = sine(ph) + 0.6f * sine(ph2); break;
+            default: x = SV_FM_G * fm_tick(&v->fm, dt); break;   /* (the FM voices: fm.c) */
             }
             ph += dt;
             if (ph >= 1.0f)

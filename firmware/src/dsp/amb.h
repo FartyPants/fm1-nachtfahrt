@@ -176,11 +176,16 @@ void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2);
 /* the voices: each layer's sounds (ALGORITHM on the layer's page) */
 #define EN_NCV 6                         /* (BERLIN) the Drone's voices: Organ, Strings, Horn, Saws, Glass, Choir */
 #define EN_NBV 5
-#define EN_NSV 6                        /* (BERLIN) the Sequence's voices: 2600, Moog, Synthi, Pulse, Glass, Pluck */
-#define EN_NS2V 7                       /* Sequence 2's: the same five, Sub, Pluck (the voices batch: Pluck appended to
-                                         * both, so every saved value keeps its voice; the Sequence's 5 is Pluck,
-                                         * Sequence 2's 5 Sub and 6 Pluck) */
-extern const char *const EN_SV_NAME[EN_NS2V];   /* all seven: 2600 .. Glass, Sub, Pluck (the engine's own numbers) */
+#define EN_NSV 16                       /* (BERLIN) the Sequence's voices: 2600, Moog, Synthi, Pulse, Glass, Pluck,
+                                         * then the ten FM voices (the voices batch, item 5): Neon Keys, Orbit Bell,
+                                         * Soft EP, Dry Clav, FM Guitar, Marimba, Vibes, Metal Hit, Round Bass, Sub Bass */
+#define EN_NS2V 17                      /* Sequence 2's: the same five, Sub, Pluck, the ten FM voices (the voices batch:
+                                         * Pluck, then the FM voices, appended to both, so every saved value keeps its
+                                         * voice; the Sequence's 5 is Pluck, Sequence 2's 5 Sub and 6 Pluck) */
+#define EN_SV_FM 6                      /* the first FM voice on the Sequence's knob, Sequence 2's (the voices before */
+#define EN_S2V_FM 7                     /* them: what a shake picks from) */
+extern const char *const EN_SV_NAME[EN_NS2V];   /* all seventeen: 2600 .. Glass, Sub, Pluck, the FM voices (the engine's
+                                                 * own numbers) */
 extern volatile uint8_t en_seq_len[2];          /* each sequence's return point as it plays (the performer's moves) */
 extern volatile int8_t en_s2oct_shift;          /* Sequence 2's octave away from its knob's (home): -1, 0, 1 (Motion's,
                                                  * at the section changes; the UI shows the knob as home + it) */
@@ -219,6 +224,9 @@ extern volatile uint32_t en_ks_struck;           /* (Pluck) its strings struck s
 extern volatile float en_pl_steal;               /* the loudest a sounding sequence voice was (its last output sample)
                                                   * when taken for a new note, since it was last set to 0 */
 int en_ks_ok(void);                              /* 1: Pluck's strings' float state finite, no denormals */
+int en_pl_on(void);                              /* the sequences' voices sounding now (of the six) */
+int en_fm_ok(void);                              /* (the voices batch, item 5) 1: every FM voice's state (the sequences',
+                                                  * the Drone's, the Lead's) finite, no denormals */
 extern volatile float en_ch_vowel;               /* (Choir) the vowel heard: 0 'oo', 1 'oh', 2 'ah', 3 'eh', 4 'ee' */
 extern volatile uint32_t en_ch_work;             /* (Choir) its samples rendered so far */
 int en_ch_ok(void);                              /* 1: Choir's float state finite, no denormals */

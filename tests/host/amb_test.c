@@ -936,6 +936,71 @@ static void ks_solo(int v, int oct, int deg, int tune, int decay)
     en_play(1);
 }
 
+/* (the voices batch, item 5) the ten FM voices appended to both Sequences' ALGORITHM (after Pluck; Sequence 2's after
+ * Sub and Pluck): named, every voice before them where it was (the saves), and each one played sound in code: the
+ * Sequence alone at the lowest it reaches (Seq oct -2, Tune -50) and two octaves up, every sample finite, heard,
+ * bounded, the note ending (its slot free) once stopped, its state sound; then a slot stolen while it sounds (16ths at
+ * 200, Decay 100: more notes than the six slots), and Sequence 2 on one of them. How they sound is the user's, by ear */
+static void test_fm_seq(void)
+{
+    static const char *const SEQ_FM[10] = {"Neon Keys", "OrbitBell", "Soft EP", "Dry Clav", "FM Guitar", "Marimba",
+                                           "Vibes", "Metal Hit", "RoundBass", "Sub Bass"};
+    static const int8_t RUN[16] = {0, 2, 4, 7, 9, 7, 4, 2, 0, 4, 7, 11, 7, 4, 2, 0};
+    char t[16];
+    int k, i;
+    CHECK(en_param_info(P_SVOICE)->hi == 15 && en_param_info(P_S2VOICE)->hi == 16, "test_fm_seq_listed: hi %d %d",
+          en_param_info(P_SVOICE)->hi, en_param_info(P_S2VOICE)->hi);
+    for (k = 0; k < 10; k++) {
+        en_param_text(P_SVOICE, 6 + k, t);
+        CHECK(!strcmp(t, SEQ_FM[k]), "test_fm_seq_listed: seq voice %d %s", 6 + k, t);
+        en_param_text(P_S2VOICE, 7 + k, t);
+        CHECK(!strcmp(t, SEQ_FM[k]), "test_fm_seq_listed: seq2 voice %d %s", 7 + k, t);
+    }
+    en_param_text(P_SVOICE, 5, t);
+    CHECK(!strcmp(t, "Pluck"), "test_fm_old_kept: seq voice 5 %s", t);
+    en_param_text(P_S2VOICE, 5, t);
+    CHECK(!strcmp(t, "Sub"), "test_fm_old_kept: seq2 voice 5 %s", t);
+    en_param_text(P_S2VOICE, 6, t);
+    CHECK(!strcmp(t, "Pluck"), "test_fm_old_kept: seq2 voice 6 %s", t);
+    for (k = 0; k < 10; k++)
+        for (i = 0; i < 2; i++) {
+            ks_solo(6 + k, i ? 2 : -2, 0, i ? 0 : -50, 35);
+            peak = 0.0f;
+            run(2.0f);
+            CHECK(!bad && peak > 1e-4f && peak < 4.0f, "test_fm_seq_render: %s at Seq oct %d: peak %f, bad %d",
+                  SEQ_FM[k], i ? 2 : -2, (double)peak, bad);
+            en_play(0);
+            run(6.0f);
+            CHECK(en_pl_on() == 0, "test_fm_seq_ends: %s at Seq oct %d: %d slots still sounding 6 s after", SEQ_FM[k],
+                  i ? 2 : -2, en_pl_on());
+            CHECK(en_fm_ok(), "test_fm_state: %s at Seq oct %d: not finite, or denormal", SEQ_FM[k], i ? 2 : -2);
+        }
+    ks_solo(12, 0, 0, 0, 100);                   /* (Vibes) */
+    seq_write(16, 0xFFFFu, RUN);
+    en_set(P_TEMPO, 200);
+    peak = 0.0f;
+    run(3.0f);
+    CHECK(!bad && peak > 1e-4f && peak < 4.0f && en_fm_ok(), "test_fm_seq_steal: Vibes in 16ths: peak %f, bad %d",
+          (double)peak, bad);
+    {
+        seq_t s;
+        memset(&s, 0, sizeof s);
+        s.len = s.base_len = 16;
+        s.gate = 0xFFFFu;
+        s.acc = 1u;
+        for (k = 0; k < 16; k++)
+            s.deg[k] = RUN[k];
+        ks_solo(0, 0, 0, 0, 50);
+        en_set(P_SEQ, 0), en_set(P_SEQ2, 80), en_set(P_S2VOICE, 15);   /* (Sequence 2 alone on Round Bass) */
+        en_seq_set(1, &s);
+        peak = 0.0f;
+        run(3.0f);
+        CHECK(!bad && peak > 1e-4f && peak < 4.0f && en_fm_ok(), "test_fm_seq2_render: Round Bass: peak %f, bad %d",
+              (double)peak, bad);
+    }
+    en_play(0);
+}
+
 /* secs played, the output (mono, the two sides' mean) into x (at most max samples): how many */
 static int run_cap(float secs, float *x, int max)
 {
@@ -1530,13 +1595,12 @@ int main(void)
         en_param_text(P_SVOICE, 4, t);
         CHECK(!strcmp(t, "Glass"), "seq voice 4: %s", t);
         en_param_text(P_SVOICE, 5, t);
-        CHECK(!strcmp(t, "Pluck") && en_param_info(P_SVOICE)->hi == 5, "test_pluck_listed: seq voice 5 %s, hi %d", t,
-              en_param_info(P_SVOICE)->hi);
+        CHECK(!strcmp(t, "Pluck"), "test_pluck_listed: seq voice 5 %s", t);   /* (the FM voices after it since item 5:
+                                                                                * test_fm_seq has the counts) */
         en_param_text(P_S2VOICE, 5, t);
         CHECK(!strcmp(t, "Sub"), "seq2 voice 5: %s", t);
         en_param_text(P_S2VOICE, 6, t);
-        CHECK(!strcmp(t, "Pluck") && en_param_info(P_S2VOICE)->hi == 6, "test_pluck_listed: seq2 voice 6 %s, hi %d", t,
-              en_param_info(P_S2VOICE)->hi);
+        CHECK(!strcmp(t, "Pluck"), "test_pluck_listed: seq2 voice 6 %s", t);
         en_param_text(P_CATT, 40, t);
         CHECK(!strcmp(t, "40"), "attack 40, unsigned: %s", t);
         en_param_text(P_LOCT, 1, t);
@@ -4545,6 +4609,7 @@ int main(void)
 
     test_atmospheres();
     test_fm_voice();
+    test_fm_seq();
 
     /* (BERLIN) the white keys play the Lead: degree d of D Aeolian (from D4 up), rising, in the scale, one at a time,
      * let go with its note-off; the Lead's own phrases wait while a key is held and two bars after */

@@ -30,8 +30,10 @@
 enum { FM_NEON_KEYS, FM_ORBIT_BELL, FM_SOFT_ORGAN, FM_ROUND_BASS, FM_WARM_AIR, FM_WOOD_REED, FM_SOFT_EP, FM_DRY_CLAV,
        FM_GUITAR, FM_MARIMBA, FM_VIBES, FM_SOFT_BRASS, FM_STRINGS, FM_SUB_BASS, FM_METAL_HIT, FM_SOFT_LEAD, FM_NREC };
 typedef char fm_nrec_ok[FM_NREC == FM_NREC_HOST ? 1 : -1];   /* (amb.h's count for the tests) */
-static const char *const FM_NAME[FM_NREC] = {"Neon Keys", "Orbit Bell", "Soft Organ", "Round Bass", "Warm Air",
-    "Wood Reed", "Soft EP", "Dry Clav", "FM Guitar", "Marimba", "Vibes", "Soft Brass", "FM Strings", "Sub Bass",
+/* their names as the screen shows them (en_param_text: 9 characters at most, so a ten-letter name loses its space;
+ * the screen reader says it whole: firmware/words.tsv) */
+static const char *const FM_NAME[FM_NREC] = {"Neon Keys", "OrbitBell", "SoftOrgan", "RoundBass", "Warm Air",
+    "Wood Reed", "Soft EP", "Dry Clav", "FM Guitar", "Marimba", "Vibes", "SoftBrass", "FMStrings", "Sub Bass",
     "Metal Hit", "Soft Lead"};
 
 /* presets.c's recipe fields: a pair's carrier level, its ratio (coarse), detune (7: none), the modulator's level,
@@ -220,7 +222,7 @@ static int fm_state_ok(const fm_v *v)            /* (for the tests) finite, and 
     const float f[2] = {v->fb0, v->fb1};
     for (op = 0; op < 8; op++) {
         const float x = op < 6 ? v->g[op] : f[op - 6], a = fm_fabsf(x);
-        if (x != x || a > 1e30f || (a > 0.0f && a < 1e-30f))
+        if (x != x || a > 1e30f || (a > 0.0f && a < 1.17549435e-38f))
             return 0;
     }
     for (op = 0; op < 6; op++)
