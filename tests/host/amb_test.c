@@ -1338,6 +1338,24 @@ static void at_drops(int *ons, double *fall, double *over, double *inr)
  *   bed, each ringing tens of ms, pitched within 300 Hz .. 6 kHz) over a quiet bed; as loud as Wind at the same
  *   level (within 3 dB);
  * - the float state (en_atm_ok: finite, no denormals) after each has played and stopped */
+/* (the voices batch, item 5) the FM voice alone (fm.c, en_fm_probe): every one of fm1_open's 16 recipes at the lowest,
+ * a middle and a high note, held a second and let go a second: every sample finite, the note heard and bounded, its
+ * state finite and never denormal after (the code's soundness only: how it sounds is the user's, by ear) */
+static void test_fm_voice(void)
+{
+    static const int NOTES[3] = {24, 60, 96};
+    float peak;
+    int r, k, ok;
+    for (r = 0; r < FM_NREC_HOST; r++)
+        for (k = 0; k < 3; k++) {
+            CHECK(en_fm_probe(r, NOTES[k], 2u * (uint32_t)EN_SR, &peak, &ok), "test_fm_finite: recipe %d note %d", r,
+                  NOTES[k]);
+            CHECK(peak > 1e-3f && peak < 4.0f, "test_fm_bounded: recipe %d note %d peak %.4f", r, NOTES[k],
+                  (double)peak);
+            CHECK(ok, "test_fm_state: recipe %d note %d: state not finite, or denormal, after release", r, NOTES[k]);
+        }
+}
+
 static void test_atmospheres(void)
 {
 #define AT_WIND7 (-47.5)                         /* (the shipped engine's, dB(A): the user's level for each) */
@@ -4526,6 +4544,7 @@ int main(void)
     }
 
     test_atmospheres();
+    test_fm_voice();
 
     /* (BERLIN) the white keys play the Lead: degree d of D Aeolian (from D4 up), rising, in the scale, one at a time,
      * let go with its note-off; the Lead's own phrases wait while a key is held and two bars after */

@@ -636,6 +636,8 @@ static void svf_coefs(float *c, float f, float k)   /* TPT SVF (Zavalishin): a1,
     c[3] = k;
 }
 
+#include "fm.c"                                  /* (the voices batch, item 5) the FM voice: fm1_open's recipes */
+
 /* ------------------------------------------------- slow random motion --- */
 #define NMOD 2                                  /* the echo's: 0 its band-pass and wow, 1 its first head's place */
 static struct {

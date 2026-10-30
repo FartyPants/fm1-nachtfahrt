@@ -199,7 +199,12 @@ void en_lead_forget(void);                      /* (PERFORM's top key) the Lead 
  * tests: a phrase begins where the count moves) */
 enum { LR_CALL, LR_ANSWER, LR_SEQ, LR_FRAG, LR_CADENCE };
 extern volatile uint8_t en_lead_role, en_lead_phr;
+#define FM_NREC_HOST 16                         /* (the voices batch, item 5) fm1_open's FM recipes (fm.c's FM_NREC) */
 #ifdef EN_HOST
+/* (host tests only) FM recipe rec (fm.c's order: fm1_open's) alone at MIDI note `note`, n samples, held for the
+ * first half and let go for the second: 1 if every sample was finite; its loudest into peak, 1 into ok if its state is
+ * finite and has no denormal after */
+int en_fm_probe(int rec, int note, uint32_t n, float *peak, int *ok);
 /* (host tests only) the phrase playing's motif slot (0: the theme), a count of its blocks so far (a block begins where
  * it moves), the intensity it was planned at (0..100) */
 extern volatile uint8_t en_lead_slot, en_lead_blk, en_lead_int;
