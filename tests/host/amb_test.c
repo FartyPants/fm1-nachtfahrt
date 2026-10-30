@@ -1149,6 +1149,49 @@ static void test_fm_drone(void)
     CHECK(en_fm_ok(), "test_fm_drone_state: not finite, or denormal, after it died away");
 }
 
+/* (the voices batch, item 5) the Lead's three FM voices, appended after Synthi: named, Synthi where it was (the
+ * saves); each alone on the white keys (its own phrases off), a note held, then a glide an octave up (legato: its FM
+ * state kept), let go: every sample finite, heard, bounded, the state sound; silent once let go. The code only: how
+ * they sound is the user's, by ear */
+static void test_fm_lead(void)
+{
+    static const char *const LD_FM[3] = {"Soft Lead", "Wood Reed", "SoftBrass"};
+    static const int OFF[13] = {P_CHORD, P_SEQ, P_SEQ2, P_CRACKLE, P_CLOUD, P_MOTION, P_ECHO, P_REVERB, P_LDECHO,
+                                P_LDREV, P_LDIN, P_LDENS, P_VIB};
+    char t[16];
+    int k, i;
+    CHECK(en_param_info(P_LVOICE)->hi == 7, "test_fm_lead_listed: hi %d", en_param_info(P_LVOICE)->hi);
+    for (k = 0; k < 3; k++) {
+        en_param_text(P_LVOICE, 5 + k, t);
+        CHECK(!strcmp(t, LD_FM[k]), "test_fm_lead_listed: lead voice %d %s", 5 + k, t);
+    }
+    en_param_text(P_LVOICE, 4, t);
+    CHECK(!strcmp(t, "Synthi"), "test_fm_old_kept: lead voice 4 %s", t);
+    for (k = 0; k < 3; k++) {
+        fresh();
+        for (i = 0; i < 13; i++)
+            en_set(OFF[i], 0);
+        en_set(P_GLIDE, 60), en_set(P_LVOICE, 5 + k);
+        en_play(1);
+        run(0.5f);
+        peak = 0.0f;
+        en_lead_key(0, 1);
+        run(1.0f);
+        en_lead_key(7, 1);
+        en_lead_key(0, 0);
+        run(1.5f);
+        en_lead_key(7, 0);
+        CHECK(!bad && peak > 1e-4f && peak < 4.0f && en_fm_ok(), "test_fm_lead_render: %s: peak %f, bad %d", LD_FM[k],
+              (double)peak, bad);
+        run(3.0f);
+        peak = 0.0f;
+        run(0.5f);
+        CHECK(peak < 1e-4f && en_fm_ok(), "test_fm_lead_ends: %s: peak %f 3 s after it was let go", LD_FM[k],
+              (double)peak);
+    }
+    en_play(0);
+}
+
 /* x[0..CH_FN) (Hann) to its spectrum's envelope: the mean power over a quarter octave about each of 200 .. ~4 kHz in
  * 1/48-octave steps (ch_hz), dB, into env[0..CH_NE); *top: the share of the power above 4 kHz, dB */
 #define CH_FN 32768
@@ -4652,6 +4695,7 @@ int main(void)
     test_fm_voice();
     test_fm_seq();
     test_fm_drone();
+    test_fm_lead();
 
     /* (BERLIN) the white keys play the Lead: degree d of D Aeolian (from D4 up), rising, in the scale, one at a time,
      * let go with its note-off; the Lead's own phrases wait while a key is held and two bars after */

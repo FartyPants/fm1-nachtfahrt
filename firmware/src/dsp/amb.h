@@ -179,7 +179,11 @@ void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2);
                                           * Organ */
 #define EN_CV_FM 6                       /* the first of them on its knob (the voices before them: what a shake picks
                                           * from) */
-#define EN_NBV 5
+#define EN_NBV 8                         /* (BERLIN) the Lead's voices: Odyssey, Mini, Flute, Theremin, Synthi, then the
+                                          * three FM voices (the voices batch, item 5): Soft Lead, Wood Reed, Soft
+                                          * Brass */
+#define EN_BV_FM 5                       /* the first of them on its knob (the voices before them: what a shake picks
+                                          * from) */
 #define EN_NSV 16                       /* (BERLIN) the Sequence's voices: 2600, Moog, Synthi, Pulse, Glass, Pluck,
                                          * then the ten FM voices (the voices batch, item 5): Neon Keys, Orbit Bell,
                                          * Soft EP, Dry Clav, FM Guitar, Marimba, Vibes, Metal Hit, Round Bass, Sub Bass */

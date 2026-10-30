@@ -77,7 +77,8 @@ const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PAR
  * (its reverb and echo 90, the defaults: the user); an Atmosphere only where it suits, of the four the user likes.
  * (Voices: the Sequence's 2600 Moog Synthi Pulse Glass Pluck (0..5) and the FM voices (6..15), Sequence 2's the
  *  five, Sub, Pluck (0..6) and the FM voices (7..16);
- *  the Drone's Organ Strings Horn Saws Glass Choir and the FM pads Warm Air, FM Strings, Soft Organ (6..8); the Lead's Odyssey Mini Flute Theremin Synthi. Modes: 0 Ionian,
+ *  the Drone's Organ Strings Horn Saws Glass Choir and the FM pads Warm Air, FM Strings, Soft Organ (6..8); the Lead's Odyssey Mini Flute Theremin Synthi
+ *  and the FM voices Soft Lead, Wood Reed, Soft Brass (5..7). Modes: 0 Ionian,
  *  1 Dorian, 2 Phrygian, 5 Aeolian. Repeat times: 1/8 1/8. 1/4 1/4. 1/2 1 bar. Drift: 2 4 8 16 32 64 bars, Hold.
  *  Play: the walk Home, Wander, Free. Grid: 8ths, 16ths. Atmosphere: None Wind Surf Space Air Tape Rain. The moves (filter motion spec 9): MW/MT/MR/MI a layer's
  *  Width, Time, Rate and Intro in bars (0 Drone, 1 Sequence, 2 Lead, 3 Sequence 2, 4 Atmosphere; the Sequence's Width
@@ -189,7 +190,8 @@ const char *const EN_CV_NAME[EN_NCV] = {"Organ", "Strings", "Horn", "Saws", "Gla
                                         "SoftOrgan"};   /* (BERLIN: the Drone's;
                                                  * the voices batch: Horn was Choir, its place kept; the formant Choir
                                                  * appended: pieces and saves sound the same) */
-const char *const EN_BV_NAME[EN_NBV] = {"Odyssey", "Mini", "Flute", "Theremin", "Synthi"};   /* (BERLIN: the Lead's) */
+const char *const EN_BV_NAME[EN_NBV] = {"Odyssey", "Mini", "Flute", "Theremin", "Synthi", "Soft Lead", "Wood Reed",
+                                        "SoftBrass"};   /* (BERLIN: the Lead's) */
 const char *const EN_CQ_NAME[EN_NCQ] = {"Empty", "Major", "Minor", "Sus2", "Sus4", "Dim", "Aug"};
 const char *const EN_CX_NAME[EN_NCX] = {"Triad", "6", "7", "Maj7", "9", "11", "Add9"};
 static const char *const ETIME_NAME[6] = {"1/8", "1/8.", "1/4", "1/4.", "1/2", "1 bar"};
@@ -1448,15 +1450,6 @@ int en_pl_on(void)                               /* (host tests) the sequence vo
         n += pluck[i].on;
     return n;
 }
-int en_fm_ok(void)                               /* (host tests, the voices batch, item 5) every FM voice's state sound */
-{
-    int i, ok = 1;
-    for (i = 0; i < NPLUCK; i++)
-        ok &= fm_state_ok(&pluck[i].fm);
-    for (i = 0; i < 2 * NDR; i++)
-        ok &= fm_state_ok(&drv[i / NDR][i % NDR].fm);
-    return ok;
-}
 #endif
 
 static float fx_swm;                             /* (the grid's Sweep, below: the burst's brightness moves with it) */
@@ -1713,11 +1706,29 @@ static void seq_tick(void)                       /* a sixteenth: the sequences' 
 /* ------------------------------------------------------------------ the lead --- */
 /* (BERLIN) the Lead: one voice, gliding, its vibrato coming in late; it plays its motifs in pairs (below), never in
  * Emerge, a breath between pairs (Phrases: how often). Voices: Odyssey (a saw and a pulse), Mini (three saws), Flute
- * (a sine and breath), Theremin (a sine, always wavering), Synthi (a square). MIDI channel 3 */
+ * (a sine and breath), Theremin (a sine, always wavering), Synthi (a square), the FM voices (fm.c: Soft Lead, Wood
+ * Reed, Soft Brass). MIDI channel 3 */
 static struct {
     uint8_t on, note;                            /* sounding (its gate); the note it glides to */
     float cur, ph, ph2, ph3, vph, env, fenv, vt, s1[2], s2[2], c1[4], c2[4];
+    fm_v fm;                                     /* (an FM voice's note: fm.c) */
 } lead;
+/* (the voices batch, item 5) the Lead's FM voices, from BV_FM0: fm.c's recipes; their level against the other
+ * voices', one constant, the user's to set by ear */
+#define BV_FM0 EN_BV_FM
+static const uint8_t BV_FM_REC[EN_NBV - BV_FM0] = {FM_SOFT_LEAD, FM_WOOD_REED, FM_SOFT_BRASS};
+#define BV_FM_G 1.0f
+#ifdef EN_HOST
+int en_fm_ok(void)                               /* (host tests, the voices batch, item 5) every FM voice's state sound */
+{
+    int i, ok = fm_state_ok(&lead.fm);
+    for (i = 0; i < NPLUCK; i++)
+        ok &= fm_state_ok(&pluck[i].fm);
+    for (i = 0; i < 2 * NDR; i++)
+        ok &= fm_state_ok(&drv[i / NDR][i % NDR].fm);
+    return ok;
+}
+#endif
 static float lead_vol, ld_gk = 0.004f, ld_tone = 1.0f, ld_att = 0.0009f, ld_rev = 1.0f, ld_echo = 1.0f;
 #define CP_MAX EN_LEAD_CPMAX                     /* (the keys' figure: the most entries kept, amb.h) */
 #define LD_MOTN (((CP_MAX > 8 ? CP_MAX : 8) + 1) & ~1)   /* (a motif's room: the keys' theme's, or the generator's
@@ -2921,6 +2932,9 @@ static void lead_note(int n)                     /* the next note: legato (it gl
         return;
     if (!legato && lead.env < 0.05f)
         lead.cur = (float)n;                     /* (from silence: no glide) */
+    if (!legato && (unsigned)par[P_LVOICE] < EN_NBV && par[P_LVOICE] >= BV_FM0)   /* (an FM voice: its recipe from
+                                                  * the top; legato, it glides on as it is) */
+        fm_start(&lead.fm, BV_FM_REC[par[P_LVOICE] - BV_FM0], n);
     lead.note = (uint8_t)n;
     lead.on = 1;
     lead.vt = 0.0f;
@@ -5316,6 +5330,8 @@ static void render_lead(uint32_t n)
         en_bass_level = 0.0f;                    /* (the meter, at rest) */
         return;
     }
+    if (lv >= BV_FM0 && lead.fm.rec != BV_FM_REC[lv - BV_FM0])   /* (turned onto an FM voice as it sounds: from rest) */
+        fm_start(&lead.fm, BV_FM_REC[lv - BV_FM0], lead.note);
     for (j = 0; j < n; j++) {
         float x, bp, a;
         if (!(j & 15u)) {                        /* the glide, the vibrato, the filter: every 16 */
@@ -5328,6 +5344,8 @@ static void render_lead(uint32_t n)
             if (lead.vph >= 1.0f)
                 lead.vph -= 1.0f;
             lead.fenv *= 0.985f;                 /* (~0.4 s) */
+            if (lv >= BV_FM0)                    /* (an FM voice's envelopes: let go with the Lead) */
+                fm_ctrl(&lead.fm, lead.on, 16);
         }
         lead.cur += ((float)lead.note - lead.cur) * ld_gk;
         switch (lv) {
@@ -5335,7 +5353,8 @@ static void render_lead(uint32_t n)
         case 1: x = 0.45f * (blep_saw(lead.ph, dt) + blep_saw(lead.ph2, dt * 1.004f) + blep_saw(lead.ph3, dt * 0.996f)); break;
         case 2: x = sine(lead.ph) + 0.08f * lead.env * (frand() - 0.5f); break;
         case 3: x = sine(lead.ph); break;
-        default: x = blep_saw(lead.ph, dt) - blep_saw(frac1(lead.ph + 0.5f), dt); break;
+        case 4: x = blep_saw(lead.ph, dt) - blep_saw(frac1(lead.ph + 0.5f), dt); break;
+        default: x = BV_FM_G * fm_tick(&lead.fm, dt); break;   /* (the FM voices) */
         }
         lead.ph += dt;
         if (lead.ph >= 1.0f)
