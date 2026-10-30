@@ -261,13 +261,13 @@ back where the theme does, and a new figure on the keys starts it all again from
 **The Atmosphere** (SAVE) is a background: **None**, **Wind** (a breath of soft, pink noise through a narrow
 band, swept slowly, louder as it climbs: gusts), **Surf** (waves of dark, deep noise, each brighter as it breaks),
 **Space** (chirps and bursts, far away), **Air**, **Tape** (a crackle ringing on the chord, DUB-1's), **Drops**
-(soft drops, each a short ring at its own pitch, over a quiet hush; it was called Rain), **Window** (rain on a
-window heard from indoors: many small drops on the glass over a muffled wash), or **Rain** (rain outside: brighter,
-sharper drops over its wash). Wind and Surf are dark, their top end soft (the FM-1's speaker is bright). Window and
+(soft drops, each a short ring at its own pitch, over a quiet hush; it was called Rain), **Hail** (deep, heavy thuds
+over a muffled rain), or **Rain** (rain outside: brighter,
+sharper drops over its wash). Wind and Surf are dark, their top end soft (the FM-1's speaker is bright). Hail and
 Rain cost the FM-1 more than the others: in a heavy piece they can make it thin its sound now and then.
 
-Its knobs keep their jobs whatever it is: Density, how busy (on Wind, how often its band turns; on Drops, Window
-and Rain, how hard it rains); Drift, how quickly it changes (Wind's band, Surf's waves, the showers coming and going);
+Its knobs keep their jobs whatever it is: Density, how busy (on Wind, how often its band turns; on Drops, Hail
+and Rain, how hard it falls); Drift, how quickly it changes (Wind's band, Surf's waves, the showers coming and going);
 Colour, darker or brighter (where Wind's band wanders, the drops' pitch or brightness); Ring, how much it rings (how
 narrow Wind's band, how long each drop); Air, the hiss under it; Width, Reverb and Echo as everywhere.
 
@@ -620,7 +620,7 @@ must also share its source code.
 - The granular cloud (Freeze) follows the design of CLOUD in [JIANT](https://github.com/juanjiant-bit/JIANT)
   (GPL-3.0), another FM-1 firmware.
 - The Tape atmosphere is DUB-1's crackle, after Bahadirhan Kocer's "Using Resonators in Live".
-- Window and Rain hear water as many small drops, each in its own band about an octave wide (never broadband clicks,
+- Hail and Rain hear water as many small drops, each in its own band about an octave wide (never broadband clicks,
   which are heard as fire), after J. H. McDermott and E. P. Simoncelli, "Sound texture perception via statistics of
   the auditory periphery" (Neuron, 2011); each fitted to a recording the author made, then chosen by ear.
 - Wind's pink noise and its band whose level follows its wandering, Surf's brown noise and Drops' drops follow

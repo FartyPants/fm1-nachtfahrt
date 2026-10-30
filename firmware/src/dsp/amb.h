@@ -227,7 +227,7 @@ extern volatile uint32_t en_shm_work;            /* (Shimmer) the shifter's samp
 extern volatile float en_shm_ret;                /* (Shimmer) its return's share, 1 (0: the dry's lift alone) */
 int en_state_ok(void);                           /* 1: the plate's and the shifter's state finite (no NaN, Inf) */
 extern volatile uint32_t en_ks_struck;           /* (Pluck) its strings struck so far */
-extern volatile uint8_t en_wn_part;              /* (Window's and Rain's calibration: 1 the drops alone, 2 the wash
+extern volatile uint8_t en_wn_part;              /* (Hail's and Rain's calibration: 1 the drops alone, 2 the wash
                                                   * alone, 0 both) */
 extern volatile float en_pl_steal;               /* the loudest a sounding sequence voice was (its last output sample)
                                                   * when taken for a new note, since it was last set to 0 */
@@ -355,7 +355,7 @@ void en_prog_rewalk(void);                     /* the walk's character turned (b
 enum { EN_WALK_HOME, EN_WALK_WANDER, EN_WALK_FREE, EN_NWALK, EN_PLOOP = 4 };
 extern const char *const EN_WALK_NAME[EN_NWALK];
 #define EN_NNCHAR 9                      /* (BERLIN) the Atmosphere's: None, Wind, Surf, Space, Air, Tape, Drops (was Rain),
-                                          * Window, Rain (2026-10-30: appended, so every saved one keeps its character) */
+                                          * Hail, Rain (2026-10-30: appended, so every saved one keeps its character) */
 extern const char *const EN_NCHAR_NAME[EN_NNCHAR];   /* the noise's characters */
 extern volatile int8_t en_chord_slot;          /* the slot whose chord sounds, -1: a chord of the scale */
 int en_deg_of(uint32_t pool, int rel);         /* the scale degree for a note above the root (nearest in the pool) */

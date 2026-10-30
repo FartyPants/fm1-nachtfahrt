@@ -39,7 +39,7 @@ The whole idea behind this music generator is that IF you are NOT put to sleep b
   the reverb and the echo; it remembers its motifs and returns to the piece's theme (how much it keeps: **Memory**).
   You can also play it on the white keys, in the scale: three notes or more and a pause become its theme, and its
   next ideas grow out of yours, straying further until they are its own again;
-- an **Atmosphere**: Wind, Surf, Space, Air, Tape, Drops, rain on a Window or Rain outside (or none);
+- an **Atmosphere**: Wind, Surf, Space, Air, Tape, Drops, Hail or Rain (or none);
 - an **arc**: a piece opens from the drone (each layer's filter rising from closed), flows, lets the Lead take
   over and crosses a bridge in the middle, where the layers' filters part and come together. It never ends by
   itself: it repeats for ever;

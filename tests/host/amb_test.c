@@ -1502,7 +1502,7 @@ static void at_drops(int *ons, double *fall, double *over, double *inr)
  *   bed, each ringing tens of ms, pitched within 300 Hz .. 6 kHz) over a quiet bed; as loud as Wind at the same
  *   level (within 3 dB);
  * - the float state (en_atm_ok: finite, no denormals) after each has played and stopped;
- * - (2026-10-30) Rain renamed Drops, its place kept; Window after it (rain on a window from indoors, the user's pick by
+ * - (2026-10-30) Rain renamed Drops, its place kept; Hail after it (deep thuds over a muffled rain, the user's pick by
  *   ear, "F"), and Rain after it (rain outside, "O1"): every sample finite, heard and bounded, each as loud as Wind
  *   at the same level (within 3 dB) */
 /* (the voices batch, item 5) the FM voice alone (fm.c, en_fm_probe): every one of fm1_open's 16 recipes at the lowest,
@@ -1535,7 +1535,7 @@ static void test_atmospheres(void)
     en_param_text(P_NCHAR, 6, t);
     CHECK(!strcmp(t, "Drops"), "test_rain_listed: atmosphere 6 %s (Rain renamed)", t);
     en_param_text(P_NCHAR, 7, t);
-    CHECK(!strcmp(t, "Window"), "test_window_listed: atmosphere 7 %s", t);
+    CHECK(!strcmp(t, "Hail"), "test_hail_listed: atmosphere 7 %s", t);
     en_param_text(P_NCHAR, 8, t);
     CHECK(en_param_info(P_NCHAR)->hi == 8 && !strcmp(t, "Rain"), "test_rain_out_listed: atmosphere 8 %s, hi %d", t,
           en_param_info(P_NCHAR)->hi);
@@ -1579,13 +1579,13 @@ static void test_atmospheres(void)
     CHECK(inr > 0.9, "test_rain_range: %.0f%% of the drops pitched within 300 Hz .. 6 kHz", 100.0 * inr);
     CHECK(peak > 0.005f && peak < 0.5f, "test_rain_range: peak %.3f", (double)peak);
     CHECK(fabs(al - wind25) < 3.0, "test_rain_level: %.1f dB(A), Wind at the same level %.1f", al, wind25);
-    at_solo(-1, 7, 25, 1);                       /* Window, dry */
+    at_solo(-1, 7, 25, 1);                       /* Hail, dry */
     peak = 0.0f;
     bad = 0;
     at_cap(30.0f);
     at_spec();
     al = at_alevel();
-    printf("  window: peak %.3f, %.1f dB(A) (Wind %.1f)\n", (double)peak, al, wind25);
+    printf("  hail: peak %.3f, %.1f dB(A) (Wind %.1f)\n", (double)peak, al, wind25);
     CHECK(!bad && peak > 0.005f && peak < 0.5f, "test_window_heard: peak %.3f, bad %d", (double)peak, bad);
     CHECK(fabs(al - wind25) < 3.0, "test_window_level: %.1f dB(A), Wind at the same level %.1f", al, wind25);
     at_solo(-1, 8, 25, 1);                       /* Rain (outside), dry */
