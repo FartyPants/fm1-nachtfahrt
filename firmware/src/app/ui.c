@@ -1238,10 +1238,10 @@ static void nudge(int layer, int how)
         knob_set(P_ETIME, v);
         en_param_text(P_ETIME, v, vn);
     } else if (how == NUDGE_SHAKE) {             /* a new voice (another than this), first: the values then fit it */
-        const en_param_t *pi = en_param_info(VOICE[layer]);
-        int nv = pi->hi - pi->lo + 1 - (layer == 0), cur = proj.par[VOICE[layer]], v;
-        v = (cur + 1 + nrand(nv > 1 ? nv - 1 : 1)) % nv;   /* (the chord's: not Noise, the last, an effect more
-                                                             * than a colour; ALGORITHM still has it) */
+        int nv = en_voice_shake_n(VOICE[layer]), cur = proj.par[VOICE[layer]], v;   /* (the voices before the FM
+                                                  * voices, the Drone's Choir among them: the FM voices only by
+                                                  * ALGORITHM, the user's for now) */
+        v = (cur + 1 + nrand(nv > 1 ? nv - 1 : 1)) % nv;
         if (v == cur)
             v = (v + 1) % nv;
         set_voice(VOICE[layer], v);

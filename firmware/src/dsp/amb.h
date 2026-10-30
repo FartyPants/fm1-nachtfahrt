@@ -116,6 +116,8 @@ typedef struct {
     int16_t lo, hi, def;
 } en_param_t;
 const en_param_t *en_param_info(int i);
+int en_voice_shake_n(int p);                     /* (the voices batch, item 5) a voice knob's values a shake picks from:
+                                                  * the voices before the FM voices; any other parameter its range */
 void en_param_text(int i, int v, char *buf);   /* the value as the screen shows it (10 bytes) */
 
 /* commands (main loop -> render) */

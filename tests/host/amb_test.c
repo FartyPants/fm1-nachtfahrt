@@ -1192,6 +1192,19 @@ static void test_fm_lead(void)
     en_play(0);
 }
 
+/* (the voices batch, item 5) a shake (HOME or a layer's button held) picks a voice from those before the FM voices
+ * only (the user, 2026-10-30: "currently only add the choir, we just want to hear the fm voices"): the Drone's six,
+ * Choir among them now; the Sequence's six, Sequence 2's seven, the Lead's five; any other parameter its whole range */
+static void test_shake_range(void)
+{
+    CHECK(en_voice_shake_n(P_CVOICE) == 6, "test_shake_range: drone %d (Organ .. Choir)", en_voice_shake_n(P_CVOICE));
+    CHECK(en_voice_shake_n(P_SVOICE) == 6, "test_shake_range: seq %d (2600 .. Pluck)", en_voice_shake_n(P_SVOICE));
+    CHECK(en_voice_shake_n(P_S2VOICE) == 7, "test_shake_range: seq2 %d (2600 .. Pluck)", en_voice_shake_n(P_S2VOICE));
+    CHECK(en_voice_shake_n(P_LVOICE) == 5, "test_shake_range: lead %d (Odyssey .. Synthi)", en_voice_shake_n(P_LVOICE));
+    CHECK(en_voice_shake_n(P_NCHAR) == en_param_info(P_NCHAR)->hi - en_param_info(P_NCHAR)->lo + 1,
+          "test_shake_range: atmosphere %d", en_voice_shake_n(P_NCHAR));
+}
+
 /* x[0..CH_FN) (Hann) to its spectrum's envelope: the mean power over a quarter octave about each of 200 .. ~4 kHz in
  * 1/48-octave steps (ch_hz), dB, into env[0..CH_NE); *top: the share of the power above 4 kHz, dB */
 #define CH_FN 32768
@@ -4696,6 +4709,7 @@ int main(void)
     test_fm_seq();
     test_fm_drone();
     test_fm_lead();
+    test_shake_range();
 
     /* (BERLIN) the white keys play the Lead: degree d of D Aeolian (from D4 up), rising, in the scale, one at a time,
      * let go with its note-off; the Lead's own phrases wait while a key is held and two bars after */

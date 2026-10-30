@@ -33,3 +33,12 @@ Nova	supernova
 NOT SAVED FLASH ERROR	not saved: flash error
 THE ROOT STAYS (SETUP)	not removed: the root stays. Change it on the setup page
 3 NOTES AT LEAST	not removed: the scale keeps 3 notes at least
+# (the voices batch, item 5) the FM voices whose screen names lose a space or a word (9 characters)
+OrbitBell	Orbit Bell
+RoundBass	Round Bass
+SoftOrgan	Soft Organ
+FMStrings	F M Strings
+SoftBrass	Soft Brass
+Soft EP	soft electric piano
+Dry Clav	dry clavinet
+FM Guitar	F M guitar

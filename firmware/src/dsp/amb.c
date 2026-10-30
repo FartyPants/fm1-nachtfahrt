@@ -70,6 +70,18 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Atmos rate", 0, 100, 30}, {"Atmos intro", 0, 64, 0}, {"Bridge", 0, 100, 40}, {"Memory", 0, 100, 50},
 };
 const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PARAMS[i] : &PARAMS[0]; }
+/* (the voices batch, item 5) a shake's voices (the user, 2026-10-30: "currently only add the choir, we just want to
+ * hear the fm voices"): those before the FM voices, the Drone's six with Choir; the FM voices only by ALGORITHM */
+int en_voice_shake_n(int p)
+{
+    switch (p) {
+    case P_CVOICE: return EN_CV_FM;
+    case P_SVOICE: return EN_SV_FM;
+    case P_S2VOICE: return EN_S2V_FM;
+    case P_LVOICE: return EN_BV_FM;
+    default: return en_param_info(p)->hi - en_param_info(p)->lo + 1;
+    }
+}
 
 /* (BERLIN) the pieces: eight recipes for the whole machine (the FM-1's PRESETS, the web app's cards), each what it
  * sets over the defaults (PARAMS), in pairs, to -1. Tune and MIDI out are never set here: they belong to the player.

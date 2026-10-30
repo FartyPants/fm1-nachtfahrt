@@ -1,0 +1,109 @@
+# (the voices batch, item 5) the FM voices on each layer's ALGORITHM, after the voices that were there before them:
+# said, and at their numbers (the Sequence's 6..15, Sequence 2's 7..16, the Drone's 6..8, the Lead's 5..7); a shot of
+# a long name on each page (the screen's field holds 9 characters: build/scenarios/fmvoices/)
+wait 300
+listen
+tap ARP
+wait 300
+expect view 2
+turn ALGO 6
+wait 300
+said VOICE Neon Keys
+expect par33 6
+turn ALGO 1
+wait 300
+said VOICE OrbitBell
+expect par33 7
+shot fm_seq.png
+turn ALGO 1
+wait 300
+said VOICE Soft EP
+expect par33 8
+turn ALGO 1
+wait 300
+said VOICE Dry Clav
+expect par33 9
+turn ALGO 1
+wait 300
+said VOICE FM Guitar
+expect par33 10
+turn ALGO 1
+wait 300
+said VOICE Marimba
+expect par33 11
+turn ALGO 1
+wait 300
+said VOICE Vibes
+expect par33 12
+turn ALGO 1
+wait 300
+said VOICE Metal Hit
+expect par33 13
+turn ALGO 1
+wait 300
+said VOICE RoundBass
+expect par33 14
+turn ALGO 1
+wait 300
+said VOICE Sub Bass
+expect par33 15
+turn ALGO 1
+wait 300
+said VOICE 2600
+expect par33 0
+# Sequence 2: from Moog (1), six on to the first FM voice, then its last
+tap SEQ
+wait 300
+expect view 4
+spin ALGO 6
+wait 300
+said VOICE Neon Keys
+expect par35 7
+spin ALGO 9
+wait 300
+said VOICE Sub Bass
+expect par35 16
+spin ALGO -9
+wait 300
+expect par35 7
+# the Drone: from Organ, six on
+tap ENV
+wait 300
+turn ALGO 6
+wait 300
+said VOICE Warm Air
+expect par22 6
+turn ALGO 1
+wait 300
+said VOICE FMStrings
+expect par22 7
+shot fm_drone.png
+turn ALGO 1
+wait 300
+said VOICE SoftOrgan
+expect par22 8
+turn ALGO 1
+wait 300
+said VOICE Organ
+expect par22 0
+# the Lead: from Odyssey, five on
+tap LFO
+wait 300
+expect view 3
+turn ALGO 5
+wait 300
+said VOICE Soft Lead
+expect par34 5
+turn ALGO 1
+wait 300
+said VOICE Wood Reed
+expect par34 6
+turn ALGO 1
+wait 300
+said VOICE SoftBrass
+expect par34 7
+shot fm_lead.png
+turn ALGO 1
+wait 300
+said VOICE Odyssey
+expect par34 0
