@@ -4422,9 +4422,11 @@ typedef struct {
                                          * level over the gusts' range) */
 } wn_rec_t;
 static const wn_rec_t WN_REC[2] = {
-    {4, 0.0f, 12.0f, 95.0f, 760.0f, 0.015f, 0.99247f, 0.6667f, 6.0f, 1.33f, 3.71f, 250.0f, 80.0f, 2000.0f, 0.664f},  /* Hail */
+    {4, 0.0f, 12.0f, 95.0f, 760.0f, 0.015f, 0.99247f, 0.6667f, 6.0f, 1.33f, 2.75f, 250.0f, 80.0f, 2000.0f, 0.664f},  /* Hail */
     {3, 0.3f, 400.0f, 1000.0f, 6000.0f, 0.003f, 0.97758f, 0.5556f, 8.0f, 0.0f, 0.83f, 2200.0f, 40.0f, 6000.0f, 0.5f}};  /* Rain */
-static float wn_d[2][WN_K], wn_a[2][WN_K], wn_s[2][WN_K][2], wn_c[WN_K][4], wn_w[2][7], wn_wait[2];
+static float wn_d[2][WN_K], wn_a[2][WN_K], wn_s[2][WN_K][2], wn_c[WN_K][4], wn_w[2][7], wn_wait[2], wn_y[2][2];
+static uint8_t wn_par;                           /* (the bands' half rate, below: 0 a sample they are worked on, 1 one
+                                                  * between two; kept across blocks of any length) */
 #ifdef EN_HOST
 volatile uint8_t en_wn_part;                     /* (host, its calibration: 1 the drops alone, 2 the wash alone) */
 #define WN_PD (en_wn_part != 2 ? 1.0f : 0.0f)
@@ -4457,7 +4459,7 @@ static void atm_reset(void)
             wn_d[ch][k] = wn_a[ch][k] = wn_s[ch][k][0] = wn_s[ch][k][1] = 0.0f;
         for (k = 0; k < 7; k++)
             wn_w[ch][k] = 0.0f;
-        wn_wait[ch] = 0.0f;
+        wn_wait[ch] = wn_y[ch][0] = wn_y[ch][1] = 0.0f;
     }
 }
 static float atm_u(void) { return (float)(seq_rand(&atm_rng) >> 8) * (1.0f / 16777216.0f); }
@@ -4500,7 +4502,7 @@ static void render_atmos(uint32_t n)
                 col = fm_exp2f(fm_clampf(nctl.colour + fo[FO_ATM], -1.0f, 1.0f)), busy = fm_exp2f(fm_clampf(nctl.grain, -1.0f, 1.0f)),
                 spd = fm_exp2f(fm_clampf(nctl.drift, -1.0f, 1.0f)), sec_n = (float)n * (1.0f / EN_SR);
     float g, sa[2] = {0.0f, 0.0f}, sd[2] = {0.0f, 0.0f}, kb = 0.0f, kt = 0.0f, bed = 0.0f, rate = 1.0f, ad = 0.0f,
-          kh = 0.0f, aa = 0.0f, step = 0.0f;
+          kh = 0.0f, aa = 0.0f, step = 0.0f, ad2 = 0.0f, aa2 = 0.0f;
     const wn_rec_t *wq = &WN_REC[c == ATM_OUT];
     uint32_t j;
     int ch, k;
@@ -4549,9 +4551,11 @@ static void render_atmos(uint32_t n)
         kh = wq->hp * (FM_TWO_PI / EN_SR);
         ad = fm_expf(-1.0f / (wq->tau * fm_exp2f(((float)par[P_NTUNE] - 50.0f) * 0.02f) * EN_SR));
         aa = wq->aa;
+        ad2 = ad * ad, aa2 = aa * aa;             /* (the bands at half the rate: a decay a step is two samples') */
         step = fm_log2f(wq->hi / wq->lo) / (float)(wq->nk - 1);
         for (k = 0; k < wq->nk; k++)
-            svf_coefs(wn_c[k], wq->lo * fm_exp2f(step * (float)k) * col, WN_KQ);
+            svf_coefs(wn_c[k], 2.0f * wq->lo * fm_exp2f(step * (float)k) * col, WN_KQ);   /* (x2: the filter works at
+                                                  * half the sample rate; its centre stays under 8 kHz) */
     }
     for (j = 0; j < n; j++) {
         float l = 0.0f, r = 0.0f, bp, xl = 0.0f, xr = 0.0f;
@@ -4667,12 +4671,20 @@ static void render_atmos(uint32_t n)
                     else
                         wn_drop(ch, rate, wq, step);
                 }
-                for (k = 0; k < wq->nk; k++) {   /* the drops: each band's envelope opening its band-pass */
-                    float bp;
-                    svf_lp(wn_c[k], wn_s[ch][k], (wn_d[ch][k] - wn_a[ch][k]) * x, &bp);
-                    y += bp;
-                    wn_d[ch][k] *= ad, wn_a[ch][k] *= aa;
-                }
+                if (!wn_par) {                   /* the drops: each band's envelope opening its band-pass, at half the
+                                                  * sample rate (the FM-1's CPU: the bands are the cost; the drops
+                                                  * are 150 Hz .. 6 kHz, under the half rate's 11 kHz), every other
+                                                  * sample worked, the ones between two of them (as the FM pads) */
+                    for (k = 0; k < wq->nk; k++) {
+                        float bp;
+                        svf_lp(wn_c[k], wn_s[ch][k], (wn_d[ch][k] - wn_a[ch][k]) * x, &bp);
+                        y += bp;
+                        wn_d[ch][k] *= ad2, wn_a[ch][k] *= aa2;
+                    }
+                    wn_y[ch][0] = wn_y[ch][1], wn_y[ch][1] = y;
+                    y = wn_y[ch][0];
+                } else
+                    y = 0.5f * (wn_y[ch][0] + wn_y[ch][1]);
                 v = 0.0f;
                 if (wq->wg > 0.0f) {             /* the wash (Rain has none: the user, for the FM-1's CPU) */
                     w[0] += kb * (x - w[0]), w[1] += kb * (w[0] - w[1]);   /* low-passed twice, */
@@ -4688,6 +4700,7 @@ static void render_atmos(uint32_t n)
                 else
                     l = wq->g * w[6];
             }
+            wn_par ^= 1u;
             break;
         }
         default:                                 /* Air: what a low-pass leaves, breathing with the gusts */
@@ -4731,6 +4744,7 @@ static void render_atmos(uint32_t n)
         }
         for (k = 0; k < 7; k++)
             wn_w[ch][k] = fm_flush(wn_w[ch][k]);
+        wn_y[ch][0] = fm_flush(wn_y[ch][0]), wn_y[ch][1] = fm_flush(wn_y[ch][1]);
     }
 }
 #ifdef EN_HOST
@@ -4746,7 +4760,7 @@ int en_atm_ok(void)                              /* (host tests) the Atmosphere'
     for (k = 0; k < RN_N; k++)
         ok &= atm_fine(rn_es[k]) && atm_fine(rn_ef[k]) && atm_fine(rn_ph[k]) && atm_fine(rn_dt[k]);
     for (ch = 0; ch < 2; ch++) {
-        ok &= atm_fine(wn_wait[ch]);
+        ok &= atm_fine(wn_wait[ch]) && atm_fine(wn_y[ch][0]) && atm_fine(wn_y[ch][1]);
         for (k = 0; k < WN_K; k++)
             ok &= atm_fine(wn_d[ch][k]) && atm_fine(wn_a[ch][k]) && atm_fine(wn_s[ch][k][0]) && atm_fine(wn_s[ch][k][1]);
         for (k = 0; k < 7; k++)
