@@ -11,7 +11,11 @@
   manual/index.html, img/     the manual (tools/manual_html.py, from docs/MANUAL.md)
   firmware/nachtfahrt-VERSION.fwsc   the package the installer writes; also the download
 
-  tools/make_pages.py build/nachtfahrt-0.9.0.fwsc 0.9.0 OUT_DIR
+  tools/make_pages.py build/nachtfahrt-0.9.0.fwsc 0.9.0 OUT_DIR [--nightly]
+
+--nightly: a test build, not a release (tools/nightly.sh): the installer carries a banner saying so, and the landing page
+is a short one pointing back to the release; the rest as for a release (the caller publishes only some of it, under
+nightly/ on the site, so the release's pages are not touched)
 
 The package must be a release build (./build.sh --release X.Y): its identity, FM-1_197XXYYZZ, is what
 the installer checks the download against and what the FM-1 reports after the install."""
@@ -127,7 +131,25 @@ M-VAVE and FM-1 are trademarks of their owners. NACHTFAHRT is not affiliated wit
 """
 
 
-def main(pkg, version, out):
+NIGHTLY_BANNER = (
+    '<div style="background:#b3261e;color:#fff;font:600 15px system-ui,sans-serif;padding:10px 16px;text-align:center">'
+    'TEST BUILD (nightly __VERSION__), not a release: it may sound or behave differently, and installing it replaces what '
+    'is on the FM-1. The release is at <a style="color:#fff" href="../../install/">../../install/</a>.</div>')
+NIGHTLY_LANDING = """<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NACHTFAHRT nightly</title>
+<style>body{font:16px/1.5 system-ui,sans-serif;background:#000;color:#ddd;max-width:34em;margin:2em auto;padding:0 16px}
+a{color:#8cf}h1{font-size:1.4em}.warn{background:#b3261e;color:#fff;padding:10px 14px;border-radius:6px}</style></head><body>
+<h1>NACHTFAHRT nightly <em>__VERSION__</em></h1>
+<p class="warn">A test build of the work in progress, not a release. It may change from one day to the next.</p>
+<ul><li><a href="install/">Install the nightly</a> (Chrome or Edge, the FM-1 connected by USB)</li>
+<li><a href="emu/">Try it in the browser</a></li>
+<li><a href="firmware/__PKG__">Download <code>__PKG__</code></a></li>
+<li><a href="../">The release, and the manual</a></li></ul></body></html>
+"""
+
+
+def main(pkg, version, out, nightly=False):
     pkg, out = Path(pkg), Path(out)
     raw = pkg.read_bytes()
     product = product_of(raw)
@@ -149,15 +171,19 @@ def main(pkg, version, out):
     for mark in ("/*LIB*/", "/*META*/"):
         if page.count(mark) != 1:
             raise SystemExit(f"amb_installer.html must contain {mark} once")
-    (out / "install" / "index.html").write_text(page.replace("/*LIB*/", lib).replace("/*META*/", meta), encoding="utf-8")
+    page = page.replace("/*LIB*/", lib).replace("/*META*/", meta)
+    if nightly:
+        page = page.replace("<title>Install · NACHTFAHRT</title>", "<title>Nightly install · NACHTFAHRT</title>", 1)
+        page = page.replace("<body>", "<body>\n" + NIGHTLY_BANNER.replace("__VERSION__", html.escape(version)), 1)
+    (out / "install" / "index.html").write_text(page, encoding="utf-8")
     # the manual (a complete page; its images beside it)
     subprocess.run([sys.executable, str(SRC / "tools" / "manual_html.py"), str(SRC / "docs" / "MANUAL.md"),
                     str(out / "manual" / "index.html")], check=True, capture_output=True)
     shutil.copytree(SRC / "docs" / "img", out / "manual" / "img")
     # the landing page and its screenshots
     shutil.copytree(SRC / "docs" / "img", out / "img")
-    (out / "index.html").write_text(LANDING.replace("__VERSION__", html.escape(version)).replace("__PKG__", name)
-                                    .replace("__REPO__", REPO), encoding="utf-8")
+    (out / "index.html").write_text((NIGHTLY_LANDING if nightly else LANDING).replace("__VERSION__", html.escape(version))
+                                    .replace("__PKG__", name).replace("__REPO__", REPO), encoding="utf-8")
     emu = SRC / "build" / "emu"
     if not (emu / "amb.wasm").exists():
         raise SystemExit("no build/emu/amb.wasm: run web/emu/build.sh (needs Emscripten)")
@@ -169,6 +195,6 @@ def main(pkg, version, out):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 4:
+    if len(sys.argv) not in (4, 5) or (len(sys.argv) == 5 and sys.argv[4] != "--nightly"):
         sys.exit(__doc__)
-    main(*sys.argv[1:4])
+    main(*sys.argv[1:4], nightly=len(sys.argv) == 5)
