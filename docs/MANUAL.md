@@ -262,7 +262,7 @@ back where the theme does, and a new figure on the keys starts it all again from
 band, swept slowly, louder as it climbs: gusts), **Surf** (waves of dark, deep noise, each brighter as it breaks),
 **Space** (chirps and bursts, far away), **Air**, **Tape** (a crackle ringing on the chord, DUB-1's), **Drops**
 (soft drops, each a short ring at its own pitch, over a quiet hush; it was called Rain), **Hail** (deep, heavy
-thuds over a muffled rain), or **Rain** (a recording of rain, 4.5 seconds looped by two readers, the right one a little
+thuds over a muffled rain), or **Stereo Rain** (a recording of rain, 4.5 seconds looped by two readers, the right one a little
 faster and starting half a loop on, so the two ears hear different rain and the loop is hard to notice). Wind and Surf are dark, their top end soft (the FM-1's speaker is bright). Hail costs the
 FM-1 more than the others: in a heavy piece it can make it thin its sound now and then, and no piece uses it.
 
@@ -620,7 +620,7 @@ must also share its source code.
 - The granular cloud (Freeze) follows the design of CLOUD in [JIANT](https://github.com/juanjiant-bit/JIANT)
   (GPL-3.0), another FM-1 firmware.
 - The Tape atmosphere is DUB-1's crackle, after Bahadirhan Kocer's "Using Resonators in Live".
-- Rain plays the author's own recording of rain, low-passed at 5 kHz and stored in the SEA format (5.7 bits a sample, 70 KB), as in M-VAVE's [fm1_open](https://github.com/m-vave/fm1_open), after SEA by Dani Biró
+- Stereo Rain plays the author's own recording of rain, low-passed at 5 kHz and stored in the SEA format (5.7 bits a sample, 70 KB), as in M-VAVE's [fm1_open](https://github.com/m-vave/fm1_open), after SEA by Dani Biró
   ([Daninet/sea-codec](https://github.com/Daninet/sea-codec), MIT; the decoder written again here).
 - Hail hears water as many small drops, each in its own band about an octave wide (never broadband clicks,
   which are heard as fire), after J. H. McDermott and E. P. Simoncelli, "Sound texture perception via statistics of

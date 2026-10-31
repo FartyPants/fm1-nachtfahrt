@@ -1537,7 +1537,7 @@ static void test_atmospheres(void)
     en_param_text(P_NCHAR, 7, t);
     CHECK(!strcmp(t, "Hail"), "test_hail_listed: atmosphere 7 %s", t);
     en_param_text(P_NCHAR, 8, t);
-    CHECK(en_param_info(P_NCHAR)->hi == 8 && !strcmp(t, "Rain"), "test_rain_loop_listed: atmosphere 8 %s, hi %d", t,
+    CHECK(en_param_info(P_NCHAR)->hi == 8 && !strcmp(t, "Stereo Rain"), "test_rain_loop_listed: atmosphere 8 %s, hi %d", t,
           en_param_info(P_NCHAR)->hi);
     at_solo(0, 1, 7, 0);                         /* Wind, Timewind's */
     at_cap(45.0f);

@@ -92,7 +92,7 @@ int en_voice_shake_n(int p)
  *  the Drone's Organ Strings Horn Saws Glass Choir; the Lead's Odyssey Mini Flute Theremin Synthi and the FM voices
  *  (5..7). Modes: 0 Ionian,
  *  1 Dorian, 2 Phrygian, 5 Aeolian. Repeat times: 1/8 1/8. 1/4 1/4. 1/2 1 bar. Drift: 2 4 8 16 32 64 bars, Hold.
- *  Play: the walk Home, Wander, Free. Grid: 8ths, 16ths. Atmosphere: None Wind Surf Space Air Tape Drops Hail Rain. The moves (filter motion spec 9): MW/MT/MR/MI a layer's
+ *  Play: the walk Home, Wander, Free. Grid: 8ths, 16ths. Atmosphere: None Wind Surf Space Air Tape Drops Hail Stereo Rain. The moves (filter motion spec 9): MW/MT/MR/MI a layer's
  *  Width, Time, Rate and Intro in bars (0 Drone, 1 Sequence, 2 Lead, 3 Sequence 2, 4 Atmosphere; the Sequence's Width
  *  is Sweep); the Lead's Width kept low; Bridge the middle section's move. Memory: how much the Lead keeps its ideas,
  *  the Lead's memory spec 3.3's starting values, to tune by ear; every piece's set, Mirage's 50 the default too, so
@@ -4227,7 +4227,7 @@ static void widen(uint32_t n)
  * a second; a little of it into the plate.
  * Four controls shape it, each -1..+1 around the piece's own (0), and a character (a preset of the mix): ready
  * on ARP's Noise page (P_NCOL .. P_NCHAR, into nctl) */
-const char *const EN_NCHAR_NAME[EN_NNCHAR] = {"None", "Wind", "Surf", "Space", "Air", "Tape", "Drops", "Hail", "Rain"};   /* (BERLIN: the
+const char *const EN_NCHAR_NAME[EN_NNCHAR] = {"None", "Wind", "Surf", "Space", "Air", "Tape", "Drops", "Hail", "Stereo Rain"};   /* (BERLIN: the
                                                   * Atmosphere's; the voices batch: Rain appended, so every one before it
                                                   * keeps its number in the pieces and the saves;
                                                   * NCHAR below is the dub's noise machine, heard as Tape) */
