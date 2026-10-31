@@ -135,7 +135,8 @@ static const int16_t PC_RYOKUU[] = {          /* (2026-10-30) Ryokuu (緑雨, "g
     P_CR2, 0, P_CQ2, EN_CQ_MINOR, P_CX2, EN_CX_7, P_CR3, 5, P_CQ3, EN_CQ_MINOR, P_CX3, EN_CX_7,
     P_CR4, 1, P_CQ4, EN_CQ_MAJOR, P_CX4, EN_CX_MAJ7, P_CR5, 3, P_CQ5, EN_CQ_SUS4, P_CX5, EN_CX_9,
     P_CR6, 0, P_CQ6, EN_CQ_MINOR, P_CX6, EN_CX_11, P_CR7, 10, P_CQ7, EN_CQ_MINOR, P_CX7, EN_CX_11,
-    P_LEAD, 54, P_LVOICE, 3, P_LOCT, -2, P_GLIDE, 70, P_LTONE, 75, P_VIB, 55, P_LDENS, 60, P_LDIN, 8,
+    P_LEAD, 60, P_LVOICE, 3, P_LOCT, -2, P_GLIDE, 70, P_LTONE, 75, P_VIB, 55, P_LDENS, 60, P_LDIN, 2,   /* (the user: the
+                                                  * Lead too quiet for the speaker, 60; in sooner, 2 bars) */
     P_NCHAR, 8, P_CRACKLE, 6, P_NCOL, 20, P_NTUNE, 70,
     P_FEEDBACK, 75, P_REVERB, 45,
     P_MW0, 45, P_MT0, 60, P_MR0, 45, P_MW2, 15, P_BRIDGE, 30,
@@ -4404,7 +4405,7 @@ static float atm_pk[2][3], atm_lv[2], atm_lq[2], rn_ph[RN_N], rn_dt[RN_N], rn_dt
  * Rain (ATM_OUT): the same rain outside, fitted to the user's recording of it ("O1", picked by ear), darkened as "O3"
  * for the FM-1's bright speaker (the user: "I would build more towards O3"; Colour brightens it back): brighter bands
  * than Window's (1 .. 6 kHz), sharper drops (1 ms in, 3 ms out at Ring 50), bigger ones now and then, a brighter wash
- * (2.2 kHz, as loud as the drops), its lows kept (40 Hz), a lighter glass (6 kHz), gentler showers.
+ * (2.2 kHz, as loud as the drops; later none: the user, for the FM-1's CPU, the wash's 7 poles a side), its lows kept (40 Hz), a lighter glass (6 kHz), gentler showers.
  * Each one's levels: wg the wash's against the drops', g the whole's (as loud as Wind at the same level, by A-weighted
  * loudness), by measure (en_wn_part) */
 #define WN_K 6                                   /* (the most bands a character has) */
@@ -4422,7 +4423,7 @@ typedef struct {
 } wn_rec_t;
 static const wn_rec_t WN_REC[2] = {
     {4, 0.0f, 12.0f, 95.0f, 760.0f, 0.015f, 0.99247f, 0.6667f, 6.0f, 1.33f, 3.71f, 250.0f, 80.0f, 2000.0f, 0.664f},  /* Hail */
-    {6, 0.3f, 400.0f, 1000.0f, 6000.0f, 0.003f, 0.97758f, 0.5556f, 8.0f, 1.29f, 0.603f, 2200.0f, 40.0f, 6000.0f, 0.5f}};  /* Rain */
+    {3, 0.3f, 400.0f, 1000.0f, 6000.0f, 0.003f, 0.97758f, 0.5556f, 8.0f, 0.0f, 0.83f, 2200.0f, 40.0f, 6000.0f, 0.5f}};  /* Rain */
 static float wn_d[2][WN_K], wn_a[2][WN_K], wn_s[2][WN_K][2], wn_c[WN_K][4], wn_w[2][7], wn_wait[2];
 #ifdef EN_HOST
 volatile uint8_t en_wn_part;                     /* (host, its calibration: 1 the drops alone, 2 the wash alone) */
@@ -4672,9 +4673,12 @@ static void render_atmos(uint32_t n)
                     y += bp;
                     wn_d[ch][k] *= ad, wn_a[ch][k] *= aa;
                 }
-                w[0] += kb * (x - w[0]), w[1] += kb * (w[0] - w[1]);   /* the wash: low-passed twice, */
-                w[2] += kh * (w[1] - w[2]), v = w[1] - w[2];          /* high-passed twice */
-                w[3] += kh * (v - w[3]), v -= w[3];
+                v = 0.0f;
+                if (wq->wg > 0.0f) {             /* the wash (Rain has none: the user, for the FM-1's CPU) */
+                    w[0] += kb * (x - w[0]), w[1] += kb * (w[0] - w[1]);   /* low-passed twice, */
+                    w[2] += kh * (w[1] - w[2]), v = w[1] - w[2];          /* high-passed twice */
+                    w[3] += kh * (v - w[3]), v -= w[3];
+                }
                 v = WN_PD * WN_KQ * y + WN_PW * wq->wg * bed * v;
                 w[4] += kh * (v - w[4]), v -= w[4];                    /* the glass: high-passed twice, */
                 w[5] += kh * (v - w[5]), v -= w[5];
