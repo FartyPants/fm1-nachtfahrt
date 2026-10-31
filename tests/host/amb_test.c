@@ -1536,8 +1536,9 @@ static void test_atmospheres(void)
     CHECK(!strcmp(t, "Drops"), "test_rain_listed: atmosphere 6 %s (Rain renamed)", t);
     en_param_text(P_NCHAR, 7, t);
     CHECK(!strcmp(t, "Hail"), "test_hail_listed: atmosphere 7 %s", t);
-    CHECK(en_param_info(P_NCHAR)->hi == 7, "test_no_rain_out: atmosphere hi %d (the user, 2026-10-31: the new Rain taken "
-          "away, it cannot be selected; Hail stays)", en_param_info(P_NCHAR)->hi);
+    en_param_text(P_NCHAR, 8, t);
+    CHECK(en_param_info(P_NCHAR)->hi == 8 && !strcmp(t, "Rain"), "test_rain_loop_listed: atmosphere 8 %s, hi %d", t,
+          en_param_info(P_NCHAR)->hi);
     at_solo(0, 1, 7, 0);                         /* Wind, Timewind's */
     at_cap(45.0f);
     nf = at_spec();
@@ -1587,6 +1588,46 @@ static void test_atmospheres(void)
     printf("  hail: peak %.3f, %.1f dB(A) (Wind %.1f)\n", (double)peak, al, wind25);
     CHECK(!bad && peak > 0.005f && peak < 0.5f, "test_window_heard: peak %.3f, bad %d", (double)peak, bad);
     CHECK(fabs(al - wind25) < 3.0, "test_window_level: %.1f dB(A), Wind at the same level %.1f", al, wind25);
+    /* (2026-10-31, the user: a recording of rain as the Atmosphere, "rain_stereo4_speeds") Rain: the author's own loop
+     * (22.05 kHz, 5 kHz low-passed, SEA5: 70 KB), two read heads (the right half a loop on, 1.3% faster), so the sides
+     * are independent: the decoder gives fm1_open's decoder's samples exactly (the loop's checksum), the output finite
+     * and bounded, as loud as Wind at the same level (within 3 dB), left and right nearly uncorrelated */
+    CHECK(en_rl_hash() == 0x1107e88au, "test_rain_loop_decode: the loop's checksum %08x (fm1_open's decoder: 1107e88a)",
+          (unsigned)en_rl_hash());
+    CHECK(en_rl_wrap(0) == 2u * 98588u, "test_rain_loop_wrap: the left head wraps after %u samples (the loop twice: 197176)",
+          (unsigned)en_rl_wrap(0));
+    CHECK(en_rl_wrap(1) > 190000u && en_rl_wrap(1) < 197176u, "test_rain_loop_wrap: the right head wraps after %u samples",
+          (unsigned)en_rl_wrap(1));
+    at_solo(-1, 8, 25, 1);
+    {
+        int b, j;
+        double sl = 0, sr = 0, sll = 0, srr = 0, slr = 0;
+        float pk = 0.0f;
+        bad = 0;
+        for (b = 0; b < (int)(30.0f * 44100.0f / 256.0f); b++) {
+            en_render(buf, 256, 2048);
+            for (j = 0; j < 256; j++) {
+                const double l = (double)buf[2 * j] / 8388608.0, r = (double)buf[2 * j + 1] / 8388608.0;
+                if (l != l || r != r)
+                    bad++;
+                if (fabs(l) > (double)pk || fabs(r) > (double)pk)
+                    pk = (float)fmax(fabs(l), fabs(r));
+                sl += l, sr += r, sll += l * l, srr += r * r, slr += l * r;
+            }
+        }
+        {
+            const double n = 30.0 * 44100.0, cov = slr / n - (sl / n) * (sr / n),
+                         cor = cov / sqrt((sll / n - (sl / n) * (sl / n)) * (srr / n - (sr / n) * (sr / n)) + 1e-30);
+            peak = 0.0f;
+            at_cap(20.0f);
+            at_spec();
+            al = at_alevel();
+            printf("  rain loop: L/R correlation %+.2f, peak %.3f, %.1f dB(A) (Wind %.1f)\n", cor, (double)pk, al, wind25);
+            CHECK(!bad && pk > 0.005f && pk < 0.7f, "test_rain_loop_heard: peak %.3f, bad %d", (double)pk, bad);
+            CHECK(fabs(cor) < 0.3, "test_rain_loop_stereo: left and right correlated %+.2f", cor);
+            CHECK(fabs(al - wind25) < 3.0, "test_rain_loop_level: %.1f dB(A), Wind at the same level %.1f", al, wind25);
+        }
+    }
     for (c = 1; c < EN_NNCHAR; c++) {            /* (each character played, stopped, the gate shut) */
         at_solo(-1, c, 60, 0);
         run(3.0f);
@@ -5358,8 +5399,8 @@ int main(void)
         /* (the user, 2026-10-28: the FM-1's speaker and headphones bright, the noise far too loud) the Atmosphere's
          * level by its type: Surf 5, Wind 7, Tape and Space 10; none: the default kept */
         for (a = 0; a < EN_NPIECES; a++) {
-            static const int LV[EN_NNCHAR] = {25, 7, 5, 10, -1, 10, -1, -1};   /* (None Wind Surf Space Air Tape
-                                                                           * Drops Hail; Air, Drops, Hail: unused) */
+            static const int LV[EN_NNCHAR] = {25, 7, 5, 10, -1, 10, -1, -1, -1};   /* (None Wind Surf Space Air Tape
+                                                                           * Drops Hail Rain; Air, Drops, Hail, Rain: unused) */
             const int c = pa[a][P_NCHAR];
             CHECK(c >= 0 && c < EN_NNCHAR && LV[c] >= 0 && pa[a][P_CRACKLE] == LV[c],
                   "test_pieces_atmos_levels: %s: %s at %d", en_piece_name(a), c >= 0 && c < EN_NNCHAR ? EN_NCHAR_NAME[c] : "?",

@@ -92,7 +92,7 @@ int en_voice_shake_n(int p)
  *  the Drone's Organ Strings Horn Saws Glass Choir; the Lead's Odyssey Mini Flute Theremin Synthi and the FM voices
  *  (5..7). Modes: 0 Ionian,
  *  1 Dorian, 2 Phrygian, 5 Aeolian. Repeat times: 1/8 1/8. 1/4 1/4. 1/2 1 bar. Drift: 2 4 8 16 32 64 bars, Hold.
- *  Play: the walk Home, Wander, Free. Grid: 8ths, 16ths. Atmosphere: None Wind Surf Space Air Tape Drops Hail. The moves (filter motion spec 9): MW/MT/MR/MI a layer's
+ *  Play: the walk Home, Wander, Free. Grid: 8ths, 16ths. Atmosphere: None Wind Surf Space Air Tape Drops Hail Rain. The moves (filter motion spec 9): MW/MT/MR/MI a layer's
  *  Width, Time, Rate and Intro in bars (0 Drone, 1 Sequence, 2 Lead, 3 Sequence 2, 4 Atmosphere; the Sequence's Width
  *  is Sweep); the Lead's Width kept low; Bridge the middle section's move. Memory: how much the Lead keeps its ideas,
  *  the Lead's memory spec 3.3's starting values, to tune by ear; every piece's set, Mirage's 50 the default too, so
@@ -4227,7 +4227,7 @@ static void widen(uint32_t n)
  * a second; a little of it into the plate.
  * Four controls shape it, each -1..+1 around the piece's own (0), and a character (a preset of the mix): ready
  * on ARP's Noise page (P_NCOL .. P_NCHAR, into nctl) */
-const char *const EN_NCHAR_NAME[EN_NNCHAR] = {"None", "Wind", "Surf", "Space", "Air", "Tape", "Drops", "Hail"};   /* (BERLIN: the
+const char *const EN_NCHAR_NAME[EN_NNCHAR] = {"None", "Wind", "Surf", "Space", "Air", "Tape", "Drops", "Hail", "Rain"};   /* (BERLIN: the
                                                   * Atmosphere's; the voices batch: Rain appended, so every one before it
                                                   * keeps its number in the pieces and the saves;
                                                   * NCHAR below is the dub's noise machine, heard as Tape) */
@@ -4360,8 +4360,8 @@ static void noise_step(int s)
  * poles, Paul Kellet's "economy" filter) -> brown (a leaky integrator), its DRFT (the cutoff wandering, the level
  * following it) and its DUST (sparse impulses through a resonance); written again in float. The user: the FM-1's
  * speaker is bright, the noise was hissy; each level is matched by its A-weighted loudness to the one he tuned.) */
-enum { ATM_NONE, ATM_WIND, ATM_SURF, ATM_SPACE, ATM_AIR, ATM_TAPE, ATM_RAIN, ATM_WINDOW };   /* (ATM_RAIN: Drops on
-                                                  * the screen since 2026-10-30; ATM_WINDOW: Hail) */
+enum { ATM_NONE, ATM_WIND, ATM_SURF, ATM_SPACE, ATM_AIR, ATM_TAPE, ATM_RAIN, ATM_WINDOW, ATM_RAINLOOP };   /* (ATM_RAIN:
+                                                  * Drops on the screen since 2026-10-30; ATM_WINDOW: Hail) */
 static inline float svf_lp(const float *c, float *s, float x, float *bp);
 static float atm_gate, atm_w[2] = {0.3f, 0.6f}, atm_wt[2] = {0.5f, 0.5f}, atm_gu = 0.5f, atm_gt = 0.5f, atm_s[2][2],
              atm_c[2][4], atm_sw[2] = {0.0f, 0.4f}, atm_swr[2] = {0.11f, 0.13f}, atm_lp[2], bl_ph, bl_dt, bl_env,
@@ -4435,6 +4435,7 @@ volatile uint8_t en_wn_part;                     /* (host, its calibration: 1 th
  * waves and filters as the program starts them (so a piece played alone sounds as it did); its gate, the transport's,
  * kept. Wind's level now follows its wander: without this its loudness in the first minutes hung on where the piece
  * before left the wander */
+static void rl_reset(void);
 static void atm_reset(void)
 {
     int ch, k;
@@ -4450,6 +4451,7 @@ static void atm_reset(void)
     for (k = 0; k < RN_N; k++)
         rn_ph[k] = rn_dt[k] = rn_dt1[k] = rn_es[k] = rn_ef[k] = rn_ds[k] = rn_gl[k] = rn_gr[k] = 0.0f;
     rn_wait = 0.0f;
+    rl_reset();
     for (ch = 0; ch < 2; ch++) {
         for (k = 0; k < WN_K; k++)
             wn_d[ch][k] = wn_a[ch][k] = wn_s[ch][k][0] = wn_s[ch][k][1] = 0.0f;
@@ -4478,6 +4480,115 @@ static void rain_drop(float col, float ring, float rate)
     rn_gl[k] = fm_cosf(p), rn_gr[k] = fm_sinf(p);
     rn_wait += -fm_logf(fm_maxf(w, 1e-6f)) * EN_SR / rate;
 }
+/* (2026-10-31) Rain: the author's own recording of rain (rainloop.c: 4.47 s, 22.05 kHz, mono, a seamless loop, low-passed
+ * at 5 kHz, stored as SEA5: 5.7 bits a sample, 70 KB), played by two read heads, the left at the loop's speed from its
+ * start, the right half a loop on and 1.3% faster, so the two never line up again (the pair repeats after ~5.8 minutes)
+ * and the sides are independent, as rain is (the user's pick by ear of the candidates, "rain_stereo4_speeds"). The
+ * synthesised Rain (many band-pass filters) went over 75% on the FM-1 and stopped itself; this costs a few multiplies a
+ * sample. SEA (Dani Biro, MIT; the format and decoder from M-VAVE's fm1_open, MIT): chunks of 320 samples in 16 groups
+ * of 20, each with a 4-bit scale, 5-bit codes, an 8-word LMS seed at the head of the chunk (so a head can start at any
+ * chunk); a prediction from the last four samples and four weights, plus the code's residual; the weights nudged by its
+ * sign. The decoder's sum of four 30-bit products is made exact in 32 bits (no 64-bit maths on the device): each
+ * product's high bits summed (>>2) and the low two bits' sum added back, then >>11 (== >>13 of the whole). Colour is a
+ * low-pass (8 kHz x its octaves); Density the level, Drift its swells (as Hail's showers) */
+#include "rainloop.c"
+#define RL_NG ((RL_N + 19u) / 20u)               /* its groups of 20 samples */
+#define RL_G 2.10f                               /* its level (as loud as Wind at the same level) */
+typedef struct {
+    int32_t st[8];                               /* the decoder's state (4 samples, 4 weights), after the last group decoded */
+    int16_t b[2][20];                            /* the group the head is in and the one after it */
+    uint32_t pos, g0;                            /* the position (Q12 samples: 98588 << 12 fits 32 bits, << 16 did not: the
+                                                  * first build wrapped after 1.5 s, a tick), the group it is in */
+    uint8_t cur;                                 /* which of b is the group it is in */
+} rl_head_t;
+static rl_head_t rl_h[2];
+static float rl_lp[2];
+static const uint32_t RL_STEP[2] = {2048u, 2075u};   /* (Q12 samples a 44.1 kHz sample: 0.5, and 0.5 x 1.013: 1.0132) */
+static uint32_t rl_next(uint32_t g) { return g + 1u < RL_NG ? g + 1u : 0u; }
+static void rl_group(rl_head_t *h, uint32_t G, int16_t *out)   /* group G (a chunk's first seeds the state) into out[20] */
+{
+    const uint8_t *c = RL_DATA + (G >> 4) * 228u;
+    const unsigned gi = G & 15u, scale = (c[20u + gi / 2u] >> (gi & 1u ? 0 : 4)) & 15u;
+    int32_t *s = h->st;
+    unsigned i, j;
+    if (!gi)
+        for (j = 0; j < 8; j++) {
+            const unsigned v = c[4u + 2u * j] | (unsigned)c[5u + 2u * j] << 8;
+            s[j] = v < 32768u ? (int32_t)v : (int32_t)v - 65536;
+        }
+    for (i = 0; i < 20; i++) {
+        const unsigned at = (gi * 20u + i) * 5u, w = (unsigned)c[28u + at / 8u] << 8 | ((at & 7u) > 3u ? c[29u + at / 8u] : 0u),
+                       code = (w >> (11u - (at & 7u))) & 31u;
+        const int32_t p0 = s[0] * s[4], p1 = s[1] * s[5], p2 = s[2] * s[6], p3 = s[3] * s[7],
+                      hi = (p0 >> 2) + (p1 >> 2) + (p2 >> 2) + (p3 >> 2), lo = (p0 & 3) + (p1 & 3) + (p2 & 3) + (p3 & 3),
+                      res = RL_DQT[(scale << 5) + code], delta = res >> 4;
+        int32_t v = ((hi + (lo >> 2)) >> 11) + res;
+        v = v > 32767 ? 32767 : v < -32768 ? -32768 : v;
+        for (j = 0; j < 4; j++) {
+            const int32_t a = s[4 + j] + (s[j] < 0 ? -delta : delta);
+            s[4 + j] = a > 32767 ? 32767 : a < -32768 ? -32768 : a;
+        }
+        s[0] = s[1], s[1] = s[2], s[2] = s[3], s[3] = v;
+        out[i] = (int16_t)v;
+    }
+}
+static void rl_start(rl_head_t *h, uint32_t chunk)      /* the head at a chunk's first sample, its two groups ready */
+{
+    h->pos = chunk * 320u << 12;
+    h->g0 = chunk * 16u;
+    h->cur = 0;
+    rl_group(h, h->g0, h->b[0]);
+    rl_group(h, rl_next(h->g0), h->b[1]);
+}
+static void rl_reset(void)                       /* from the top: the left at the loop's start, the right half a loop on */
+{
+    rl_start(&rl_h[0], 0);
+    rl_start(&rl_h[1], 154);
+    rl_lp[0] = rl_lp[1] = 0.0f;
+}
+static inline float rl_read(rl_head_t *h, uint32_t step)  /* a sample (linear between two), the head a step on */
+{
+    uint32_t i = h->pos >> 12;
+    uint32_t k = i - h->g0 * 20u;
+    const float f = (float)(h->pos & 0xFFFu) * (1.0f / 4096.0f), s0 = (float)h->b[h->cur][k],
+                s1 = (float)(i == RL_N - 1u || k + 1u >= 20u ? h->b[h->cur ^ 1u][0] : h->b[h->cur][k + 1u]);
+    h->pos += step;
+    if (h->pos >= RL_N << 12)
+        h->pos -= RL_N << 12;
+    i = h->pos >> 12;
+    if (i / 20u != h->g0) {                      /* into the next group: that one was ready; the one after it now */
+        h->g0 = i / 20u;
+        h->cur ^= 1u;
+        rl_group(h, rl_next(h->g0), h->b[h->cur ^ 1u]);
+    }
+    return s0 + (s1 - s0) * f;
+}
+#ifdef EN_HOST
+uint32_t en_rl_wrap(int head)
+{
+    rl_head_t h;
+    uint32_t n = 0, last = 0;
+    rl_start(&h, 0);
+    do {
+        last = h.pos;
+        rl_read(&h, RL_STEP[head]);
+        n++;
+    } while (h.pos > last);
+    return n;
+}
+uint32_t en_rl_hash(void)
+{
+    rl_head_t h;
+    int16_t g[20];
+    uint32_t G, i, x = 2166136261u;
+    for (G = 0; G < RL_NG; G++) {
+        rl_group(&h, G, g);
+        for (i = 0; i < 20u && G * 20u + i < RL_N; i++)
+            x = (x ^ (uint16_t)g[i]) * 16777619u;
+    }
+    return x;
+}
+#endif
 /* (Hail) a new drop on side ch: its band at random, its size a power law (u^(-1/alpha)), capped, the higher
  * bands a little softer ((the lowest centre / its centre)^0.3: step, the bands' spacing in octaves); the next one at
  * random (Poisson: rate a second) */
@@ -4552,6 +4663,10 @@ static void render_atmos(uint32_t n)
         for (k = 0; k < wq->nk; k++)
             svf_coefs(wn_c[k], 2.0f * wq->lo * fm_exp2f(step * (float)k) * col, WN_KQ);   /* (x2: the filter works at
                                                   * half the sample rate; its centre stays under 8 kHz) */
+    } else if (c == ATM_RAINLOOP) {              /* (Density the level, Drift the swells, as Hail's showers; Colour the
+                                                  * low-pass over the 5 kHz of the loop: darker only) */
+        bed = RL_G * (1.0f / 32768.0f) * fm_exp2f((atm_gu - 0.5f) * 0.83f) * busy;
+        kt = fm_minf(8000.0f * col * (FM_TWO_PI / EN_SR), 1.0f);
     }
     for (j = 0; j < n; j++) {
         float l = 0.0f, r = 0.0f, bp, xl = 0.0f, xr = 0.0f;
@@ -4698,6 +4813,15 @@ static void render_atmos(uint32_t n)
             wn_par ^= 1u;
             break;
         }
+        case ATM_RAINLOOP: {                     /* (one draw, two noises, as Wind's: the hiss under it) */
+            const uint32_t rr = seq_rand(&atm_rng);
+            xl = (float)(int32_t)(rr << 16) * (1.0f / 2147483648.0f);
+            xr = (float)(int32_t)(rr & 0xFFFF0000u) * (1.0f / 2147483648.0f);
+            rl_lp[0] += kt * (bed * rl_read(&rl_h[0], RL_STEP[0]) - rl_lp[0]);
+            rl_lp[1] += kt * (bed * rl_read(&rl_h[1], RL_STEP[1]) - rl_lp[1]);
+            l = rl_lp[0], r = rl_lp[1];
+            break;
+        }
         default:                                 /* Air: what a low-pass leaves, breathing with the gusts */
             for (ch = 0; ch < 2; ch++) {
                 const float x = atm_noise();
@@ -4740,6 +4864,7 @@ static void render_atmos(uint32_t n)
         for (k = 0; k < 7; k++)
             wn_w[ch][k] = fm_flush(wn_w[ch][k]);
         wn_y[ch][0] = fm_flush(wn_y[ch][0]), wn_y[ch][1] = fm_flush(wn_y[ch][1]);
+        rl_lp[ch] = fm_flush(rl_lp[ch]);
     }
 }
 #ifdef EN_HOST
@@ -4755,7 +4880,7 @@ int en_atm_ok(void)                              /* (host tests) the Atmosphere'
     for (k = 0; k < RN_N; k++)
         ok &= atm_fine(rn_es[k]) && atm_fine(rn_ef[k]) && atm_fine(rn_ph[k]) && atm_fine(rn_dt[k]);
     for (ch = 0; ch < 2; ch++) {
-        ok &= atm_fine(wn_wait[ch]) && atm_fine(wn_y[ch][0]) && atm_fine(wn_y[ch][1]);
+        ok &= atm_fine(wn_wait[ch]) && atm_fine(wn_y[ch][0]) && atm_fine(wn_y[ch][1]) && atm_fine(rl_lp[ch]);
         for (k = 0; k < WN_K; k++)
             ok &= atm_fine(wn_d[ch][k]) && atm_fine(wn_a[ch][k]) && atm_fine(wn_s[ch][k][0]) && atm_fine(wn_s[ch][k][1]);
         for (k = 0; k < 7; k++)
