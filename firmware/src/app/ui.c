@@ -691,7 +691,10 @@ static void set_voice(int p, int v)
     proj.par[p] = (int16_t)v;
     en_set(p, v);
     en_param_text(p, v, t);
-    say("VOICE", t);
+    if (p == P_NCHAR)                            /* (a shake of the Atmosphere: its name whole, as ALGORITHM says it) */
+        say("NOISE", EN_NCHAR_NAME[v % EN_NNCHAR]);
+    else
+        say("VOICE", t);
     mark_dirty();
 }
 
@@ -1246,6 +1249,12 @@ static void nudge(int layer, int how)
             v = (v + 1) % nv;
         set_voice(VOICE[layer], v);
         en_param_text(VOICE[layer], proj.par[VOICE[layer]], vn);
+        if (VOICE[layer] == P_NCHAR) {           /* (the Atmosphere: its name whole, not the value's 9 characters) */
+            const char *w = EN_NCHAR_NAME[proj.par[P_NCHAR] % EN_NNCHAR];
+            for (j = 0; j < 23 && w[j]; j++)
+                vn[j] = w[j];
+            vn[j] = 0;
+        }
     }
     en_piece(proj.piece, rec, &pool);
     for (j = 0; j < 6; j++) {                    /* (the values to choose from, each once) */

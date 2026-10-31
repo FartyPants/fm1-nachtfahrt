@@ -1537,8 +1537,9 @@ static void test_atmospheres(void)
     en_param_text(P_NCHAR, 7, t);
     CHECK(!strcmp(t, "Hail"), "test_hail_listed: atmosphere 7 %s", t);
     en_param_text(P_NCHAR, 8, t);
-    CHECK(en_param_info(P_NCHAR)->hi == 8 && !strcmp(t, "Stereo Rain"), "test_rain_loop_listed: atmosphere 8 %s, hi %d", t,
-          en_param_info(P_NCHAR)->hi);
+    CHECK(en_param_info(P_NCHAR)->hi == 8 && !strcmp(EN_NCHAR_NAME[8], "Stereo Rain") && !strncmp(t, "Stereo Ra", 9),
+          "test_rain_loop_listed: atmosphere 8 %s (%s), hi %d", EN_NCHAR_NAME[8], t, en_param_info(P_NCHAR)->hi);
+    /* (the value's field holds 9 characters: the name is shown whole by the Atmosphere's header, page and said text) */
     at_solo(0, 1, 7, 0);                         /* Wind, Timewind's */
     at_cap(45.0f);
     nf = at_spec();
@@ -1627,6 +1628,33 @@ static void test_atmospheres(void)
             CHECK(fabs(cor) < 0.3, "test_rain_loop_stereo: left and right correlated %+.2f", cor);
             CHECK(fabs(al - wind25) < 3.0, "test_rain_loop_level: %.1f dB(A), Wind at the same level %.1f", al, wind25);
         }
+    }
+    /* (the user, 2026-10-31: "the density has audible effect, the color doesn't") Stereo Rain's Colour a tilt of its top
+     * (a pole at 2.5 kHz): Colour -50 darker, +50 brighter (the first-difference's RMS, a measure of the highs,
+     * rises by 2 dB or more at each step); Density its level */
+    {
+        static const int COL[3] = {-50, 0, 50};
+        double hi[3], tot[3];
+        int k, b, j;
+        for (k = 0; k < 3; k++) {
+            double d2 = 0, e2 = 0, pl = 0;
+            at_solo(-1, 8, 25, 1);
+            en_set(P_NCOL, COL[k]);
+            run(2.0f);
+            for (b = 0; b < (int)(10.0f * 44100.0f / 256.0f); b++) {
+                en_render(buf, 256, 2048);
+                for (j = 0; j < 256; j++) {
+                    const double l = (double)buf[2 * j] / 8388608.0;
+                    d2 += (l - pl) * (l - pl), e2 += l * l, pl = l;
+                }
+            }
+            hi[k] = d2, tot[k] = e2;
+        }
+        printf("  stereo rain Colour: highs %.1f / %.1f / %.1f dB (-50 / 0 / +50)\n", 10 * log10(hi[0]), 10 * log10(hi[1]),
+               10 * log10(hi[2]));
+        CHECK(hi[2] > 1.6 * hi[1] && hi[1] > 1.6 * hi[0], "test_rain_loop_colour: highs %.2g / %.2g / %.2g (-50 / 0 / +50): "
+              "each step should be 2 dB or more", hi[0], hi[1], hi[2]);
+        CHECK(tot[0] > 0.0 && tot[2] > 0.0, "test_rain_loop_colour: silent");
     }
     for (c = 1; c < EN_NNCHAR; c++) {            /* (each character played, stopped, the gate shut) */
         at_solo(-1, c, 60, 0);

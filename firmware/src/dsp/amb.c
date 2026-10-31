@@ -4490,10 +4490,10 @@ static void rain_drop(float col, float ring, float rate)
  * chunk); a prediction from the last four samples and four weights, plus the code's residual; the weights nudged by its
  * sign. The decoder's sum of four 30-bit products is made exact in 32 bits (no 64-bit maths on the device): each
  * product's high bits summed (>>2) and the low two bits' sum added back, then >>11 (== >>13 of the whole). Colour is a
- * low-pass (8 kHz x its octaves); Density the level, Drift its swells (as Hail's showers) */
+ * tilt of the top about 2.5 kHz (-50 dark, 0 as recorded, +50 bright); Density the level, Drift its swells (as Hail's showers) */
 #include "rainloop.c"
 #define RL_NG ((RL_N + 19u) / 20u)               /* its groups of 20 samples */
-#define RL_G 2.10f                               /* its level (as loud as Wind at the same level) */
+#define RL_G 1.75f                               /* its level (as loud as Wind at the same level) */
 typedef struct {
     int32_t st[8];                               /* the decoder's state (4 samples, 4 weights), after the last group decoded */
     int16_t b[2][20];                            /* the group the head is in and the one after it */
@@ -4666,7 +4666,10 @@ static void render_atmos(uint32_t n)
     } else if (c == ATM_RAINLOOP) {              /* (Density the level, Drift the swells, as Hail's showers; Colour the
                                                   * low-pass over the 5 kHz of the loop: darker only) */
         bed = RL_G * (1.0f / 32768.0f) * fm_exp2f((atm_gu - 0.5f) * 0.83f) * busy;
-        kt = fm_minf(8000.0f * col * (FM_TWO_PI / EN_SR), 1.0f);
+        kt = 2500.0f * (FM_TWO_PI / EN_SR);       /* (Colour a tilt of the top about 2.5 kHz: its gain col^2, 0.25 .. 4, so
+                                                  * -50 dark, 0 as recorded, +50 bright by 12 dB: the first build's
+                                                  * low-pass at 8 kHz x col sat above the loop's 5 kHz and did nothing) */
+        ad = col * col;
     }
     for (j = 0; j < n; j++) {
         float l = 0.0f, r = 0.0f, bp, xl = 0.0f, xr = 0.0f;
@@ -4817,9 +4820,12 @@ static void render_atmos(uint32_t n)
             const uint32_t rr = seq_rand(&atm_rng);
             xl = (float)(int32_t)(rr << 16) * (1.0f / 2147483648.0f);
             xr = (float)(int32_t)(rr & 0xFFFF0000u) * (1.0f / 2147483648.0f);
-            rl_lp[0] += kt * (bed * rl_read(&rl_h[0], RL_STEP[0]) - rl_lp[0]);
-            rl_lp[1] += kt * (bed * rl_read(&rl_h[1], RL_STEP[1]) - rl_lp[1]);
-            l = rl_lp[0], r = rl_lp[1];
+            {
+                const float v0 = bed * rl_read(&rl_h[0], RL_STEP[0]), v1 = bed * rl_read(&rl_h[1], RL_STEP[1]);
+                rl_lp[0] += kt * (v0 - rl_lp[0]);
+                rl_lp[1] += kt * (v1 - rl_lp[1]);
+                l = rl_lp[0] + ad * (v0 - rl_lp[0]), r = rl_lp[1] + ad * (v1 - rl_lp[1]);
+            }
             break;
         }
         default:                                 /* Air: what a low-pass leaves, breathing with the gusts */
