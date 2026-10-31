@@ -92,7 +92,7 @@ int en_voice_shake_n(int p)
  *  the Drone's Organ Strings Horn Saws Glass Choir; the Lead's Odyssey Mini Flute Theremin Synthi and the FM voices
  *  (5..7). Modes: 0 Ionian,
  *  1 Dorian, 2 Phrygian, 5 Aeolian. Repeat times: 1/8 1/8. 1/4 1/4. 1/2 1 bar. Drift: 2 4 8 16 32 64 bars, Hold.
- *  Play: the walk Home, Wander, Free. Grid: 8ths, 16ths. Atmosphere: None Wind Surf Space Air Tape Drops Hail Rain. The moves (filter motion spec 9): MW/MT/MR/MI a layer's
+ *  Play: the walk Home, Wander, Free. Grid: 8ths, 16ths. Atmosphere: None Wind Surf Space Air Tape Drops Hail. The moves (filter motion spec 9): MW/MT/MR/MI a layer's
  *  Width, Time, Rate and Intro in bars (0 Drone, 1 Sequence, 2 Lead, 3 Sequence 2, 4 Atmosphere; the Sequence's Width
  *  is Sweep); the Lead's Width kept low; Bridge the middle section's move. Memory: how much the Lead keeps its ideas,
  *  the Lead's memory spec 3.3's starting values, to tune by ear; every piece's set, Mirage's 50 the default too, so
@@ -117,16 +117,18 @@ static const int16_t PC_WAHNFRIED[] = {       /* Schulze, Wahnfried 1883: roots 
     P_FEEDBACK, 75, P_REVERB, 45,
     P_MW0, 45, P_MT0, 60, P_MR0, 45, P_MW2, 15, P_BRIDGE, 30,
     P_ARC, 20, P_MOTION, 55, P_LMEM, 40, -1};
-static const int16_t PC_RYOKUU[] = {          /* (2026-10-30) Ryokuu (緑雨, "green rain": early-summer rain; first
-                                                * called Umeda), the user's: Wahnfried's Lead melody, tempo, key and
-                                                * Strings, the Lead a Theremin two octaves down, gliding ("almost like
-                                                * singing"); Jean-Michel Jarre's arps (the Sequence on 2600 an octave
-                                                * down, dark; Sequence 2 on Sub two down, open); the Drone darker
-                                                * (Colour -30, the user's ear); Rain outside, quiet */
+static const int16_t PC_SAKURA[] = {         /* (2026-10-30) the ninth piece, the user's: Wahnfried's Lead melody, tempo,
+                                                * key and Strings, the Lead a Theremin two octaves down, gliding ("almost
+                                                * like singing"); Jean-Michel Jarre's arps (the Sequence on 2600 an octave
+                                                * down, dark; Sequence 2 on Sub two down, open); the Drone darker (Colour
+                                                * -30) and quieter (75), on the royal road. First Umeda, then Ryokuu (緑雨,
+                                                * "green rain") with Rain outside; the FM-1's CPU went over 75% and stopped the
+                                                * rain, so, the user (2026-10-31): "it's not point chasing effect if it takes
+                                                * too much cpu": Sakura Rain, no Atmosphere */
     P_TEMPO, 80, P_ROOT, 10, P_MODE, MODE_DORIAN,
     P_SEQ, 30, P_MI1, 16, P_SVOICE, 0, P_SEQOCT, -1, P_CUTOFF, 30,
     P_SEQ2, 50, P_S2VOICE, 5, P_SEQ2OCT, -2, P_S2CUT, 90,
-    P_CHORD, 95, P_CVOICE, 1, P_CCOL, -30, P_PEDAL, 85, P_PHASER, 50, P_CRES, -5, P_DRIFT, 2,
+    P_CHORD, 75, P_CVOICE, 1, P_CCOL, -30, P_PEDAL, 85, P_PHASER, 50, P_CRES, -5, P_DRIFT, 2,
     /* (the user: "royal road progression, keep Bb Dorian"; research_notes/japanese-chords, progression A) A flat's
      * royal road in B flat Dorian's notes, IV maj7 - V7 - iii7 - vi7, again, then D flat over E flat and home to B flat
      * minor 11: the eight slots written, looping, a chord every Drift (8 bars) */
@@ -137,7 +139,6 @@ static const int16_t PC_RYOKUU[] = {          /* (2026-10-30) Ryokuu (緑雨, "g
     P_CR6, 0, P_CQ6, EN_CQ_MINOR, P_CX6, EN_CX_11, P_CR7, 10, P_CQ7, EN_CQ_MINOR, P_CX7, EN_CX_11,
     P_LEAD, 60, P_LVOICE, 3, P_LOCT, -2, P_GLIDE, 70, P_LTONE, 75, P_VIB, 55, P_LDENS, 60, P_LDIN, 2,   /* (the user: the
                                                   * Lead too quiet for the speaker, 60; in sooner, 2 bars) */
-    P_NCHAR, 8, P_CRACKLE, 6, P_NCOL, 20, P_NTUNE, 70,
     P_FEEDBACK, 75, P_REVERB, 45,
     P_MW0, 45, P_MT0, 60, P_MR0, 45, P_MW2, 15, P_BRIDGE, 30,
     P_ARC, 20, P_MOTION, 55, P_LMEM, 40, -1};
@@ -207,7 +208,7 @@ static const struct {
 } PIECES[EN_NPIECES] = {
     {"Timewind", PC_TIMEWIND}, {"Wahnfried", PC_WAHNFRIED}, {"Phaedra", PC_PHAEDRA},   {"Rubycon", PC_RUBYCON},
     {"Stratosfear", PC_STRATOSFEAR}, {"Sunrain", PC_SUNRAIN}, {"Mirage", PC_MIRAGE}, {"Cyborg", PC_CYBORG},
-    {"Ryokuu", PC_RYOKUU},
+    {"Sakura Rain", PC_SAKURA},
 };
 
 const char *en_piece_name(int i) { return PIECES[(unsigned)i < EN_NPIECES ? i : 0].name; }
@@ -4226,8 +4227,7 @@ static void widen(uint32_t n)
  * a second; a little of it into the plate.
  * Four controls shape it, each -1..+1 around the piece's own (0), and a character (a preset of the mix): ready
  * on ARP's Noise page (P_NCOL .. P_NCHAR, into nctl) */
-const char *const EN_NCHAR_NAME[EN_NNCHAR] = {"None", "Wind", "Surf", "Space", "Air", "Tape", "Drops", "Hail",
-                                                "Rain"};   /* (BERLIN: the
+const char *const EN_NCHAR_NAME[EN_NNCHAR] = {"None", "Wind", "Surf", "Space", "Air", "Tape", "Drops", "Hail"};   /* (BERLIN: the
                                                   * Atmosphere's; the voices batch: Rain appended, so every one before it
                                                   * keeps its number in the pieces and the saves;
                                                   * NCHAR below is the dub's noise machine, heard as Tape) */
@@ -4360,8 +4360,8 @@ static void noise_step(int s)
  * poles, Paul Kellet's "economy" filter) -> brown (a leaky integrator), its DRFT (the cutoff wandering, the level
  * following it) and its DUST (sparse impulses through a resonance); written again in float. The user: the FM-1's
  * speaker is bright, the noise was hissy; each level is matched by its A-weighted loudness to the one he tuned.) */
-enum { ATM_NONE, ATM_WIND, ATM_SURF, ATM_SPACE, ATM_AIR, ATM_TAPE, ATM_RAIN, ATM_WINDOW, ATM_OUT };   /* (ATM_RAIN:
-                                                  * Drops on the screen since 2026-10-30; ATM_OUT: the new Rain) */
+enum { ATM_NONE, ATM_WIND, ATM_SURF, ATM_SPACE, ATM_AIR, ATM_TAPE, ATM_RAIN, ATM_WINDOW };   /* (ATM_RAIN: Drops on
+                                                  * the screen since 2026-10-30; ATM_WINDOW: Hail) */
 static inline float svf_lp(const float *c, float *s, float x, float *bp);
 static float atm_gate, atm_w[2] = {0.3f, 0.6f}, atm_wt[2] = {0.5f, 0.5f}, atm_gu = 0.5f, atm_gt = 0.5f, atm_s[2][2],
              atm_c[2][4], atm_sw[2] = {0.0f, 0.4f}, atm_swr[2] = {0.11f, 0.13f}, atm_lp[2], bl_ph, bl_dt, bl_env,
@@ -4402,12 +4402,9 @@ static float atm_pk[2][3], atm_lv[2], atm_lq[2], rn_ph[RN_N], rn_dt[RN_N], rn_dt
  * dark wash, 400 Hz); the room's smear is the Atmosphere's Reverb. Then the user: "if we put it deeper, we can call
  * it Hail. The rain stays": Hail on the screen, its thuds 2/3 of an octave lower (95 .. 760 Hz), the bed at 250 Hz,
  * the glass at 2 kHz (ATM_WINDOW in the code, Hail to the player).
- * Rain (ATM_OUT): the same rain outside, fitted to the user's recording of it ("O1", picked by ear), darkened as "O3"
- * for the FM-1's bright speaker (the user: "I would build more towards O3"; Colour brightens it back): brighter bands
- * than Window's (1 .. 6 kHz), sharper drops (1 ms in, 3 ms out at Ring 50), bigger ones now and then, a brighter wash
- * (2.2 kHz, as loud as the drops; later none: the user, for the FM-1's CPU, the wash's 7 poles a side), its lows kept (40 Hz), a lighter glass (6 kHz), gentler showers.
- * Each one's levels: wg the wash's against the drops', g the whole's (as loud as Wind at the same level, by A-weighted
- * loudness), by measure (en_wn_part) */
+ * Its level: wg the wash's against the drops', g the whole's (as loud as Wind at the same level, by A-weighted
+ * loudness), by measure (en_wn_part). A second character, "Rain" (rain outside, fitted to the user's recording, 0.9.6),
+ * was taken away on 2026-10-31: it went over 75% on the FM-1 in Ryokuu and stopped itself */
 #define WN_K 6                                   /* (the most bands a character has) */
 #define WN_KQ 0.714f                             /* (the bands' damping: Q 1.4, about an octave wide) */
 typedef struct {
@@ -4421,9 +4418,8 @@ typedef struct {
                                          * the high-pass and the glass's low-pass (Hz), the showers' depth (octaves of
                                          * level over the gusts' range) */
 } wn_rec_t;
-static const wn_rec_t WN_REC[2] = {
-    {4, 0.0f, 12.0f, 95.0f, 760.0f, 0.015f, 0.99247f, 0.6667f, 6.0f, 1.33f, 2.75f, 250.0f, 80.0f, 2000.0f, 0.664f},  /* Hail */
-    {3, 0.3f, 400.0f, 1000.0f, 6000.0f, 0.003f, 0.97758f, 0.5556f, 8.0f, 0.0f, 0.83f, 2200.0f, 40.0f, 6000.0f, 0.5f}};  /* Rain */
+static const wn_rec_t WN_REC[1] = {
+    {4, 0.0f, 12.0f, 95.0f, 760.0f, 0.015f, 0.99247f, 0.6667f, 6.0f, 1.33f, 2.75f, 250.0f, 80.0f, 2000.0f, 0.664f}};  /* Hail */
 static float wn_d[2][WN_K], wn_a[2][WN_K], wn_s[2][WN_K][2], wn_c[WN_K][4], wn_w[2][7], wn_wait[2], wn_y[2][2];
 static uint8_t wn_par;                           /* (the bands' half rate, below: 0 a sample they are worked on, 1 one
                                                   * between two; kept across blocks of any length) */
@@ -4482,7 +4478,7 @@ static void rain_drop(float col, float ring, float rate)
     rn_gl[k] = fm_cosf(p), rn_gr[k] = fm_sinf(p);
     rn_wait += -fm_logf(fm_maxf(w, 1e-6f)) * EN_SR / rate;
 }
-/* (Hail, Rain) a new drop on side ch: its band at random, its size a power law (u^(-1/alpha)), capped, the higher
+/* (Hail) a new drop on side ch: its band at random, its size a power law (u^(-1/alpha)), capped, the higher
  * bands a little softer ((the lowest centre / its centre)^0.3: step, the bands' spacing in octaves); the next one at
  * random (Poisson: rate a second) */
 static void wn_drop(int ch, float rate, const wn_rec_t *q, float step)
@@ -4503,7 +4499,7 @@ static void render_atmos(uint32_t n)
                 spd = fm_exp2f(fm_clampf(nctl.drift, -1.0f, 1.0f)), sec_n = (float)n * (1.0f / EN_SR);
     float g, sa[2] = {0.0f, 0.0f}, sd[2] = {0.0f, 0.0f}, kb = 0.0f, kt = 0.0f, bed = 0.0f, rate = 1.0f, ad = 0.0f,
           kh = 0.0f, aa = 0.0f, step = 0.0f, ad2 = 0.0f, aa2 = 0.0f;
-    const wn_rec_t *wq = &WN_REC[c == ATM_OUT];
+    const wn_rec_t *wq = &WN_REC[0];
     uint32_t j;
     int ch, k;
     atm_gate += ((en_playing ? 1.0f : 0.0f) - atm_gate) * fm_minf((float)n / (0.5f * EN_SR), 1.0f);
@@ -4541,7 +4537,7 @@ static void render_atmos(uint32_t n)
         kb = fm_minf(800.0f * col * (FM_TWO_PI / EN_SR), 1.0f);
         rate = RN_RATE * busy * (0.3f + 1.4f * atm_gu);
         bed = RN_BED * (0.5f + atm_gu);
-    } else if (c == ATM_WINDOW || c == ATM_OUT) {   /* (the shower with the gusts, the drops' rate with it; the
+    } else if (c == ATM_WINDOW) {              /* (the shower with the gusts, the drops' rate with it; the
                                                   * bands, the wash's and the glass's corners with Colour; Ring: a
                                                   * drop's decay, x0.5 .. x2 of its own) */
         bed = fm_exp2f((atm_gu - 0.5f) * wq->sh);
@@ -4657,8 +4653,7 @@ static void render_atmos(uint32_t n)
                 }
             break;
         }
-        case ATM_WINDOW:
-        case ATM_OUT: {                          /* (one draw, two noises, as Wind's) */
+        case ATM_WINDOW: {                       /* (one draw, two noises, as Wind's) */
             const uint32_t rr = seq_rand(&atm_rng);
             xl = (float)(int32_t)(rr << 16) * (1.0f / 2147483648.0f);
             xr = (float)(int32_t)(rr & 0xFFFF0000u) * (1.0f / 2147483648.0f);
@@ -4686,7 +4681,7 @@ static void render_atmos(uint32_t n)
                 } else
                     y = 0.5f * (wn_y[ch][0] + wn_y[ch][1]);
                 v = 0.0f;
-                if (wq->wg > 0.0f) {             /* the wash (Rain has none: the user, for the FM-1's CPU) */
+                if (wq->wg > 0.0f) {             /* the wash (a record without one skips it) */
                     w[0] += kb * (x - w[0]), w[1] += kb * (w[0] - w[1]);   /* low-passed twice, */
                     w[2] += kh * (w[1] - w[2]), v = w[1] - w[2];          /* high-passed twice */
                     w[3] += kh * (v - w[3]), v -= w[3];
@@ -4736,7 +4731,7 @@ static void render_atmos(uint32_t n)
         atm_lq[ch] = fm_flush(atm_lq[ch]);
     for (k = 0; k < RN_N; k++)
         rn_ef[k] = fm_flush(rn_ef[k]);
-    for (ch = 0; ch < 2; ch++) {                 /* (Hail's and Rain's envelopes, bands and poles: never into
+    for (ch = 0; ch < 2; ch++) {                 /* (Hail's envelopes, bands and poles: never into
                                                   * denormals) */
         for (k = 0; k < WN_K; k++) {
             wn_d[ch][k] = fm_flush(wn_d[ch][k]), wn_a[ch][k] = fm_flush(wn_a[ch][k]);

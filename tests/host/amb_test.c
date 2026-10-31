@@ -1503,8 +1503,8 @@ static void at_drops(int *ons, double *fall, double *over, double *inr)
  *   level (within 3 dB);
  * - the float state (en_atm_ok: finite, no denormals) after each has played and stopped;
  * - (2026-10-30) Rain renamed Drops, its place kept; Hail after it (deep thuds over a muffled rain, the user's pick by
- *   ear, "F"), and Rain after it (rain outside, "O1"): every sample finite, heard and bounded, each as loud as Wind
- *   at the same level (within 3 dB) */
+ *   ear, "F"): every sample finite, heard and bounded, as loud as Wind at the same level (within 3 dB); a "Rain"
+ *   (rain outside) after it was released as 0.9.6 and taken away on 2026-10-31 (the FM-1's CPU) */
 /* (the voices batch, item 5) the FM voice alone (fm.c, en_fm_probe): every one of fm1_open's 16 recipes at the lowest,
  * a middle and a high note, held a second and let go a second: every sample finite, the note heard and bounded, its
  * state finite and never denormal after (the code's soundness only: how it sounds is the user's, by ear) */
@@ -1536,9 +1536,8 @@ static void test_atmospheres(void)
     CHECK(!strcmp(t, "Drops"), "test_rain_listed: atmosphere 6 %s (Rain renamed)", t);
     en_param_text(P_NCHAR, 7, t);
     CHECK(!strcmp(t, "Hail"), "test_hail_listed: atmosphere 7 %s", t);
-    en_param_text(P_NCHAR, 8, t);
-    CHECK(en_param_info(P_NCHAR)->hi == 8 && !strcmp(t, "Rain"), "test_rain_out_listed: atmosphere 8 %s, hi %d", t,
-          en_param_info(P_NCHAR)->hi);
+    CHECK(en_param_info(P_NCHAR)->hi == 7, "test_no_rain_out: atmosphere hi %d (the user, 2026-10-31: the new Rain taken "
+          "away, it cannot be selected; Hail stays)", en_param_info(P_NCHAR)->hi);
     at_solo(0, 1, 7, 0);                         /* Wind, Timewind's */
     at_cap(45.0f);
     nf = at_spec();
@@ -1588,15 +1587,6 @@ static void test_atmospheres(void)
     printf("  hail: peak %.3f, %.1f dB(A) (Wind %.1f)\n", (double)peak, al, wind25);
     CHECK(!bad && peak > 0.005f && peak < 0.5f, "test_window_heard: peak %.3f, bad %d", (double)peak, bad);
     CHECK(fabs(al - wind25) < 3.0, "test_window_level: %.1f dB(A), Wind at the same level %.1f", al, wind25);
-    at_solo(-1, 8, 25, 1);                       /* Rain (outside), dry */
-    peak = 0.0f;
-    bad = 0;
-    at_cap(30.0f);
-    at_spec();
-    al = at_alevel();
-    printf("  rain outside: peak %.3f, %.1f dB(A) (Wind %.1f)\n", (double)peak, al, wind25);
-    CHECK(!bad && peak > 0.005f && peak < 0.5f, "test_rain_out_heard: peak %.3f, bad %d", (double)peak, bad);
-    CHECK(fabs(al - wind25) < 3.0, "test_rain_out_level: %.1f dB(A), Wind at the same level %.1f", al, wind25);
     for (c = 1; c < EN_NNCHAR; c++) {            /* (each character played, stopped, the gate shut) */
         at_solo(-1, c, 60, 0);
         run(3.0f);
@@ -5334,14 +5324,15 @@ int main(void)
 
     /* (BERLIN) the pieces: their names; no two alike (at least 4 of Tempo, Root, Mode, the Sequence's voice, the
      * Drone's, the Lead's, Sequence 2 on, Repeat B on, the Atmosphere, Sequence 2's voice, the Lead's octave, the
-     * Sequence's octave differ: the "samey" anti-goal; the last three since Ryokuu, the user's Wahnfried variant, whose
+     * Sequence's octave, the Drone's Colour, the Lead's Glide differ: the "samey" anti-goal; the last five since the ninth
+     * piece, Sakura Rain, the user's Wahnfried variant (no Atmosphere), whose
      * difference is in its voices); not every piece
      * has an Atmosphere (three at least None, the user); the Lead dreamy in all of them (its reverb and echo 90) */
     {
         static const char *const NAME[EN_NPIECES] = {"Timewind", "Wahnfried", "Phaedra", "Rubycon", "Stratosfear",
-                                                     "Sunrain", "Mirage", "Cyborg", "Ryokuu"};
+                                                     "Sunrain", "Mirage", "Cyborg", "Sakura Rain"};
         static const int KEY[] = {P_TEMPO, P_ROOT, P_MODE, P_SVOICE, P_CVOICE, P_LVOICE, P_NCHAR, P_MI1, P_MI3,
-                                  P_S2VOICE, P_LOCT, P_SEQOCT};
+                                  P_S2VOICE, P_LOCT, P_SEQOCT, P_CCOL, P_GLIDE};
         int16_t pa[EN_NPIECES][P_NPARAMS];
         uint16_t pl;
         int a, b, k, none = 0, worst = 99, wa = 0, wb = 0, dreamy = 1;
@@ -5367,8 +5358,8 @@ int main(void)
         /* (the user, 2026-10-28: the FM-1's speaker and headphones bright, the noise far too loud) the Atmosphere's
          * level by its type: Surf 5, Wind 7, Tape and Space 10; none: the default kept */
         for (a = 0; a < EN_NPIECES; a++) {
-            static const int LV[EN_NNCHAR] = {25, 7, 5, 10, -1, 10, -1, -1, 6};   /* (None Wind Surf Space Air Tape
-                                                                           * Drops Hail Rain; Air, Drops, Hail: unused) */
+            static const int LV[EN_NNCHAR] = {25, 7, 5, 10, -1, 10, -1, -1};   /* (None Wind Surf Space Air Tape
+                                                                           * Drops Hail; Air, Drops, Hail: unused) */
             const int c = pa[a][P_NCHAR];
             CHECK(c >= 0 && c < EN_NNCHAR && LV[c] >= 0 && pa[a][P_CRACKLE] == LV[c],
                   "test_pieces_atmos_levels: %s: %s at %d", en_piece_name(a), c >= 0 && c < EN_NNCHAR ? EN_NCHAR_NAME[c] : "?",
@@ -5376,24 +5367,26 @@ int main(void)
         }
     }
 
-    /* (2026-10-30) Ryokuu, the ninth piece (after early-summer rain (緑雨, "green rain")), the user's: Wahnfried's (its Lead's melody, 80, B flat
+    /* (2026-10-30) Sakura Rain, the ninth piece (after early-summer rain (緑雨, "green rain")), the user's: Wahnfried's (its Lead's melody, 80, B flat
      * Dorian, the Drone on Strings) with the Lead a Theremin two octaves down, gliding (70: "almost like singing"),
      * Jean-Michel Jarre's arps: the Sequence on 2600 an octave down (Cutoff 30), Sequence 2 on Sub two down (Cutoff 90);
-     * the Drone darker (Colour -30); Rain outside at 6 (Colour 20, Ring 70) */
+     * the Drone darker (Colour -30); first Ryokuu, with Rain outside; the FM-1's CPU went over 75% and stopped the rain
+     * (2026-10-31, the user: "it's not point chasing effect if it takes too much cpu"): Sakura Rain, no Atmosphere */
     {
         int16_t p[P_NPARAMS];
         uint16_t pl;
         en_piece(8, p, &pl);
-        CHECK(!strcmp(en_piece_name(8), "Ryokuu") && p[P_TEMPO] == 80 && p[P_ROOT] == 10 && p[P_MODE] == MODE_DORIAN,
-              "test_ryokuu: %s, %d BPM, root %d, mode %d", en_piece_name(8), p[P_TEMPO], p[P_ROOT], p[P_MODE]);
-        CHECK(p[P_LVOICE] == 3 && p[P_LOCT] == -2 && p[P_GLIDE] == 70, "test_ryokuu_lead: voice %d, oct %d, glide %d",
+        CHECK(!strcmp(en_piece_name(8), "Sakura Rain") && p[P_TEMPO] == 80 && p[P_ROOT] == 10 && p[P_MODE] == MODE_DORIAN,
+              "test_sakura: %s, %d BPM, root %d, mode %d", en_piece_name(8), p[P_TEMPO], p[P_ROOT], p[P_MODE]);
+        CHECK(p[P_LVOICE] == 3 && p[P_LOCT] == -2 && p[P_GLIDE] == 70, "test_sakura_lead: voice %d, oct %d, glide %d",
               p[P_LVOICE], p[P_LOCT], p[P_GLIDE]);
         CHECK(p[P_SVOICE] == 0 && p[P_SEQOCT] == -1 && p[P_CUTOFF] == 30 && p[P_S2VOICE] == 5 && p[P_SEQ2OCT] == -2 &&
-              p[P_S2CUT] == 90, "test_ryokuu_arps: seq %d oct %d cut %d, seq2 %d oct %d cut %d", p[P_SVOICE],
+              p[P_S2CUT] == 90, "test_sakura_arps: seq %d oct %d cut %d, seq2 %d oct %d cut %d", p[P_SVOICE],
               p[P_SEQOCT], p[P_CUTOFF], p[P_S2VOICE], p[P_SEQ2OCT], p[P_S2CUT]);
-        CHECK(p[P_CVOICE] == 1 && p[P_CCOL] == -30, "test_ryokuu_drone: voice %d, colour %d", p[P_CVOICE], p[P_CCOL]);
-        CHECK(p[P_NCHAR] == 8 && p[P_CRACKLE] == 6 && p[P_NCOL] == 20 && p[P_NTUNE] == 70,
-              "test_ryokuu_rain: %d at %d, colour %d, ring %d", p[P_NCHAR], p[P_CRACKLE], p[P_NCOL], p[P_NTUNE]);
+        CHECK(p[P_CVOICE] == 1 && p[P_CCOL] == -30 && p[P_CHORD] == 75, "test_sakura_drone: voice %d, colour %d, level %d "
+              "(the user: Strings, -30, too loud at 95: 75)", p[P_CVOICE], p[P_CCOL], p[P_CHORD]);
+        CHECK(p[P_NCHAR] == 0 && p[P_CRACKLE] == 25, "test_sakura_none: Atmosphere %d at %d (the user, after the FM-1's CPU: "
+              "no rain, none: its level the default, 25)", p[P_NCHAR], p[P_CRACKLE]);
         {   /* (the user: "go for royal road progression and keep Bb Dorian"; the research's progression A,
              * research_notes/japanese-chords: A flat's royal road, IV maj7 - V7 - iii7 - vi7, in B flat Dorian's notes,
              * then home to B flat minor 11) written in the eight slots, looping (Free, Loop) */
@@ -5404,7 +5397,7 @@ int main(void)
             int k, ok = p[P_PMODE] == (EN_WALK_FREE | EN_PLOOP);
             for (k = 0; k < 8; k++)
                 ok &= p[P_CR0 + k] == R[k] && p[P_CQ0 + k] == Q[k] && p[P_CX0 + k] == X[k];
-            CHECK(ok, "test_ryokuu_chords: the royal road not in its slots, or not looping (play %d)", p[P_PMODE]);
+            CHECK(ok, "test_sakura_chords: the royal road not in its slots, or not looping (play %d)", p[P_PMODE]);
         }
     }
 
@@ -5460,7 +5453,7 @@ int main(void)
         /* (the Lead's memory, spec 3.3) each piece's Memory (the Arc page's fourth knob): the report's starting
          * values, to tune by ear */
         for (a = 0; a < EN_NPIECES; a++) {
-            static const int LMEM[EN_NPIECES] = {55, 40, 75, 45, 85, 60, 50, 35, 40};   /* (Ryokuu: Wahnfried's) */
+            static const int LMEM[EN_NPIECES] = {55, 40, 75, 45, 85, 60, 50, 35, 40};   /* (Sakura Rain: Wahnfried's) */
             CHECK(pa[a][P_LMEM] == LMEM[a], "test_pieces_memory: %s Memory %d (spec 3.3: %d)", en_piece_name(a),
                   pa[a][P_LMEM], LMEM[a]);
         }

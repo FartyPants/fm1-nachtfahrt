@@ -261,13 +261,11 @@ back where the theme does, and a new figure on the keys starts it all again from
 **The Atmosphere** (SAVE) is a background: **None**, **Wind** (a breath of soft, pink noise through a narrow
 band, swept slowly, louder as it climbs: gusts), **Surf** (waves of dark, deep noise, each brighter as it breaks),
 **Space** (chirps and bursts, far away), **Air**, **Tape** (a crackle ringing on the chord, DUB-1's), **Drops**
-(soft drops, each a short ring at its own pitch, over a quiet hush; it was called Rain), **Hail** (deep, heavy thuds
-over a muffled rain), or **Rain** (rain outside: brighter,
-sharper drops over its wash). Wind and Surf are dark, their top end soft (the FM-1's speaker is bright). Hail and
-Rain cost the FM-1 more than the others: in a heavy piece they can make it thin its sound now and then.
+(soft drops, each a short ring at its own pitch, over a quiet hush; it was called Rain), or **Hail** (deep, heavy
+thuds over a muffled rain). Wind and Surf are dark, their top end soft (the FM-1's speaker is bright). Hail costs the
+FM-1 more than the others: in a heavy piece it can make it thin its sound now and then, and no piece uses it.
 
-Its knobs keep their jobs whatever it is: Density, how busy (on Wind, how often its band turns; on Drops, Hail
-and Rain, how hard it falls); Drift, how quickly it changes (Wind's band, Surf's waves, the showers coming and going);
+Its knobs keep their jobs whatever it is: Density, how busy (on Wind, how often its band turns; on Drops and Hail, how hard it falls); Drift, how quickly it changes (Wind's band, Surf's waves, the showers coming and going);
 Colour, darker or brighter (where Wind's band wanders, the drops' pitch or brightness); Ring, how much it rings (how
 narrow Wind's band, how long each drop); Air, the hiss under it; Width, Reverb and Echo as everywhere.
 
@@ -370,10 +368,10 @@ filter's usable range.
 | 6 | **Sunrain** | Ashra, *New Age of Earth* | D major, 130 | Pulse 8, Glass 7, both repeats at 100 | Strings, Odyssey | Surf | Straight in, no Intros; Sequence 2 and the Atmosphere wander a little wider |
 | 7 | **Mirage** | Schulze, *Mirage* | F♯ minor, 95 | Glass 12 and 11, sparse, in 16ths | Glass + deep phaser, Theremin; a long reverb | Space | A slow opening: the Sequence's Intro 16 bars, Sequence 2's 24; the Atmosphere moves widest |
 | 8 | **Cyborg** | Schulze, *Cyborg* | C Phrygian, 70 | One, quiet (level 20): 2600, 8 steps in 8ths; no Sequence 2 | Organ, deep and beating; Theremin, low and up front (level 70) | None | The Drone's filter moves widely and slowly (Width 50, Time 70) |
-| 9 | **Ryokuu** | after early-summer rain (緑雨, "green rain") (Cranky Man's) | B♭ Dorian, 80 | Jean-Michel Jarre's arps: 2600 an octave down, dark (Cutoff 30); Sequence 2 on Sub two octaves down, open (Cutoff 90) | Strings, darker (Colour −30), the royal road (A♭'s IV△7–V7–iii7–vi7 in B♭ Dorian's notes, looping); Theremin two octaves down, gliding (70): almost singing | Rain (6; Colour 20, Ring 70) | Wahnfried's melody and moves |
+| 9 | **Sakura Rain** | Cranky Man's, after the summers in Japan | B♭ Dorian, 80 | Jean-Michel Jarre's arps: 2600 an octave down, dark (Cutoff 30); Sequence 2 on Sub two octaves down, open (Cutoff 90) | Strings, darker (Colour −30) and quieter (75), the royal road (A♭'s IV△7–V7–iii7–vi7 in B♭ Dorian's notes, looping); Theremin two octaves down, gliding (70): almost singing | None | Wahnfried's melody and moves |
 
 In every piece the Lead's Width is low: it stays gentle. Its **Memory** (the Arc page): Timewind 55, Wahnfried
-40, Phaedra 75, Rubycon 45, Stratosfear 85, Sunrain 60, Mirage 50, Cyborg 35, Ryokuu 40 (Stratosfear's and Phaedra's Leads hold
+40, Phaedra 75, Rubycon 45, Stratosfear 85, Sunrain 60, Mirage 50, Cyborg 35, Sakura Rain 40 (Stratosfear's and Phaedra's Leads hold
 on to their ideas, Cyborg's and Wahnfried's wander). The names are working titles. The keys and tempos are
 starting points from music analysis sites, to be tuned by ear; fast readings such as Phaedra's 149 and
 Rubycon's 144 may be double the felt tempo (they run in eighths, which feel like sixteenths at half the speed).
@@ -621,7 +619,7 @@ must also share its source code.
 - The granular cloud (Freeze) follows the design of CLOUD in [JIANT](https://github.com/juanjiant-bit/JIANT)
   (GPL-3.0), another FM-1 firmware.
 - The Tape atmosphere is DUB-1's crackle, after Bahadirhan Kocer's "Using Resonators in Live".
-- Hail and Rain hear water as many small drops, each in its own band about an octave wide (never broadband clicks,
+- Hail hears water as many small drops, each in its own band about an octave wide (never broadband clicks,
   which are heard as fire), after J. H. McDermott and E. P. Simoncelli, "Sound texture perception via statistics of
   the auditory periphery" (Neuron, 2011); each fitted to a recording the author made, then chosen by ear.
 - Wind's pink noise and its band whose level follows its wandering, Surf's brown noise and Drops' drops follow

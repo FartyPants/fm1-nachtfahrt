@@ -227,7 +227,7 @@ extern volatile uint32_t en_shm_work;            /* (Shimmer) the shifter's samp
 extern volatile float en_shm_ret;                /* (Shimmer) its return's share, 1 (0: the dry's lift alone) */
 int en_state_ok(void);                           /* 1: the plate's and the shifter's state finite (no NaN, Inf) */
 extern volatile uint32_t en_ks_struck;           /* (Pluck) its strings struck so far */
-extern volatile uint8_t en_wn_part;              /* (Hail's and Rain's calibration: 1 the drops alone, 2 the wash
+extern volatile uint8_t en_wn_part;              /* (Hail's calibration: 1 the drops alone, 2 the wash
                                                   * alone, 0 both) */
 extern volatile float en_pl_steal;               /* the loudest a sounding sequence voice was (its last output sample)
                                                   * when taken for a new note, since it was last set to 0 */
@@ -354,8 +354,9 @@ void en_prog_rewalk(void);                     /* the walk's character turned (b
                                                 * the one playing (yours and the gaps kept) */
 enum { EN_WALK_HOME, EN_WALK_WANDER, EN_WALK_FREE, EN_NWALK, EN_PLOOP = 4 };
 extern const char *const EN_WALK_NAME[EN_NWALK];
-#define EN_NNCHAR 9                      /* (BERLIN) the Atmosphere's: None, Wind, Surf, Space, Air, Tape, Drops (was Rain),
-                                          * Hail, Rain (2026-10-30: appended, so every saved one keeps its character) */
+#define EN_NNCHAR 8                      /* (BERLIN) the Atmosphere's: None, Wind, Surf, Space, Air, Tape, Drops (was Rain),
+                                          * Hail (2026-10-30: appended, so every saved one keeps its character; a "Rain"
+                                          * after it was released as 0.9.6 and taken away 2026-10-31: a saved one reads Hail) */
 extern const char *const EN_NCHAR_NAME[EN_NNCHAR];   /* the noise's characters */
 extern volatile int8_t en_chord_slot;          /* the slot whose chord sounds, -1: a chord of the scale */
 int en_deg_of(uint32_t pool, int rel);         /* the scale degree for a note above the root (nearest in the pool) */
@@ -364,6 +365,6 @@ const char *en_chord_label(int root, int kind, int type, char *buf);   /* "Fm7",
 
 /* the pieces: recipes for every parameter (Tune and MIDI out included, but they are the player's) */
 #define EN_NPIECES 9
-/* (2026-10-30: Ryokuu, the ninth piece, the user's: one more save slot of the two the project's sector holds) */
+/* (2026-10-30: Sakura Rain, the ninth piece, the user's: one more save slot of the two the project's sector holds) */
 const char *en_piece_name(int i);
 void en_piece(int i, int16_t *par, uint16_t *pool);

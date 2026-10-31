@@ -39,7 +39,7 @@ The whole idea behind this music generator is that IF you are NOT put to sleep b
   the reverb and the echo; it remembers its motifs and returns to the piece's theme (how much it keeps: **Memory**).
   You can also play it on the white keys, in the scale: three notes or more and a pause become its theme, and its
   next ideas grow out of yours, straying further until they are its own again;
-- an **Atmosphere**: Wind, Surf, Space, Air, Tape, Drops, Hail or Rain (or none);
+- an **Atmosphere**: Wind, Surf, Space, Air, Tape, Drops or Hail (or none);
 - an **arc**: a piece opens from the drone (each layer's filter rising from closed), flows, lets the Lead take
   over and crosses a bridge in the middle, where the layers' filters part and come together. It never ends by
   itself: it repeats for ever;
@@ -70,7 +70,7 @@ runs on the FM-1, installed from the [web installer](https://fartypants.github.i
 | 6 | Sunrain | Ashra, *New Age of Earth* | D major, 130 | The most hopeful: sequences of 8 and 7, both echo repeats at full, bright strings, surf; straight in |
 | 7 | Mirage | Schulze, *Mirage* | F♯ minor, 95 | Icy glass sequences of 12 and 11 opening slowly (16 and 24 bars), a deep phaser, a long reverb, sparse |
 | 8 | Cyborg | Schulze, *Cyborg* | C Phrygian, 70 | Early and raw: deep organ drones beating, a quiet sequence (level 20), no Sequence 2; the theremin Lead up front (level 70); the Drone's filter moves widely |
-| 9 | Ryokuu | after early-summer rain (緑雨, "green rain") | B♭ Dorian, 80 | Based on Japanese Royal Road progression with calm arps (2600 and Sub, low), strings walking the dorian scale, a theremin gliding like a singing voice, summer rain outside. This is made by Cranky Man as a reminder of the summers in Japan |
+| 9 | Sakura Rain | after the summers in Japan | B♭ Dorian, 80 | Based on Japanese Royal Road progression with calm arps (2600 and Sub, low), strings walking the dorian scale, a theremin gliding like a singing voice. This is made by Cranky Man as a reminder of the summers in Japan |
 
 NACHTFAHRT is not connected with any of these artists.
 
