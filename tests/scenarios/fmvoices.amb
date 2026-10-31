@@ -96,5 +96,9 @@ expect par34 7
 shot fm_lead.png
 turn ALGO 1
 wait 300
+said VOICE Choir
+expect par34 8
+turn ALGO 1
+wait 300
 said VOICE Odyssey
 expect par34 0

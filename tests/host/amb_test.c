@@ -1129,7 +1129,8 @@ static void test_fm_lead(void)
                                 P_LDREV, P_LDIN, P_LDENS, P_VIB};
     char t[16];
     int k, i;
-    CHECK(en_param_info(P_LVOICE)->hi == 7, "test_fm_lead_listed: hi %d", en_param_info(P_LVOICE)->hi);
+    CHECK(en_param_info(P_LVOICE)->hi == 8, "test_fm_lead_listed: hi %d (the FM voices 5..7, Choir 8)",
+          en_param_info(P_LVOICE)->hi);
     for (k = 0; k < 3; k++) {
         en_param_text(P_LVOICE, 5 + k, t);
         CHECK(!strcmp(t, LD_FM[k]), "test_fm_lead_listed: lead voice %d %s", 5 + k, t);
@@ -1159,6 +1160,64 @@ static void test_fm_lead(void)
               (double)peak);
     }
     en_play(0);
+}
+
+/* (2026-10-31, the user: "since we already have choir in the drone, would the sound work also as a lead?") the Lead's
+ * ninth voice, Choir (8): two saws a little apart through the Drone's three vowel resonators (Tone the vowel, 'oo' at
+ * its bottom to 'ee' at its top, 'ah' at 50): the Lead alone, a key held: named; finite and bounded; its level evened
+ * across the five vowels (within 2 dB) and about Odyssey's (within 4 dB); Tone moves the formants (the resonators'
+ * gain at 1 kHz, 'oo''s second formant, and at 2.3 kHz, 'ee''s, each 6 dB over the other vowel's) */
+static double choir_lead_run(int voice, int tone, double *g1k, double *g23)
+{
+    static const int OFF[13] = {P_CHORD, P_SEQ, P_SEQ2, P_CRACKLE, P_CLOUD, P_MOTION, P_ECHO, P_REVERB, P_LDECHO,
+                                P_LDREV, P_LDIN, P_LDENS, P_VIB};
+    double e2 = 0;
+    int i, b, j;
+    fresh();
+    for (i = 0; i < 13; i++)
+        en_set(OFF[i], 0);
+    en_set(P_LVOICE, voice), en_set(P_LTONE, tone), en_set(P_LATT, 0);
+    en_play(1);
+    run(0.5f);
+    peak = 0.0f;
+    en_lead_key(0, 1);
+    run(1.5f);
+    for (b = 0; b < (int)(3.0f * 44100.0f / 256.0f); b++) {
+        en_render(buf, 256, 2048);
+        for (j = 0; j < 256; j++) {
+            const double l = (double)buf[2 * j] / 8388608.0;
+            e2 += l * l;
+            if (fabs(l) > (double)peak)
+                peak = (float)fabs(l);
+        }
+    }
+    if (g1k)
+        *g1k = (double)en_lc_gain(1000.0f), *g23 = (double)en_lc_gain(2300.0f);
+    en_lead_key(0, 0);
+    en_play(0);
+    return 10.0 * log10(e2 / (3.0 * 44100.0) + 1e-30);
+}
+static void test_choir_lead(void)
+{
+    static const int TONE[5] = {0, 25, 50, 75, 100};
+    char t[16];
+    double ody, lv[5], g1[5], g2[5], lo = 1e9, hi = -1e9;
+    int k;
+    en_param_text(P_LVOICE, 8, t);
+    CHECK(!strcmp(t, "Choir"), "test_choir_lead_listed: lead voice 8 %s", t);
+    ody = choir_lead_run(0, 50, 0, 0);
+    for (k = 0; k < 5; k++) {
+        lv[k] = choir_lead_run(8, TONE[k], &g1[k], &g2[k]);
+        lo = fmin(lo, lv[k]), hi = fmax(hi, lv[k]);
+        CHECK(!bad && peak > 1e-4f && peak < 4.0f, "test_choir_lead_heard: Tone %d: peak %f, bad %d", TONE[k], (double)peak,
+              bad);
+    }
+    CHECK(hi - lo < 2.0, "test_choir_lead_level: the five vowels span %.1f dB (%.1f .. %.1f)", hi - lo, lo, hi);
+    CHECK(fabs(lv[2] - ody) < 4.0, "test_choir_lead_level: Choir %.1f dB, Odyssey %.1f dB", lv[2], ody);
+    CHECK(20.0 * log10(g1[0] / g1[4]) > 6.0, "test_choir_lead_vowel: the gain at 1 kHz, 'oo' %.3g, 'ee' %.3g", g1[0], g1[4]);
+    CHECK(20.0 * log10(g2[4] / g2[0]) > 6.0, "test_choir_lead_vowel: the gain at 2.3 kHz, 'oo' %.3g, 'ee' %.3g", g2[0], g2[4]);
+    printf("  choir lead: %.1f dB (Odyssey %.1f), the vowels %.1f .. %.1f dB; gain at 1 kHz oo %.2f ee %.2f, at 2.3 kHz oo %.2f ee %.2f\n",
+           lv[2], ody, lo, hi, g1[0], g1[4], g2[0], g2[4]);
 }
 
 /* (the voices batch, item 5) a shake (HOME or a layer's button held) picks a voice from those before the FM voices
@@ -4798,6 +4857,7 @@ int main(void)
     test_fm_lead();
     test_shake_range();
     test_fm_lead_return();
+    test_choir_lead();
 
     /* (BERLIN) the white keys play the Lead: degree d of D Aeolian (from D4 up), rising, in the scale, one at a time,
      * let go with its note-off; the Lead's own phrases wait while a key is held and two bars after */

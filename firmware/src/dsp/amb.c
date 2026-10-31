@@ -228,7 +228,7 @@ const char *const EN_CV_NAME[EN_NCV] = {"Organ", "Strings", "Horn", "Saws", "Gla
                                                  * the voices batch: Horn was Choir, its place kept; the formant Choir
                                                  * appended: pieces and saves sound the same) */
 const char *const EN_BV_NAME[EN_NBV] = {"Odyssey", "Mini", "Flute", "Theremin", "Synthi", "FM Lead", "FM Reed",
-                                        "FM Brass"};   /* (BERLIN: the Lead's) */
+                                        "FM Brass", "Choir"};   /* (BERLIN: the Lead's) */
 const char *const EN_CQ_NAME[EN_NCQ] = {"Empty", "Major", "Minor", "Sus2", "Sus4", "Dim", "Aug"};
 const char *const EN_CX_NAME[EN_NCX] = {"Triad", "6", "7", "Maj7", "9", "11", "Add9"};
 static const char *const ETIME_NAME[6] = {"1/8", "1/8.", "1/4", "1/4.", "1/2", "1 bar"};
@@ -1744,8 +1744,9 @@ static struct {
 /* (the voices batch, item 5) the Lead's FM voices, from BV_FM0: fm.c's recipes; each one's level matched to the mean
  * of the Lead's other five (-0.7 dB under Odyssey), by RMS on the Lead alone (a key held), as the Sequences' are */
 #define BV_FM0 EN_BV_FM
-static const uint8_t BV_FM_REC[EN_NBV - BV_FM0] = {FM_SOFT_LEAD, FM_WOOD_REED, FM_SOFT_BRASS};
-static const float BV_FM_G[EN_NBV - BV_FM0] = {2.66f, 3.02f, 2.99f};
+#define BV_CHOIR 8                               /* (the voice after the three FM voices: the Drone's Choir, a Lead's) */
+static const uint8_t BV_FM_REC[BV_CHOIR - BV_FM0] = {FM_SOFT_LEAD, FM_WOOD_REED, FM_SOFT_BRASS};
+static const float BV_FM_G[BV_CHOIR - BV_FM0] = {2.66f, 3.02f, 2.99f};
 #ifdef EN_HOST
 int en_fm_ok(void)                               /* (host tests, the voices batch, item 5) every FM voice's state sound */
 {
@@ -2958,7 +2959,7 @@ static void lead_note(int n)                     /* the next note: legato (it gl
         return;
     if (!legato && lead.env < 0.05f)
         lead.cur = (float)n;                     /* (from silence: no glide) */
-    if ((unsigned)par[P_LVOICE] < EN_NBV && par[P_LVOICE] >= BV_FM0) {   /* (an FM voice: its recipe from the top;
+    if ((unsigned)par[P_LVOICE] < BV_CHOIR && par[P_LVOICE] >= BV_FM0) {   /* (an FM voice: its recipe from the top;
                                                   * legato, it glides on as it is) */
         if (!legato)
             fm_start(&lead.fm, BV_FM_REC[par[P_LVOICE] - BV_FM0], n);
@@ -5617,6 +5618,68 @@ static void render_drone(uint32_t n)
     }
 }
 
+/* (2026-10-31) the Lead as a choir (the user: "since we already have choir in the drone, would the sound work also as a
+ * lead?"): its two saws a little apart (as Mini's) through the Drone's vowel filter: the tilt, then the three resonators
+ * (CH_F, CH_B: Felucca's table, after Hillenbrand), written for one voice and so one chain; Tone the vowel (its two
+ * octaves either way: 'oo' at the bottom, 'ah' at 50, 'ee' at the top), eased as the Drone's is; its glide and vibrato
+ * the Lead's own, and no Tone filter after (the formants are its colour, as the Flute's and Theremin's sines are) */
+#define LC_G 0.81f                               /* its level, matched to Odyssey (by RMS, the Lead alone) */
+static float lc_s[7], lc_p, lc_g, lc_rc[3][3];
+/* (each vowel's level, evened to 'ah': measured on the Lead alone on one note, in dB re 'ah': oo -0.4, 1 +2.6, ah 0, 3 +4.1,
+ * ee -1.8, as gains: the resonators' peaks are not equally tall, 'ee' was 6 dB over the quietest) */
+static const float LC_VG[5] = {0.955f, 1.349f, 1.0f, 1.603f, 0.813f};
+static uint8_t lc_live;                          /* (0: the vowel from where Tone puts it, not eased from the last) */
+static void lc_set(uint32_t n, float tone)
+{
+    const float want = fm_clampf(2.0f + fm_log2f(fm_maxf(tone, 1e-3f)), 0.0f, 4.0f),
+                ease = fm_minf((float)n * (1.0f / 4410.0f), 1.0f);
+    int f;
+    if (!lc_live) {
+        lc_p = want;
+        lc_live = 1;
+    } else
+        lc_p += (want - lc_p) * ease;
+    {
+        const int v0 = lc_p >= 3.0f ? 3 : (int)lc_p;
+        const float fr = lc_p - (float)v0;
+        lc_g = LC_VG[v0] + fr * (LC_VG[v0 + 1] - LC_VG[v0]);
+        for (f = 0; f < 3; f++) {
+            const float hz = CH_F[v0][f] + fr * (CH_F[v0 + 1][f] - CH_F[v0][f]),
+                        bw = CH_B[v0][f] + fr * (CH_B[v0 + 1][f] - CH_B[v0][f]),
+                        r = fm_expf(-FM_PI * bw * (1.0f / EN_SR));
+            lc_rc[f][1] = 2.0f * r * fm_cosf(FM_TWO_PI * hz * (1.0f / EN_SR));
+            lc_rc[f][2] = -r * r;
+            lc_rc[f][0] = 1.0f - lc_rc[f][1] - lc_rc[f][2];
+        }
+    }
+}
+#ifdef EN_HOST
+float en_lc_probe(void) { return lc_p; }   /* (host tests) the Choir lead's vowel now (0 'oo' .. 4 'ee') */
+float en_lc_gain(float hz)                  /* (host tests) its three resonators' gain at hz, as last set */
+{
+    const float w = FM_TWO_PI * hz * (1.0f / EN_SR), cw = fm_cosf(w), sw = fm_sinf(w), c2 = fm_cosf(2.0f * w),
+                s2 = fm_sinf(2.0f * w);
+    float g = 1.0f;
+    int f;
+    for (f = 0; f < 3; f++) {
+        const float re = 1.0f - lc_rc[f][1] * cw - lc_rc[f][2] * c2, im = lc_rc[f][1] * sw + lc_rc[f][2] * s2;
+        g *= lc_rc[f][0] * fm_rsqrtf(re * re + im * im + 1e-30f);
+    }
+    return g;
+}
+#endif
+static inline float lc_tick(float x)
+{
+    float y;
+    lc_s[0] += CH_TILT * (x - lc_s[0]);
+    y = lc_rc[0][0] * lc_s[0] + lc_rc[0][1] * lc_s[1] + lc_rc[0][2] * lc_s[2];
+    lc_s[2] = lc_s[1], lc_s[1] = y;
+    x = lc_rc[1][0] * y + lc_rc[1][1] * lc_s[3] + lc_rc[1][2] * lc_s[4];
+    lc_s[4] = lc_s[3], lc_s[3] = x;
+    y = lc_rc[2][0] * x + lc_rc[2][1] * lc_s[5] + lc_rc[2][2] * lc_s[6];
+    lc_s[6] = lc_s[5], lc_s[5] = y;
+    return y;
+}
 static void render_lead(uint32_t n)
 {
     const int lv = (unsigned)par[P_LVOICE] < EN_NBV ? par[P_LVOICE] : 0;
@@ -5626,10 +5689,17 @@ static void render_lead(uint32_t n)
     float dt = 0.0f;
     if (!lead.on && lead.env < 1e-5f) {
         en_bass_level = 0.0f;                    /* (the meter, at rest) */
+        if (lc_live) {                           /* (the choir's resonators from silence, its vowel from Tone, at the next note) */
+            memset(lc_s, 0, sizeof lc_s);
+            lc_live = 0;
+        }
         return;
     }
-    if (lv >= BV_FM0 && lead.fm.rec != BV_FM_REC[lv - BV_FM0])   /* (turned onto an FM voice as it sounds: from rest) */
+    if (lv >= BV_FM0 && lv < BV_CHOIR && lead.fm.rec != BV_FM_REC[lv - BV_FM0])   /* (turned onto an FM voice as it sounds:
+                                                  * from rest) */
         fm_start(&lead.fm, BV_FM_REC[lv - BV_FM0], lead.note);
+    if (lv == BV_CHOIR)
+        lc_set(n, tone);
     for (j = 0; j < n; j++) {
         float x, bp, a;
         if (!(j & 15u)) {                        /* the glide, the vibrato, the filter: every 16 */
@@ -5642,7 +5712,7 @@ static void render_lead(uint32_t n)
             if (lead.vph >= 1.0f)
                 lead.vph -= 1.0f;
             lead.fenv *= 0.985f;                 /* (~0.4 s) */
-            if (lv >= BV_FM0)                    /* (an FM voice's envelopes: let go with the Lead) */
+            if (lv >= BV_FM0 && lv < BV_CHOIR)   /* (an FM voice's envelopes: let go with the Lead) */
                 fm_ctrl(&lead.fm, lead.on, 16);
         }
         lead.cur += ((float)lead.note - lead.cur) * ld_gk;
@@ -5652,6 +5722,7 @@ static void render_lead(uint32_t n)
         case 2: x = sine(lead.ph) + 0.08f * lead.env * (frand() - 0.5f); break;
         case 3: x = sine(lead.ph); break;
         case 4: x = blep_saw(lead.ph, dt) - blep_saw(frac1(lead.ph + 0.5f), dt); break;
+        case BV_CHOIR: x = LC_G * lc_g * lc_tick(0.5f * (blep_saw(lead.ph, dt) + blep_saw(lead.ph2, dt * 1.004f))); break;
         default: x = BV_FM_G[lv - BV_FM0] * fm_tick(&lead.fm, dt); break;   /* (the FM voices) */
         }
         lead.ph += dt;
@@ -5663,7 +5734,7 @@ static void render_lead(uint32_t n)
         lead.ph3 += dt * 0.996f;
         if (lead.ph3 >= 1.0f)
             lead.ph3 -= 1.0f;
-        if (lv != 2 && lv != 3) {
+        if (lv != 2 && lv != 3 && lv != BV_CHOIR) {
             x = svf_lp(lead.c1, lead.s1, x, &bp);
             x = svf_lp(lead.c2, lead.s2, x, &bp);
         }
@@ -5675,6 +5746,8 @@ static void render_lead(uint32_t n)
         esend[j] += 0.6f * ld_echo * a;
     }
     en_bass_level = lead.env;
+    for (j = 0; j < 7; j++)                      /* (the choir's states: never into denormals) */
+        lc_s[j] = fm_flush(lc_s[j]);
 }
 
 /* (BERLIN) the arc's Crash: a take-off, noise through a band-pass falling five octaves from ~5 kHz in 4 s, dying in

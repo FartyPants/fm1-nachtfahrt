@@ -225,7 +225,9 @@ phaser sweeps it slowly (**Phaser**). The chord walks from degree to degree ever
 (the Nachtfahrt page), or follows the eight slots of the Chords page.
 
 **The Lead** (LFO; channel 3) is one voice, gliding: **Odyssey**, **Mini**, **Flute**, **Theremin**, **Synthi**, and three FM voices (fm1_open's recipes): **FM Lead**,
-**FM Reed** and **FM Brass**. It plays
+**FM Reed** and **FM Brass**; or **Choir**, the Drone's formant choir as a single voice (two saws a little apart through
+three vowel resonators: **Tone** is its vowel, 'oo' at the bottom, 'ah' in the middle, 'ee' at the top; its glide and vibrato
+make it sing). It plays
 in pairs: a call that ends open, then, a beat or two later, its answer, the same rhythm ending on the chord's root or
 fifth, held longer. It remembers its motifs: it plays one for a few pairs, then keeps it, varies it a little (a note
 moved, a new tail, its first half twice, slower) or finds a new one. How much it keeps is **Memory** (the Arc page):

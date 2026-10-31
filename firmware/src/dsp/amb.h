@@ -178,8 +178,9 @@ void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2);
 /* the voices: each layer's sounds (ALGORITHM on the layer's page) */
 #define EN_NCV 6                         /* (BERLIN) the Drone's voices: Organ, Strings, Horn, Saws, Glass, Choir (no FM
                                           * voices: the user's ear, 2026-10-30) */
-#define EN_NBV 8                         /* (BERLIN) the Lead's voices: Odyssey, Mini, Flute, Theremin, Synthi, then the
-                                          * three FM voices (the voices batch, item 5): FM Lead, FM Reed, FM Brass */
+#define EN_NBV 9                         /* (BERLIN) the Lead's voices: Odyssey, Mini, Flute, Theremin, Synthi, then the
+                                          * three FM voices (the voices batch, item 5): FM Lead, FM Reed, FM Brass, then Choir
+                                          * (2026-10-31: the Drone's formant choir as a voice: Tone is its vowel) */
 #define EN_BV_FM 5                       /* the first of them on its knob (the voices before them: what a shake picks
                                           * from) */
 #define EN_NSV 16                       /* (BERLIN) the Sequence's voices: 2600, Moog, Synthi, Pulse, Glass, Pluck,
@@ -241,6 +242,7 @@ int en_ch_ok(void);                              /* 1: Choir's float state finit
 float en_ch_gain(float hz);                      /* (Choir) its three formants' gain at hz, as last set */
 uint32_t en_rl_wrap(int head);                 /* (host tests) the 44.1 kHz samples a read head plays from its start until it wraps:
                                                   * the loop twice (2 x its samples) for the left, a little less for the right */
+float en_lc_gain(float hz);                     /* (host tests) the Choir lead's resonators' gain at hz, as last set */
 uint32_t en_rl_hash(void);                      /* (host tests) the rain loop decoded whole: an FNV-1a of its samples */
 int en_atm_ok(void);                             /* 1: the Atmosphere's float state finite, no denormals */
 int en_lead_cap(void);

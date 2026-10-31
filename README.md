@@ -35,7 +35,7 @@ The whole idea behind this music generator is that IF you are NOT put to sleep b
 - a **Drone**: a chord on two banks of voices (Organ, Strings, Horn, Saws, Glass, or a Choir whose vowel moves
   with the Drone's filter) with a pedal under it, a
   phaser and a slow walk from chord to chord;
-- a **Lead**: one gliding voice (Odyssey, Mini, Flute, Theremin, Synthi, or three FM voices) playing dreamy calls and answers deep in
+- a **Lead**: one gliding voice (Odyssey, Mini, Flute, Theremin, Synthi, three FM voices, or a Choir) playing dreamy calls and answers deep in
   the reverb and the echo; it remembers its motifs and returns to the piece's theme (how much it keeps: **Memory**).
   You can also play it on the white keys, in the scale: three notes or more and a pause become its theme, and its
   next ideas grow out of yours, straying further until they are its own again;
