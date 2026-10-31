@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BERLIN screen styles</title>
+<style>
+  :root { --bg: #0d0e10; --fg: #d8d9dc; --dim: #8a8d93; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 system-ui, sans-serif; }
+  main { max-width: 1180px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  p.lead { color: var(--dim); margin: 0 0 24px; max-width: 70ch; }
+  .row { display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; }
+  figure { margin: 0; width: 360px; }
+  canvas { width: 360px; height: 360px; image-rendering: pixelated; border-radius: 14px; display: block;
+           box-shadow: 0 0 0 10px #1b1c1f, 0 0 0 11px #2b2d31; }
+  figcaption { margin-top: 18px; }
+  figcaption b { font-size: 17px; }
+  figcaption span { color: var(--dim); display: block; margin-top: 4px; }
+  .note { color: var(--dim); margin-top: 32px; max-width: 80ch; }
+</style>
+</head>
+<body>
+<main>
+  <h1>BERLIN: three directions for the main screen</h1>
+  <p class="lead">Each is the FM-1's 240 × 240 screen at 1.5×, animated as it would play (Timewind, Dm7, the Sequence
+    16 steps against Sequence 2's 15). Same information in all three: the piece, key and tempo; the section; five
+    layer meters with their filter mark; the chord; the two sequences; the Berlin page's knobs.</p>
+  <div class="row">
+    <figure><canvas id="a" width="240" height="240"></canvas>
+      <figcaption><b>A · Phosphor</b><span>A 1970s oscilloscope: green-amber glow on black. Around the chord, a
+        Lissajous figure drawn by the two sequences: 16 against 15 makes it turn slowly and close again when they
+        meet.</span></figcaption></figure>
+    <figure><canvas id="b" width="240" height="240"></canvas>
+      <figcaption><b>B · Modular</b><span>A Moog sequencer panel: warm cream on charcoal, the two sequences as rows
+        of step lamps, the chord in a tube-display face, a slow patch-cable curve for the filter motion.</span>
+      </figcaption></figure>
+    <figure><canvas id="c" width="240" height="240"></canvas>
+      <figcaption><b>C · Cosmic</b><span>Deep space, as the record sleeves: indigo and magenta, a slow starfield,
+        the chord a glowing body, each sequence note a particle orbiting it, its echoes fading trails.</span>
+      </figcaption></figure>
+  </div>
+  <p class="note">Tell me in the terminal which feels like BERLIN, or what to take from each (a mix is fine: e.g. A's
+    Lissajous in C's colours). These are drawn in the browser at full colour; the FM-1 draws in 16-bit colour with a
+    few fonts, so the final look is close but simpler.</p>
+</main>
+<script>
+const SEQ1 = [0,1,1,0,1,1,0,1,1,1,0,1,1,0,1,0], SEQ2 = [1,0,1,1,0,1,0,1,1,0,1,1,0,1,0];
+const W = 240;
+function hdr(g, fg, dim, acc, sec) {
+  g.font = "bold 12px system-ui"; g.fillStyle = fg; g.fillText("Timewind", 8, 15);
+  g.font = "10px system-ui"; g.fillStyle = dim; g.fillText("D Minor", 66, 15); g.fillText("96", 216, 15);
+  g.fillStyle = acc; g.fillText(sec, 8, 30);
+}
+function knobs(g, t, fg, dim, acc, line) {
+  const L = ["FILTER", "EVOLVE", "MOTION", "DRIFT"], V = ["Off", "40", "45", "16 bars"];
+  g.strokeStyle = line; g.beginPath(); g.moveTo(6, 186); g.lineTo(234, 186); g.stroke();
+  for (let i = 0; i < 4; i++) {
+    const x = 30 + i * 60;
+    g.font = "9px system-ui"; g.fillStyle = dim; g.textAlign = "center"; g.fillText(L[i], x, 198);
+    g.strokeStyle = line; g.lineWidth = 3; g.beginPath(); g.arc(x, 214, 8, 0.75 * Math.PI, 2.25 * Math.PI); g.stroke();
+    g.strokeStyle = acc; g.beginPath(); g.arc(x, 214, 8, 0.75 * Math.PI, (0.75 + 1.5 * [0.5, .4, .45, .6][i]) * Math.PI); g.stroke();
+    g.lineWidth = 1; g.fillStyle = fg; g.font = "bold 10px system-ui"; g.fillText(V[i], x, 236);
+  }
+  g.textAlign = "left";
+}
+function meters(g, t, cols, track, x0) {
+  for (let i = 0; i < 5; i++) {
+    const lv = 0.35 + 0.3 * Math.sin(t * (0.6 + i * 0.13) + i), x = x0 + i * 9;
+    g.fillStyle = track; g.fillRect(x, 38, 6, 52);
+    g.fillStyle = cols[i]; g.fillRect(x, 38 + 52 * (1 - lv), 6, 52 * lv);
+    const off = Math.sin(t * 0.17 + i * 1.7) * 10;
+    g.fillRect(x - 1, 64 - off, 8, 1.5);
+  }
+}
+
+/* A · Phosphor */
+(function () {
+  const c = document.getElementById("a"), g = c.getContext("2d");
+  const fg = "#c9ffd9", dim = "#3f8f5c", acc = "#7dffa8", amb = "#ffb347";
+  function frame(ms) {
+    const t = ms / 1000, step = Math.floor(t * 6.4);
+    g.fillStyle = "rgba(4,10,6,0.35)"; g.fillRect(0, 0, W, W);
+    if (!frame.init) { g.fillStyle = "#040a06"; g.fillRect(0, 0, W, W); frame.init = 1; }
+    g.fillStyle = "#040a06"; g.fillRect(0, 0, W, 34); g.fillRect(0, 150, W, 90);
+    hdr(g, fg, dim, amb, "FLOW");
+    /* the Lissajous: x from the Sequence's phase (16), y from Sequence 2's (15) */
+    g.strokeStyle = "rgba(125,255,168,0.85)"; g.lineWidth = 1.2; g.shadowColor = acc; g.shadowBlur = 6;
+    g.beginPath();
+    for (let k = 0; k <= 360; k++) {
+      const u = k / 360 * Math.PI * 2;
+      const x = 120 + 52 * Math.sin(16 * u / 1 + t * 0.21), y = 92 + 44 * Math.sin(15 * u + t * 0.05 + 1.0);
+      k ? g.lineTo(x, y) : g.moveTo(x, y);
+    }
+    g.stroke(); g.shadowBlur = 0;
+    g.fillStyle = "#040a06"; g.fillRect(96, 80, 48, 22);
+    g.font = "bold 18px ui-monospace, monospace"; g.fillStyle = fg; g.textAlign = "center"; g.fillText("Dm7", 120, 97); g.textAlign = "left";
+    meters(g, t, [acc, acc, amb, acc, dim], "#0e2416", 8);
+    /* lanes: dots, each with its own cursor */
+    [SEQ1, SEQ2].forEach((s, l) => {
+      const pos = step % s.length;
+      for (let i = 0; i < s.length; i++) {
+        const x = 30 + i * 12, y = 156 + l * 14;
+        g.fillStyle = i === pos ? amb : s[i] ? dim : "#123020";
+        g.fillRect(x, y, s[i] || i === pos ? 7 : 3, s[i] || i === pos ? 7 : 3);
+      }
+    });
+    knobs(g, t, fg, dim, acc, "#14361f");
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+
+/* B · Modular */
+(function () {
+  const c = document.getElementById("b"), g = c.getContext("2d");
+  const bg = "#1e1c1a", fg = "#efe6d2", dim = "#9b917d", acc = "#e8a33d", red = "#d6573f";
+  function frame(ms) {
+    const t = ms / 1000, step = Math.floor(t * 6.4);
+    g.fillStyle = bg; g.fillRect(0, 0, W, W);
+    hdr(g, fg, dim, acc, "FLOW");
+    /* the patch cable: the filter motion, a slow sag */
+    g.strokeStyle = red; g.lineWidth = 3; g.lineCap = "round";
+    const sag = 18 + 14 * Math.sin(t * 0.3);
+    g.beginPath(); g.moveTo(62, 44); g.bezierCurveTo(100, 44 + sag * 2, 160, 44 + sag * 2, 208, 48); g.stroke();
+    g.fillStyle = "#3a3632"; [[62, 44], [208, 48]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 4, 0, 7); g.fill(); });
+    g.lineWidth = 1;
+    /* the chord, a tube display */
+    g.fillStyle = "#2a1a10"; g.fillRect(84, 74, 72, 34);
+    g.shadowColor = acc; g.shadowBlur = 10; g.fillStyle = "#ffb85c"; g.font = "bold 22px ui-monospace, monospace";
+    g.textAlign = "center"; g.fillText("Dm7", 120, 99); g.textAlign = "left"; g.shadowBlur = 0;
+    meters(g, t, [fg, acc, red, acc, dim], "#33302b", 8);
+    /* step lamps */
+    [SEQ1, SEQ2].forEach((s, l) => {
+      const pos = step % s.length;
+      g.font = "8px system-ui"; g.fillStyle = dim; g.fillText(l ? "SEQ 2" : "SEQ", 8, 129 + l * 22);
+      for (let i = 0; i < s.length; i++) {
+        const x = 44 + i * 12, y = 124 + l * 22, on = i === pos;
+        g.fillStyle = "#2b2824"; g.beginPath(); g.arc(x, y, 4.5, 0, 7); g.fill();
+        if (s[i] || on) {
+          g.shadowColor = on ? red : acc; g.shadowBlur = on ? 8 : 3;
+          g.fillStyle = on ? red : "rgba(232,163,61,0.75)"; g.beginPath(); g.arc(x, y, 3.3, 0, 7); g.fill(); g.shadowBlur = 0;
+        }
+      }
+    });
+    knobs(g, t, fg, dim, acc, "#3b3731");
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+
+/* C · Cosmic */
+(function () {
+  const c = document.getElementById("c"), g = c.getContext("2d");
+  const fg = "#efe7ff", dim = "#8d7fb8", acc = "#ff6ad5", cy = "#7fd8ff";
+  const stars = Array.from({ length: 70 }, (_, i) => [Math.random() * W, Math.random() * 150, Math.random()]);
+  const parts = [];
+  let last = -1;
+  function frame(ms) {
+    const t = ms / 1000, step = Math.floor(t * 6.4);
+    const grd = g.createRadialGradient(120, 90, 4, 120, 90, 170);
+    grd.addColorStop(0, "#2a1450"); grd.addColorStop(1, "#07051a");
+    g.fillStyle = grd; g.fillRect(0, 0, W, W);
+    stars.forEach(s => { s[0] = (s[0] - 0.05 * (0.3 + s[2])) % W; if (s[0] < 0) s[0] += W;
+      g.fillStyle = `rgba(220,210,255,${0.25 + 0.6 * s[2]})`; g.fillRect(s[0], s[1], 1, 1); });
+    hdr(g, fg, dim, acc, "FLOW");
+    if (step !== last) { last = step;
+      if (SEQ1[step % 16]) parts.push({ a: step * 0.39, r: 34, life: 1, col: acc });
+      if (SEQ2[step % 15]) parts.push({ a: step * 0.41 + 3, r: 48, life: 1, col: cy }); }
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const p = parts[i]; p.a += 0.012; p.life -= 0.006;
+      if (p.life <= 0) { parts.splice(i, 1); continue; }
+      for (let k = 0; k < 5; k++) {
+        const a = p.a - k * 0.05, x = 120 + p.r * Math.cos(a), y = 90 + p.r * 0.75 * Math.sin(a);
+        g.globalAlpha = p.life * (1 - k / 5); g.fillStyle = p.col; g.beginPath(); g.arc(x, y, 2.2 - k * 0.3, 0, 7); g.fill();
+      }
+      g.globalAlpha = 1;
+    }
+    const glow = g.createRadialGradient(120, 90, 2, 120, 90, 26);
+    glow.addColorStop(0, "rgba(255,230,255,0.9)"); glow.addColorStop(1, "rgba(255,106,213,0)");
+    g.fillStyle = glow; g.beginPath(); g.arc(120, 90, 26, 0, 7); g.fill();
+    g.font = "bold 17px system-ui"; g.fillStyle = "#1a0b33"; g.textAlign = "center"; g.fillText("Dm7", 120, 96); g.textAlign = "left";
+    meters(g, t, [cy, acc, "#ffd27f", cy, dim], "rgba(255,255,255,0.08)", 8);
+    [SEQ1, SEQ2].forEach((s, l) => {
+      const pos = step % s.length;
+      for (let i = 0; i < s.length; i++) {
+        const x = 32 + i * 12, y = 156 + l * 14;
+        g.fillStyle = i === pos ? fg : s[i] ? (l ? cy : acc) : "rgba(255,255,255,0.12)";
+        g.beginPath(); g.arc(x, y, s[i] || i === pos ? 3 : 1.4, 0, 7); g.fill();
+      }
+    });
+    knobs(g, t, fg, dim, acc, "rgba(255,255,255,0.12)");
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

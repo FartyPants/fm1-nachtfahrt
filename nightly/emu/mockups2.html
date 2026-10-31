@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BERLIN screen styles</title>
+<style>
+  :root { --bg: #0d0e10; --fg: #d8d9dc; --dim: #8a8d93; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 system-ui, sans-serif; }
+  main { max-width: 1180px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  p.lead { color: var(--dim); margin: 0 0 24px; max-width: 70ch; }
+  .row { display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; }
+  figure { margin: 0; width: 360px; }
+  canvas { width: 360px; height: 360px; image-rendering: pixelated; border-radius: 14px; display: block;
+           box-shadow: 0 0 0 10px #1b1c1f, 0 0 0 11px #2b2d31; }
+  figcaption { margin-top: 18px; }
+  figcaption b { font-size: 17px; }
+  figcaption span { color: var(--dim); display: block; margin-top: 4px; }
+  .note { color: var(--dim); margin-top: 32px; max-width: 80ch; }
+</style>
+</head>
+<body>
+<main>
+  <h1>BERLIN: Cosmic, on black</h1>
+  <p class="lead">Direction C on pure black for contrast on the FM-1's small screen: no sky gradient, the stars dimmer
+    so they never compete with the chord and the text. Left: the main screen. Right: the Sequence's sound page with
+    the new filter motion: the Cutoff knob's ring keeps your setting (the pink arc), and a second dot (cyan) shows where
+    the filter actually is now, drifting with the automation.</p>
+  <div class="row">
+    <figure><canvas id="c" width="240" height="240"></canvas>
+      <figcaption><b>Main screen</b><span>The chord a glowing body, sequence notes orbiting it (pink the Sequence,
+        cyan Sequence 2), echoes as fading trails; five meters with their filter marks; the two lanes with their own
+        cursors.</span></figcaption></figure>
+    <figure><canvas id="d" width="240" height="240"></canvas>
+      <figcaption><b>Seq sound page</b><span>Cutoff set at 45 (the arc); the cyan dot wanders darker and brighter
+        around it. "Moving darker, −0.8 oct" under the knob while it moves.</span></figcaption></figure>
+  </div>
+</main>
+<script>
+const SEQ1 = [0,1,1,0,1,1,0,1,1,1,0,1,1,0,1,0], SEQ2 = [1,0,1,1,0,1,0,1,1,0,1,1,0,1,0];
+const W = 240;
+function hdr(g, fg, dim, acc, sec) {
+  g.font = "bold 12px system-ui"; g.fillStyle = fg; g.fillText("Timewind", 8, 15);
+  g.font = "10px system-ui"; g.fillStyle = dim; g.fillText("D Minor", 66, 15); g.fillText("96", 216, 15);
+  g.fillStyle = acc; g.fillText(sec, 8, 30);
+}
+function knobs(g, t, fg, dim, acc, line) {
+  const L = ["FILTER", "EVOLVE", "MOTION", "DRIFT"], V = ["Off", "40", "45", "16 bars"];
+  g.strokeStyle = line; g.beginPath(); g.moveTo(6, 186); g.lineTo(234, 186); g.stroke();
+  for (let i = 0; i < 4; i++) {
+    const x = 30 + i * 60;
+    g.font = "9px system-ui"; g.fillStyle = dim; g.textAlign = "center"; g.fillText(L[i], x, 198);
+    g.strokeStyle = line; g.lineWidth = 3; g.beginPath(); g.arc(x, 214, 8, 0.75 * Math.PI, 2.25 * Math.PI); g.stroke();
+    g.strokeStyle = acc; g.beginPath(); g.arc(x, 214, 8, 0.75 * Math.PI, (0.75 + 1.5 * [0.5, .4, .45, .6][i]) * Math.PI); g.stroke();
+    g.lineWidth = 1; g.fillStyle = fg; g.font = "bold 10px system-ui"; g.fillText(V[i], x, 236);
+  }
+  g.textAlign = "left";
+}
+function meters(g, t, cols, track, x0) {
+  for (let i = 0; i < 5; i++) {
+    const lv = 0.35 + 0.3 * Math.sin(t * (0.6 + i * 0.13) + i), x = x0 + i * 9;
+    g.fillStyle = track; g.fillRect(x, 38, 6, 52);
+    g.fillStyle = cols[i]; g.fillRect(x, 38 + 52 * (1 - lv), 6, 52 * lv);
+    const off = Math.sin(t * 0.17 + i * 1.7) * 10;
+    g.fillRect(x - 1, 64 - off, 8, 1.5);
+  }
+}
+
+/* C · Cosmic */
+(function () {
+  const c = document.getElementById("c"), g = c.getContext("2d");
+  const fg = "#efe7ff", dim = "#8d7fb8", acc = "#ff6ad5", cy = "#7fd8ff";
+  const stars = Array.from({ length: 70 }, (_, i) => [Math.random() * W, Math.random() * 150, Math.random()]);
+  const parts = [];
+  let last = -1;
+  function frame(ms) {
+    const t = ms / 1000, step = Math.floor(t * 6.4);
+    g.fillStyle = "#000"; g.fillRect(0, 0, W, W);
+    stars.forEach(s => { s[0] = (s[0] - 0.05 * (0.3 + s[2])) % W; if (s[0] < 0) s[0] += W;
+      g.fillStyle = `rgba(220,210,255,${0.12 + 0.35 * s[2]})`; g.fillRect(s[0], s[1], 1, 1); });
+    hdr(g, fg, dim, acc, "FLOW");
+    if (step !== last) { last = step;
+      if (SEQ1[step % 16]) parts.push({ a: step * 0.39, r: 34, life: 1, col: acc });
+      if (SEQ2[step % 15]) parts.push({ a: step * 0.41 + 3, r: 48, life: 1, col: cy }); }
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const p = parts[i]; p.a += 0.012; p.life -= 0.006;
+      if (p.life <= 0) { parts.splice(i, 1); continue; }
+      for (let k = 0; k < 5; k++) {
+        const a = p.a - k * 0.05, x = 120 + p.r * Math.cos(a), y = 90 + p.r * 0.75 * Math.sin(a);
+        g.globalAlpha = p.life * (1 - k / 5); g.fillStyle = p.col; g.beginPath(); g.arc(x, y, 2.2 - k * 0.3, 0, 7); g.fill();
+      }
+      g.globalAlpha = 1;
+    }
+    const glow = g.createRadialGradient(120, 90, 2, 120, 90, 26);
+    glow.addColorStop(0, "rgba(255,230,255,0.9)"); glow.addColorStop(1, "rgba(255,106,213,0)");
+    g.fillStyle = glow; g.beginPath(); g.arc(120, 90, 26, 0, 7); g.fill();
+    g.font = "bold 17px system-ui"; g.fillStyle = "#1a0b33"; g.textAlign = "center"; g.fillText("Dm7", 120, 96); g.textAlign = "left";
+    meters(g, t, [cy, acc, "#ffd27f", cy, dim], "#1a1726", 8);
+    [SEQ1, SEQ2].forEach((s, l) => {
+      const pos = step % s.length;
+      for (let i = 0; i < s.length; i++) {
+        const x = 32 + i * 12, y = 156 + l * 14;
+        g.fillStyle = i === pos ? fg : s[i] ? (l ? cy : acc) : "rgba(255,255,255,0.12)";
+        g.beginPath(); g.arc(x, y, s[i] || i === pos ? 3 : 1.4, 0, 7); g.fill();
+      }
+    });
+    knobs(g, t, fg, dim, acc, "#262236");
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+
+/* D · the Sequence's sound page, the filter dot */
+(function () {
+  const c = document.getElementById("d"), g = c.getContext("2d");
+  const fg = "#efe7ff", dim = "#8d7fb8", acc = "#ff6ad5", cy = "#7fd8ff";
+  function frame(ms) {
+    const t = ms / 1000;
+    g.fillStyle = "#000"; g.fillRect(0, 0, W, W);
+    hdr(g, fg, dim, acc, "FLOW");
+    g.font = "bold 13px system-ui"; g.fillStyle = cy; g.textAlign = "right"; g.fillText("SEQ SOUND", 232, 46); g.textAlign = "left";
+    /* the big Cutoff knob */
+    const set = 0.45, off = 0.16 * Math.sin(t * 0.35) + 0.06 * Math.sin(t * 0.9), now = Math.max(0, Math.min(1, set + off));
+    const a0 = 0.75 * Math.PI, span = 1.5 * Math.PI;
+    g.lineWidth = 7; g.lineCap = "round";
+    g.strokeStyle = "#262236"; g.beginPath(); g.arc(120, 104, 46, a0, a0 + span); g.stroke();
+    g.strokeStyle = acc; g.beginPath(); g.arc(120, 104, 46, a0, a0 + span * set); g.stroke();
+    g.lineWidth = 1;
+    const an = a0 + span * now;
+    g.shadowColor = cy; g.shadowBlur = 8; g.fillStyle = cy;
+    g.beginPath(); g.arc(120 + 46 * Math.cos(an), 104 + 46 * Math.sin(an), 5, 0, 7); g.fill(); g.shadowBlur = 0;
+    g.font = "bold 26px system-ui"; g.fillStyle = fg; g.textAlign = "center"; g.fillText("45", 120, 112);
+    g.font = "10px system-ui"; g.fillStyle = dim; g.fillText("CUTOFF", 120, 72);
+    const oct = (off * 5).toFixed(1);
+    g.fillStyle = off < 0 ? cy : acc; g.fillText((off < 0 ? "moving darker, " : "moving brighter, ") + (off > 0 ? "+" : "") + oct + " oct", 120, 168);
+    g.textAlign = "left";
+    /* the page's four knobs */
+    const L = ["CUTOFF", "DECAY", "REVERB", "ECHO"], V = ["45", "35", "50", "50"], F = [set, .35, .5, .5];
+    g.strokeStyle = "#262236"; g.beginPath(); g.moveTo(6, 186); g.lineTo(234, 186); g.stroke();
+    for (let i = 0; i < 4; i++) {
+      const x = 30 + i * 60;
+      g.font = "9px system-ui"; g.fillStyle = dim; g.textAlign = "center"; g.fillText(L[i], x, 198);
+      g.strokeStyle = "#262236"; g.lineWidth = 3; g.beginPath(); g.arc(x, 214, 8, a0, a0 + span); g.stroke();
+      g.strokeStyle = acc; g.beginPath(); g.arc(x, 214, 8, a0, a0 + span * F[i]); g.stroke();
+      if (!i) { g.fillStyle = cy; g.beginPath(); g.arc(x + 8 * Math.cos(an), 214 + 8 * Math.sin(an), 2.2, 0, 7); g.fill(); }
+      g.lineWidth = 1; g.fillStyle = fg; g.font = "bold 10px system-ui"; g.fillText(V[i], x, 236);
+    }
+    g.textAlign = "left";
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
