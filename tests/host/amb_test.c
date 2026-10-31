@@ -1630,8 +1630,9 @@ static void test_atmospheres(void)
         }
     }
     /* (the user, 2026-10-31: "the density has audible effect, the color doesn't") Stereo Rain's Colour a tilt of its top
-     * (a pole at 2.5 kHz): Colour -50 darker, +50 brighter (the first-difference's RMS, a measure of the highs,
-     * rises by 2 dB or more at each step); Density its level */
+     * (a balanced tilt about 1 kHz: the highs up and the lows down, or the other way; first build at 2.5 kHz,
+     * the user: "very little audible difference in either extremes"): the highs (the first difference's energy)
+     * rise by 2.3 dB or more at each step, -50 / 0 / +50; Density its level */
     {
         static const int COL[3] = {-50, 0, 50};
         double hi[3], tot[3];
@@ -1652,8 +1653,8 @@ static void test_atmospheres(void)
         }
         printf("  stereo rain Colour: highs %.1f / %.1f / %.1f dB (-50 / 0 / +50)\n", 10 * log10(hi[0]), 10 * log10(hi[1]),
                10 * log10(hi[2]));
-        CHECK(hi[2] > 1.6 * hi[1] && hi[1] > 1.6 * hi[0], "test_rain_loop_colour: highs %.2g / %.2g / %.2g (-50 / 0 / +50): "
-              "each step should be 2 dB or more", hi[0], hi[1], hi[2]);
+        CHECK(hi[2] > 1.7 * hi[1] && hi[1] > 1.7 * hi[0], "test_rain_loop_colour: highs %.2g / %.2g / %.2g (-50 / 0 / +50): "
+              "each step should be 2.3 dB or more", hi[0], hi[1], hi[2]);
         CHECK(tot[0] > 0.0 && tot[2] > 0.0, "test_rain_loop_colour: silent");
     }
     for (c = 1; c < EN_NNCHAR; c++) {            /* (each character played, stopped, the gate shut) */

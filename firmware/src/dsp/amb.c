@@ -4490,7 +4490,7 @@ static void rain_drop(float col, float ring, float rate)
  * chunk); a prediction from the last four samples and four weights, plus the code's residual; the weights nudged by its
  * sign. The decoder's sum of four 30-bit products is made exact in 32 bits (no 64-bit maths on the device): each
  * product's high bits summed (>>2) and the low two bits' sum added back, then >>11 (== >>13 of the whole). Colour is a
- * tilt of the top about 2.5 kHz (-50 dark, 0 as recorded, +50 bright); Density the level, Drift its swells (as Hail's showers) */
+ * balanced tilt about 1 kHz (-50 dark, 0 as recorded, +50 bright); Density the level, Drift its swells (as Hail's showers) */
 #include "rainloop.c"
 #define RL_NG ((RL_N + 19u) / 20u)               /* its groups of 20 samples */
 #define RL_G 1.75f                               /* its level (as loud as Wind at the same level) */
@@ -4666,10 +4666,13 @@ static void render_atmos(uint32_t n)
     } else if (c == ATM_RAINLOOP) {              /* (Density the level, Drift the swells, as Hail's showers; Colour the
                                                   * low-pass over the 5 kHz of the loop: darker only) */
         bed = RL_G * (1.0f / 32768.0f) * fm_exp2f((atm_gu - 0.5f) * 0.83f) * busy;
-        kt = 2500.0f * (FM_TWO_PI / EN_SR);       /* (Colour a tilt of the top about 2.5 kHz: its gain col^2, 0.25 .. 4, so
-                                                  * -50 dark, 0 as recorded, +50 bright by 12 dB: the first build's
-                                                  * low-pass at 8 kHz x col sat above the loop's 5 kHz and did nothing) */
-        ad = col * col;
+        kt = 1000.0f * (FM_TWO_PI / EN_SR);       /* (Colour a balanced tilt about 1 kHz: the highs x col^1.5, the lows the inverse,
+                                                  * so -50 dark (9 dB each way: 18 between), 0 as recorded, +50
+                                                  * bright. The first low-pass, 8 kHz x col, sat above the loop's 5 kHz and
+                                                  * did nothing; a tilt about 2.5 kHz (the nightly of 2026-10-31) was too
+                                                  * gentle, the rain keeping its energy under 2 kHz) */
+        ad = fm_exp2f(1.5f * fm_clampf(nctl.colour + fo[FO_ATM], -1.0f, 1.0f));   /* (col^1.5: 9 dB each way, 18 between: the
+                                                  * user found 12 too gentle; the exponent is the strength) */
     }
     for (j = 0; j < n; j++) {
         float l = 0.0f, r = 0.0f, bp, xl = 0.0f, xr = 0.0f;
@@ -4820,12 +4823,8 @@ static void render_atmos(uint32_t n)
             const uint32_t rr = seq_rand(&atm_rng);
             xl = (float)(int32_t)(rr << 16) * (1.0f / 2147483648.0f);
             xr = (float)(int32_t)(rr & 0xFFFF0000u) * (1.0f / 2147483648.0f);
-            {
-                const float v0 = bed * rl_read(&rl_h[0], RL_STEP[0]), v1 = bed * rl_read(&rl_h[1], RL_STEP[1]);
-                rl_lp[0] += kt * (v0 - rl_lp[0]);
-                rl_lp[1] += kt * (v1 - rl_lp[1]);
-                l = rl_lp[0] + ad * (v0 - rl_lp[0]), r = rl_lp[1] + ad * (v1 - rl_lp[1]);
-            }
+            l = bed * rl_read(&rl_h[0], RL_STEP[0]);     /* (the tilt is applied below, after the Air hiss: it shapes both) */
+            r = bed * rl_read(&rl_h[1], RL_STEP[1]);
             break;
         }
         default:                                 /* Air: what a low-pass leaves, breathing with the gusts */
@@ -4845,6 +4844,12 @@ static void render_atmos(uint32_t n)
                         hr = c == ATM_WIND || c == ATM_RAIN || c >= ATM_WINDOW ? xr : atm_noise();
             atm_hl += 0.35f * (hl - atm_hl), atm_hr += 0.35f * (hr - atm_hr);
             l += 0.12f * air * (hl - atm_hl), r += 0.12f * air * (hr - atm_hr);
+        }
+        if (c == ATM_RAINLOOP) {                 /* (Stereo Rain's Colour, over the rain and the hiss under it) */
+            const float l0 = l, r0 = r;
+            rl_lp[0] += kt * (l0 - rl_lp[0]);
+            rl_lp[1] += kt * (r0 - rl_lp[1]);
+            l = rl_lp[0] / ad + ad * (l0 - rl_lp[0]), r = rl_lp[1] / ad + ad * (r0 - rl_lp[1]);
         }
         {                                        /* Width: 0 one, 50 as it is, 100 wider */
             const float m = 0.5f * (l + r), sd = 0.5f * (l - r) * wid;
