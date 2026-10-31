@@ -70,7 +70,7 @@ runs on the FM-1, installed from the [web installer](https://fartypants.github.i
 | 6 | Sunrain | Ashra, *New Age of Earth* | D major, 130 | The most hopeful: sequences of 8 and 7, both echo repeats at full, bright strings, surf; straight in |
 | 7 | Mirage | Schulze, *Mirage* | F♯ minor, 95 | Icy glass sequences of 12 and 11 opening slowly (16 and 24 bars), a deep phaser, a long reverb, sparse |
 | 8 | Cyborg | Schulze, *Cyborg* | C Phrygian, 70 | Early and raw: deep organ drones beating, a quiet sequence (level 20), no Sequence 2; the theremin Lead up front (level 70); the Drone's filter moves widely |
-| 9 | Sakura Rain | after the spring in Japan | B♭ Dorian, 80 | Calm arpeggios from the 2600 and Sub, strings that wander through the Dorian scale and Japanese Royal Road progression. A low pitched theremin glides above it all, singing like a human voice. Made by Cranky Man as a reminder of the springs he spent in Osaka |
+| 9 | Sakura Rain | After the spring in Japan | B♭ Dorian, 80 | Calm arpeggios from the 2600 and Sub, strings that wander through the Dorian scale and Japanese Royal Road progression. A low pitched theremin glides above it all, singing like a human voice. Made by Cranky Man as a reminder of the springs he spent in Osaka |
 
 NACHTFAHRT is not connected with any of these artists.
 
