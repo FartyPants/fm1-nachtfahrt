@@ -1,5 +1,5 @@
-# the scale: on the Key page's knobs (Root, Mode: once a song, the user), not the keys (they play the Lead); MIDI in
-# still edits it (a note in or out, the root stays, three notes at least)
+# the scale: on the Key page's knobs (Root, Mode: once a song, the user), not the keys (they play the Lead), nor MIDI
+# in (it plays the Lead too)
 wait 300
 # the first piece (Timewind) is in D Aeolian; its root to C (HOME on the Berlin page, the Key page: KNOB 2, down to
 # its lowest)
@@ -31,16 +31,12 @@ shot d_aeolian.png
 spin K3 4
 expect par20 7
 expect pool 0x4A9
-# MIDI in, channel 1: D pent min (D F G A C); F (note 53) out, G (55) out, A (57) would leave two: stays
+# MIDI in plays the Lead (any channel) and leaves the scale be: D pent min (D F G A C) stays, notes sent or not
 midi 90 35 64
 midi 90 37 64
 wait 20
-expect pool 0x481
-midi 90 39 64
+expect pool 0x4A9
+midi 80 35 0
+midi 80 37 0
 wait 20
-expect pool 0x481
-# G back in
-midi 90 37 64
-wait 20
-expect pool 0x4A1
-expect dirty 1
+expect pool 0x4A9

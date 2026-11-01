@@ -1,0 +1,23 @@
+# MIDI in plays the Lead (the user, 2026-11-01): a note on any channel sounds on the Lead's channel 3 at the nearest note
+# of the scale (the lower of two as near), the Lead's octave 0 as the keys' (the MIDI bytes are hex). The first piece,
+# Timewind, is D Aeolian (D E F G A Bb C): F4 (65, 0x41) is in the scale and sounds as played; F#4 (66, 0x42), between
+# F and G, sounds the lower, F; A4 (69, 0x45) on channel 5 with velocity 0x5A the same; a note on with velocity 0 is a
+# note off; the scale is never changed (1453)
+wait 500
+expect pool 1453
+midi 90 41 64
+wait 300
+expect lastnote_ch3 65
+midi 80 41 00
+wait 200
+midi 90 42 64
+wait 300
+expect lastnote_ch3 65
+midi 80 42 00
+wait 200
+midi 94 45 5A
+wait 300
+expect lastnote_ch3 69
+midi 94 45 00
+wait 200
+expect pool 1453

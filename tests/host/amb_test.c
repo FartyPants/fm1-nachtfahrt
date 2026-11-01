@@ -1343,6 +1343,32 @@ static void test_piano_lead(void)
         CHECK(!bad && pk > 0.01f && pk < 4.0f, "test_piano_poly: six notes, peak %f, bad %d, %d samples", (double)pk, bad, k);
         en_play(0);
     }
+    /* (the arps' Piano steals voices) a sequence rings 3 Piano notes at most, the oldest let go in ~40 ms when a fourth
+     * comes: 16ths at 200, Decay 100, both sequences; never over 3 a sequence, 3 reached (the stealing is used) */
+    {
+        static const int8_t RUN[16] = {0, 2, 4, 7, 9, 7, 4, 2, 0, 4, 7, 11, 7, 4, 2, 0};
+        int b, mx0 = 0, mx1 = 0;
+        ks_solo(16, 0, 0, 0, 100);
+        seq_write(16, 0xFFFFu, RUN);
+        en_set(P_TEMPO, 200), en_set(P_SEQ2, 80), en_set(P_S2VOICE, 17);
+        {
+            seq_t s;
+            memset(&s, 0, sizeof s);
+            s.len = s.base_len = 16;
+            s.gate = 0xFFFFu;
+            s.acc = 1u;
+            for (b = 0; b < 16; b++)
+                s.deg[b] = RUN[b];
+            en_seq_set(1, &s);
+        }
+        for (b = 0; b < (int)(6.0f * 44100.0f / 256.0f); b++) {
+            en_render(buf, 256, 2048);
+            mx0 = en_pn_act(0) > mx0 ? en_pn_act(0) : mx0;
+            mx1 = en_pn_act(1) > mx1 ? en_pn_act(1) : mx1;
+        }
+        CHECK(mx0 == 3 && mx1 == 3, "test_piano_steal: at most %d (Sequence) and %d (Sequence 2) notes ringing, 3 expected", mx0, mx1);
+        en_play(0);
+    }
     printf("  piano: notes %d and %d, peak %.3f, 1 s on %.3f\n", n0, n1, (double)early, (double)mid);
 }
 
@@ -1844,13 +1870,37 @@ static void test_atmospheres(void)
               "each step should be 2.3 dB or more", hi[0], hi[1], hi[2]);
         CHECK(tot[0] > 0.0 && tot[2] > 0.0, "test_rain_loop_colour: silent");
     }
-    /* (2026-11-01, the user: "another ambience like the rain, with the stereo trick": the water at Umeda, their recording, 3.24 s,
-     * 22.05 kHz, SEA5: 50 KB) Water: Rain's two read heads on its own loop: the decoder gives fm1_open's samples exactly (the
-     * loop's checksum), the heads wrap as the Rain's do (the left after the loop twice, the right sooner), the sides
-     * nearly uncorrelated, finite and bounded, as loud as Wind at the same level (within 3 dB) */
-    CHECK(en_wl_hash() == 0xdac0875eu, "test_water_decode: the loop's checksum %08x (fm1_open's decoder: dac0875e)",
-          (unsigned)en_wl_hash());
+    /* (2026-11-01, the user: "another ambience like the rain, with the stereo trick": the water at Umeda, their recording, 3.24 s)
+     * Water: filtered noise fitted to its spectrum (the recording is steady Gaussian noise: "the cheap version is as good as the
+     * original"): the sides nearly uncorrelated, finite and bounded, as loud as Wind at the same level (within 3 dB), and the
+     * recording's shape: its level per third octave at 400 Hz, 1.6 kHz and 6.4 kHz against 50 Hz within 4 dB of the
+     * recording's (-6.3, +1.6, -8.9 dB, measured on the 44.1 kHz file) */
     at_solo(-1, 9, 25, 1);
+    {
+        static const double F[4] = {50.0, 400.0, 1600.0, 6400.0}, WANT[4] = {0.0, -6.3, 1.6, -8.9};
+        double lev[4];
+        int k, i;
+        run(1.0f);
+        for (k = 0; k < 4; k++) {
+            lev[k] = 0;
+        }
+        {
+            int n = 0, b, j;
+            for (b = 0; b < (int)(4.0f * 44100.0f / 256.0f) && n + 256 <= (int)(sizeof pn_out / sizeof pn_out[0]); b++) {
+                en_render(buf, 256, 2048);
+                for (j = 0; j < 256; j++)
+                    pn_out[n++] = (float)buf[2 * j] / 8388608.0f;
+            }
+        }
+        for (k = 0; k < 4; k++)                  /* (24 probes over the third octave, each x its frequency: the energy per log step) */
+            for (i = 0; i < 24; i++)
+                lev[k] += pn_gz(8192, 16384, F[k] * pow(2.0, (i - 11.5) / 72.0)) * F[k];
+        for (k = 1; k < 4; k++) {
+            const double d = 10.0 * log10(lev[k] / lev[0]);
+            CHECK(fabs(d - WANT[k]) < 4.0, "test_water_shape: %.0f Hz is %+.1f dB against 50 Hz (the recording's %+.1f)", F[k], d,
+                  WANT[k]);
+        }
+    }
     {
         int b, j;
         double sl = 0, sr = 0, sll = 0, srr = 0, slr = 0;

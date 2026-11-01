@@ -267,7 +267,7 @@ band, swept slowly, louder as it climbs: gusts), **Surf** (waves of dark, deep n
 **Space** (chirps and bursts, far away), **Air**, **Tape** (a crackle ringing on the chord, DUB-1's), **Drops**
 (soft drops, each a short ring at its own pitch, over a quiet hush; it was called Rain), **Hail** (deep, heavy
 thuds over a muffled rain), or **Stereo Rain** (a recording of rain, 4.5 seconds looped by two readers, the right one a little
-faster and starting half a loop on, so the two ears hear different rain and the loop is hard to notice), or **Water** (the same, for a recording of the water at Umeda, 3.2 seconds). Wind and Surf are dark, their top end soft (the FM-1's speaker is bright). Hail costs the
+faster and starting half a loop on, so the two ears hear different rain and the loop is hard to notice), or **Water** (the water at Umeda: noise shaped to the spectrum of the author's recording of it, so it never repeats; Colour and Density as the rain's). Wind and Surf are dark, their top end soft (the FM-1's speaker is bright). Hail costs the
 FM-1 more than the others: in a heavy piece it can make it thin its sound now and then, and no piece uses it.
 
 Its knobs keep their jobs whatever it is: Density, how busy (on Wind, how often its band turns; on Drops and Hail, how hard it falls; on Rain, its level); Drift, how quickly it changes (Wind's band, Surf's waves, the showers coming and going);
@@ -526,8 +526,11 @@ MIDI comes in over USB and the TRS jack, and goes out over USB.
   Sequence 2 on 4, and, on its own tempo, clock with start and stop.
 - **In, clock:** the sequences follow MIDI clock, and start, continue and stop start, continue and stop
   the music. The screen shows EXT for the tempo; when the clock stops, NACHTFAHRT goes back to its own.
-- **In, channel 1:** a note adds or removes its note from the scale ("ADDED", "REMOVED"; the root stays,
-  three notes at least). The keys no longer do this; they play the Lead.
+- **In, notes (any channel):** they play the **Lead**, as the white keys do: each note sounds as the nearest note of the
+  scale (the lower of two as near), one at a time, the last one held sounding; the Lead's Octave shifts it as it shifts the
+  keys'. A figure you play is taken as the Lead's theme, as the keys' is: it answers, and its variations follow. The Lead
+  must be on, not muted. Velocity and the other messages are ignored. (Earlier versions, as DUB-1's, added or removed the
+  note from the scale: the scale is the Key page's now.)
 
 ### Screen reader
 
@@ -627,7 +630,7 @@ must also share its source code.
 - The Tape atmosphere is DUB-1's crackle, after Bahadirhan Kocer's "Using Resonators in Live".
 - Stereo Rain plays the author's own recording of rain, low-passed at 5 kHz and stored in the SEA format (5.7 bits a sample, 70 KB), as in M-VAVE's [fm1_open](https://github.com/m-vave/fm1_open), after SEA by Dani Biró
   ([Daninet/sea-codec](https://github.com/Daninet/sea-codec), MIT; the decoder written again here).
-- Water is the same, for the author's own recording of the water at Umeda (22.05 kHz mono, 3.2 s, SEA, 50 KB).
+- Water is noise, not a sample: the author's recording of the water at Umeda was steady Gaussian noise, so three small filters (a low-pass at 95 Hz, band-passes at 169 Hz and 1.2 kHz, then a low-pass at 2 kHz) shape white noise to its spectrum (within about 1 dB), a side each.
 - The Piano is three notes (C3, C5, C6) of the Kawai grand piano of the Virtual Community Sample Library (Versilian Studios, CC0), as in [Felucca](https://github.com/hugelton/Felucca), shortened, normalised and stored in the SEA format as above (113 KB).
 - Hail hears water as many small drops, each in its own band about an octave wide (never broadband clicks,
   which are heard as fire), after J. H. McDermott and E. P. Simoncelli, "Sound texture perception via statistics of

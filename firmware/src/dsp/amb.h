@@ -204,6 +204,7 @@ extern volatile uint16_t en_seq_lane[5], en_seq_acc[2];   /* the Pattern page's 
 void en_lead_key(int degree, int on);           /* the white keys: the Lead plays scale degree `degree` (0: the
                                                  * root) from the root up, in its register; on 0 lets it go */
 extern volatile int8_t en_lead_deg;             /* the degree the Lead sounds (played or its own): -1 none */
+void en_lead_midi(int note, int on);             /* MIDI in plays the Lead: a note on or off, to the scale's nearest note */
 void en_lead_forget(void);                      /* (PERFORM's top key) the Lead forgets all it remembers:
                                                  * its ideas and its theme (the keys' too), a figure on the keys,
                                                  * an answer due, the offspring; its note let go (not a key's); new
@@ -235,6 +236,7 @@ extern volatile uint8_t en_wn_part;              /* (Hail's calibration: 1 the d
 extern volatile float en_pl_steal;               /* the loudest a sounding sequence voice was (its last output sample)
                                                   * when taken for a new note, since it was last set to 0 */
 int en_ks_ok(void);                              /* 1: Pluck's strings' float state finite, no denormals */
+int en_pn_act(int l);                            /* (host tests) a sequence's Piano notes ringing and not stolen */
 int en_pl_on(void);                              /* the sequences' voices sounding now (of the six) */
 int en_fm_ok(void);                              /* (the voices batch, item 5) 1: every FM voice's state (the sequences',
                                                   * the Lead's) finite, no denormals */
@@ -246,7 +248,6 @@ uint32_t en_rl_wrap(int head);                 /* (host tests) the 44.1 kHz samp
                                                   * the loop twice (2 x its samples) for the left, a little less for the right */
 float en_lc_gain(float hz);                     /* (host tests) the Choir lead's resonators' gain at hz, as last set */
 uint32_t en_rl_hash(void);                      /* (host tests) the rain loop decoded whole: an FNV-1a of its samples */
-uint32_t en_wl_hash(void);                      /* (host tests) the water loop decoded whole, the same */
 int en_atm_ok(void);                             /* 1: the Atmosphere's float state finite, no denormals */
 int en_lead_cap(void);
 int en_lead_theme(int8_t *off, uint8_t *dur);
@@ -366,8 +367,7 @@ extern const char *const EN_WALK_NAME[EN_NWALK];
                                           * Hail (2026-10-30: appended, so every saved one keeps its character), Rain
                                           * (2026-10-31: the author's recording of rain, a loop of SEA5 in rainloop.c; the
                                           * heavy synthesised "Rain" of 0.9.6 to 0.9.8 had this place, taken away), Water
-                                          * (2026-11-01: the author's recording of the water at Umeda, waterloop.c: the same two
-                                          * read heads) */
+                                          * (2026-11-01: the water at Umeda, as filtered noise fitted to the author's recording) */
 extern const char *const EN_NCHAR_NAME[EN_NNCHAR];   /* the noise's characters */
 extern volatile int8_t en_chord_slot;          /* the slot whose chord sounds, -1: a chord of the scale */
 int en_deg_of(uint32_t pool, int rel);         /* the scale degree for a note above the root (nearest in the pool) */

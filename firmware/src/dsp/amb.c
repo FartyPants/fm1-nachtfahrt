@@ -206,7 +206,9 @@ static const int16_t PC_UMEDA[] = {           /* (2026-10-31) the tenth piece, t
                                                 * plazas of Umeda; F sharp major pentatonic at 50 (a sixteenth 0.3 s: the
                                                 * motive's own grid), a quiet Organ pad on the home chord, the Piano on
                                                 * both sequences (sparse, low) and the Lead, the Lead's theme the user's
-                                                * second motive (ld_seed), Stereo Rain under it */
+                                                * second motive (ld_seed); no Atmosphere (the user: "I prefer the Umeda
+                                                * with None atmosphere": the Rain, then, took about 8 points of
+                                                * the FM-1's load, 72 to 80) */
     P_TEMPO, 50, P_ROOT, 6, P_MODE, MODE_PENT_MAJ,
     P_SEQ, 25, P_SVOICE, 16, P_DENSITY, 20, P_SEQOCT, -1, P_MI1, 8,   /* (the user, in the browser: the Piano on both
                                                   * sequences; Sequence: Volume 25, Density 20, octave -1, Intro 8) */
@@ -214,9 +216,8 @@ static const int16_t PC_UMEDA[] = {           /* (2026-10-31) the tenth piece, t
                                                   * Decay 70) */
     P_CHORD, 45, P_CVOICE, 0, P_PEDAL, 85, P_DRIFT, 1, P_PMODE, EN_WALK_HOME,   /* (the user: "the drone sounds better with
                                                   * Organ"; Drift 4 bars; by ear in the browser, "the current good volumes":
-                                                  * Drone 45, Atmosphere 15, then 10) */
+                                                  * Drone 45) */
     P_LEAD, 70, P_LVOICE, 9, P_GLIDE, 0, P_LDENS, 50, P_LDIN, 2,   /* (the user: no glide, a piano's notes struck) */
-    P_NCHAR, 8, P_CRACKLE, 10,                   /* (the Rain at 10, the user's: 20, then 15, then 10) */
     P_REVERB, 60,
     P_ARC, 15, P_MOTION, 30, P_LMEM, 60, -1};
 static const struct {
@@ -494,7 +495,7 @@ const char *en_chord_name(const int *pcs, int n, char *buf)
 }
 
 /* ------------------------------------------------------------ commands --- */
-enum { C_SET, C_POOL, C_PLAY, C_NEXT, C_FREEZE, C_SEED, C_PANIC, C_CLOCK, C_REGROW, C_MUTE, C_PERF, C_FX, C_SEQ, C_MACRO, C_PROT, C_REWALK, C_LOCK, C_SEQSET, C_LKEY, C_MOVE, C_LFORGET, C_THEME };
+enum { C_SET, C_POOL, C_PLAY, C_NEXT, C_FREEZE, C_SEED, C_PANIC, C_CLOCK, C_REGROW, C_MUTE, C_PERF, C_FX, C_SEQ, C_MACRO, C_PROT, C_REWALK, C_LOCK, C_SEQSET, C_LKEY, C_MOVE, C_LFORGET, C_THEME, C_LMIDI };
 #define QN 512u                                 /* (a piece is every parameter at once: room for twice over and more) */
 _Static_assert(QN >= 2u * (P_NPARAMS + 8), "the command queue can't hold a piece's parameters twice over");
 static uint32_t q[QN];
@@ -1391,10 +1392,12 @@ typedef struct {
                                                   * gain (the velocity's, from the line's units) */
     fm_v fm;                                     /* (the voices batch, item 5) an FM voice's note (fm.c) */
     rl_head_t pn;                                /* (the Piano: its note's read head, its step (Q12) and the samples left) */
-    uint32_t pn_step;
+    uint32_t pn_step, pn_age;
     int32_t pn_left;
+    uint8_t pn_fade;                             /* (the Piano: a voice stolen, dying away in ~40 ms) */
 } pluck_t;
 static pluck_t pluck[NPLUCK];
+#define PN_SEQ_ACT 3                             /* (the Piano on a sequence: notes ringing at once, per sequence) */
 static void pn_seq_start(pluck_t *v, int note);  /* (the Piano as a Sequence's voice: its note struck; a sample's worth each
                                                   * tick, rendered) */
 static float pn_seq_tick(pluck_t *v);
@@ -1506,6 +1509,13 @@ int en_ks_ok(void)                               /* (host tests) the strings' fl
     }
     return ok;
 }
+int en_pn_act(int l)                             /* (host tests) a sequence's Piano notes ringing, not stolen */
+{
+    int i, n = 0;
+    for (i = 0; i < NPLUCK; i++)
+        n += pluck[i].on && pluck[i].voice == SV_PIANO && pluck[i].layer == l && !pluck[i].pn_fade;
+    return n;
+}
 int en_pl_on(void)                               /* (host tests) the sequence voices sounding */
 {
     int i, n = 0;
@@ -1566,6 +1576,28 @@ static void pluck_voice(int l, int n, int vel, int rep)   /* rep: a repeat, pann
         if (a < lo)
             lo = a, best = i;
     }
+    if (sv_of(l, par[l ? P_S2VOICE : P_SVOICE]) == SV_PIANO) {   /* (the Piano rings on: a layer's PN_SEQ_ACT notes at most, the
+                                                  * oldest over that let go in ~40 ms; the user: "set the arps to steal
+                                                  * voices", the load went from 72 to 80 with many ringing) */
+        int act = 0, old = -1;
+        for (i = 0; i < NPLUCK; i++)
+            if (pluck[i].on && pluck[i].voice == SV_PIANO && pluck[i].layer == l && !pluck[i].pn_fade) {
+                act++;
+                if (old < 0 || pluck[i].pn_age < pluck[old].pn_age)
+                    old = i;
+            }
+        if (act >= PN_SEQ_ACT && old >= 0) {
+            pluck[old].pn_fade = 1;
+            pluck[old].adec = 0.9994f;           /* (-60 dB over ~1800 samples: render_plucks ends it at -62 dB) */
+        }
+        best = 0, lo = 9.0f;                     /* (the slot: a free one, else the quietest, as before: the dying ones
+                                                  * count as quiet) */
+        for (i = 0; i < NPLUCK; i++) {
+            float a = pluck[i].on ? pluck[i].amp * (pluck[i].pn_fade ? 0.01f : 1.0f) : -1.0f;
+            if (a < lo)
+                lo = a, best = i;
+        }
+    }
     v = &pluck[best];
     if (v->on) {
         midi(v->layer ? 0x83u : 0x81u, v->note, 0);
@@ -1584,8 +1616,12 @@ static void pluck_voice(int l, int n, int vel, int rep)   /* rep: a repeat, pann
     v->ph = v->ph2 = 0.0f;
     if (v->voice >= SV_FM0 && v->voice < SV_PIANO)   /* (an FM voice: its recipe from the top, at this note) */
         fm_start(&v->fm, SV_FM_REC[v->voice - SV_FM0], n);
-    else if (v->voice == SV_PIANO)
+    else if (v->voice == SV_PIANO) {
+        static uint32_t pl_age;
         pn_seq_start(v, n);
+        v->pn_age = ++pl_age;
+        v->pn_fade = 0;
+    }
     v->amp = (float)vel * (1.0f / 127.0f);
     v->att = 0.0f;
     v->env = 1.0f;
@@ -1967,6 +2003,7 @@ static void lead_off(void)                       /* the note let go */
     en_lead_deg = -1;
 }
 void en_lead_key(int d, int on) { post(C_LKEY, d, on); }
+void en_lead_midi(int note, int on) { post(C_LMIDI, note, on); }
 void en_lead_forget(void) { post(C_LFORGET, 0, 0); }
 
 static int ld_deg_raw(int d)                     /* scale degree d (any) as a note, in the Lead's register */
@@ -3045,6 +3082,29 @@ static void lead_note(int n)                     /* the next note: legato (it gl
     midi(0x92, (uint32_t)n, 90);
 }
 
+/* a key down on the Lead (id: the key, a white key's step or a MIDI note; d: its scale degree) and let go: the Lead's own
+ * phrase let go, the key's note played (legato over one held), written on the figure; the key let go, its quiet's two
+ * bars before its own phrases are back */
+static void lead_press(int id, int d)
+{
+    const int held = ld_key >= 0;
+    ld_n = 0;                                    /* (its own phrase let go, its pair too; the keys' answer too) */
+    ld_due = 0;
+    ld_cap &= (uint8_t)~(CP_ANS | CP_NEXT);
+    ld_key = (int8_t)id;
+    lead_note(ld_deg_note(d));
+    en_lead_deg = lead.on && d >= 0 && d < 16 ? (int8_t)d : -1;   /* (the key's light: the white keys' steps) */
+    cp_key(d, held);                             /* (written down once it sounds: the keys play as they did) */
+}
+static void lead_release(int id)
+{
+    if (id == ld_key) {
+        ld_key = -1;
+        lead_off();
+        ld_rest = 2;                             /* (its own phrases back after two bars) */
+        cp_off();
+    }
+}
 static void lead_tick(void)                      /* a sixteenth: the phrase goes on, or the breath */
 {
     int planned = 0;
@@ -4127,21 +4187,29 @@ static void drain(void)
             break;
         case C_PANIC: quiet(); break;
         case C_LKEY:                             /* (the white keys: the Lead, in the scale) */
+            if (b)
+                lead_press(a, a);
+            else
+                lead_release(a);
+            break;
+        case C_LMIDI:                            /* (MIDI in: the Lead, in the scale: a note on any channel to the nearest
+                                                  * note of the scale (the lower on a tie), the Lead's octave shifting it as
+                                                  * it shifts the keys'; one at a time, as the keys: the last one held
+                                                  * sounds, its release lets go; the figure played is taken as a theme,
+                                                  * as the keys') */
             if (b) {
-                const int held = ld_key >= 0;
-                ld_n = 0;                        /* (its own phrase let go, its pair too; the keys' answer too) */
-                ld_due = 0;
-                ld_cap &= (uint8_t)~(CP_ANS | CP_NEXT);
-                ld_key = (int8_t)a;
-                lead_note(ld_deg_note(a));
-                en_lead_deg = lead.on ? (int8_t)a : -1;
-                cp_key(a, held);                 /* (written down once it sounds: the keys play as they did) */
-            } else if (a == ld_key) {
-                ld_key = -1;
-                lead_off();
-                ld_rest = 2;                     /* (its own phrases back after two bars) */
-                cp_off();
-            }
+                const int ns = nsteps ? nsteps : 7, rt = 60 + par[P_ROOT] % 12, rel = a - rt,
+                          oc = rel >= 0 ? rel / 12 : -((11 - rel) / 12), pc = rel - 12 * oc;
+                int k, s, bd = 99, bt = 0, bk = 0, bs = 0;
+                for (s = -1; s <= 1; s++)
+                    for (k = 0; k < ns; k++) {
+                        const int t = (nsteps ? steps[k] : 2 * k) + 12 * s, dist = pc > t ? pc - t : t - pc;
+                        if (dist < bd || (dist == bd && t < bt))
+                            bd = dist, bt = t, bk = k, bs = s;
+                    }
+                lead_press(a, (oc + bs) * ns + bk);
+            } else
+                lead_release(a);
             break;
         case C_SEQSET:                           /* a pattern written: played as written, from its first step */
             sq[a & 1] = sq_pend[a & 1];
@@ -4570,12 +4638,38 @@ static void rain_drop(float col, float ring, float rate)
  * product's high bits summed (>>2) and the low two bits' sum added back, then >>11 (== >>13 of the whole). Colour is a
  * balanced tilt about 1 kHz (-50 dark, 0 as recorded, +50 bright); Density the level, Drift its swells (as Hail's showers) */
 #include "rainloop.c"
-#include "waterloop.c"                      /* (the Water: its loop, the Rain's quantiser table) */
 #define RL_NG ((RL_N + 19u) / 20u)               /* its groups of 20 samples */
 #define RL_G 1.75f                               /* its level (as loud as Wind at the same level) */
-static rl_head_t rl_h[2], wl_h[2];              /* (the Rain's heads, the Water's) */
+static rl_head_t rl_h[2];
 static float rl_lp[2];
-#define WL_G 1.75f                               /* the Water's level (its own; set against Wind at the same level) */
+/* (2026-11-01) Water: the user's recording of the water at Umeda (3.2 s, mono) turned out to be steady Gaussian noise
+ * (kurtosis 3.06; its level wanders 0.2 dB over 0.25 s), so, "the cheap version is as good as the original" (the user,
+ * comparing the two), no loop: white noise through the recording's spectrum, a side each (independent, so wide as the
+ * Rain's two heads were). The spectrum fitted (tools/water_fit.py's numbers, 1.05 dB rms over 40 Hz .. 14 kHz; the
+ * 1/3-octave levels within 2 dB): three parallel biquads (a low-pass at 95 Hz, a band-pass at 169 Hz, a band-pass at
+ * 1.2 kHz; transposed direct form II) summed, then a one-pole low-pass at 2 kHz; the gains folded into the b's, for a
+ * 16-bit uniform noise in, the recording's own rms (3529 of 32768) out. Colour and Density as Stereo Rain's */
+#define WL_G 1.75f                               /* its level (as loud as Wind at the same level, as the loop's was) */
+static const float WL_BQ[3][5] = {               /* b0 b1 b2 a1 a2 */
+    {3.94086178f, 7.88172356f, 3.94086178f, -1.97134881f, 0.971529245f},
+    {365.702539f, 0.0f, -365.702539f, -1.96593655f, 0.966507945f},
+    {2257.17502f, 0.0f, -2257.17502f, -1.67765367f, 0.70334425f}};
+#define WL_K 0.243323583f
+static float wl_s[2][3][2], wl_p[2];
+static inline float wl_tick(int ch, float x)     /* x: uniform noise in +-1 */
+{
+    float y = 0.0f;
+    int k;
+    for (k = 0; k < 3; k++) {
+        float *const s = wl_s[ch][k];
+        const float o = WL_BQ[k][0] * x + s[0];
+        s[0] = WL_BQ[k][1] * x - WL_BQ[k][3] * o + s[1];
+        s[1] = WL_BQ[k][2] * x - WL_BQ[k][4] * o;
+        y += o;
+    }
+    wl_p[ch] += WL_K * (y - wl_p[ch]);
+    return wl_p[ch];
+}
 static const uint32_t RL_STEP[2] = {2048u, 2075u};   /* (Q12 samples a 44.1 kHz sample: 0.5, and 0.5 x 1.013: 1.0132) */
 static uint32_t rl_next(const rl_head_t *h, uint32_t g) { return g + 1u < h->ng ? g + 1u : 0u; }
 static void rl_group(rl_head_t *h, uint32_t G, int16_t *out)   /* group G (a chunk's first seeds the state) into out[20] */
@@ -4622,10 +4716,7 @@ static void rl_reset(void)                       /* from the top: the left at th
     rl_aim(&rl_h[0], RL_DATA, RL_N), rl_aim(&rl_h[1], RL_DATA, RL_N);
     rl_start(&rl_h[0], 0);
     rl_start(&rl_h[1], 154);
-    rl_aim(&wl_h[0], WL_DATA, WL_N), rl_aim(&wl_h[1], WL_DATA, WL_N);   /* (the Water: the left from the top, the right
-                                                  * half its 223 chunks on) */
-    rl_start(&wl_h[0], 0);
-    rl_start(&wl_h[1], 111);
+    memset(wl_s, 0, sizeof wl_s), wl_p[0] = wl_p[1] = 0.0f;   /* (the Water's filters from rest) */
     rl_lp[0] = rl_lp[1] = 0.0f;
 }
 static inline float rl_read(rl_head_t *h, uint32_t step)  /* a sample (linear between two), the head a step on */
@@ -4658,19 +4749,6 @@ uint32_t en_rl_wrap(int head)
         n++;
     } while (h.pos > last);
     return n;
-}
-uint32_t en_wl_hash(void)                        /* (the Water loop's checksum, as the Rain's) */
-{
-    rl_head_t h;
-    int16_t g[20];
-    uint32_t G, i, x = 2166136261u;
-    rl_aim(&h, WL_DATA, WL_N);
-    for (G = 0; G < h.ng; G++) {
-        rl_group(&h, G, g);
-        for (i = 0; i < 20u && G * 20u + i < WL_N; i++)
-            x = (x ^ (uint16_t)g[i]) * 16777619u;
-    }
-    return x;
 }
 uint32_t en_rl_hash(void)
 {
@@ -5045,13 +5123,21 @@ static void render_atmos(uint32_t n)
             wn_par ^= 1u;
             break;
         }
-        case ATM_RAINLOOP: case ATM_WATER: {     /* (one draw, two noises, as Wind's: the hiss under it) */
-            rl_head_t *const hd = c == ATM_WATER ? wl_h : rl_h;
+        case ATM_WATER: {                        /* (one draw, two noises, as Wind's: each side's own, through the recording's
+                                                  * spectrum: the hiss under it as the Rain's) */
             const uint32_t rr = seq_rand(&atm_rng);
             xl = (float)(int32_t)(rr << 16) * (1.0f / 2147483648.0f);
             xr = (float)(int32_t)(rr & 0xFFFF0000u) * (1.0f / 2147483648.0f);
-            l = bed * rl_read(&hd[0], RL_STEP[0]);       /* (the tilt is applied below, after the Air hiss: it shapes both) */
-            r = bed * rl_read(&hd[1], RL_STEP[1]);
+            l = bed * wl_tick(0, xl);
+            r = bed * wl_tick(1, xr);
+            break;
+        }
+        case ATM_RAINLOOP: {                     /* (one draw, two noises, as Wind's: the hiss under it) */
+            const uint32_t rr = seq_rand(&atm_rng);
+            xl = (float)(int32_t)(rr << 16) * (1.0f / 2147483648.0f);
+            xr = (float)(int32_t)(rr & 0xFFFF0000u) * (1.0f / 2147483648.0f);
+            l = bed * rl_read(&rl_h[0], RL_STEP[0]);     /* (the tilt is applied below, after the Air hiss: it shapes both) */
+            r = bed * rl_read(&rl_h[1], RL_STEP[1]);
             break;
         }
         default:                                 /* Air: what a low-pass leaves, breathing with the gusts */
@@ -5103,6 +5189,9 @@ static void render_atmos(uint32_t n)
             wn_w[ch][k] = fm_flush(wn_w[ch][k]);
         wn_y[ch][0] = fm_flush(wn_y[ch][0]), wn_y[ch][1] = fm_flush(wn_y[ch][1]);
         rl_lp[ch] = fm_flush(rl_lp[ch]);
+        wl_p[ch] = fm_flush(wl_p[ch]);
+        for (k = 0; k < 3; k++)
+            wl_s[ch][k][0] = fm_flush(wl_s[ch][k][0]), wl_s[ch][k][1] = fm_flush(wl_s[ch][k][1]);
     }
 }
 #ifdef EN_HOST
