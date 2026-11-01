@@ -54,7 +54,7 @@ NACHTFAHRT is a fork of [DUB-1](https://github.com/sbegueria/fm1-dub), itself a 
 [AMB-1](https://github.com/charlesvestal/fm1-amb), Charles Vestal's generative ambient firmware for the FM-1. It
 keeps their platform, panel, echo, plate and much of the engine.
 
-**Status: a test version below 1.0** (see [the releases](https://github.com/FartyPants/fm1-nachtfahrt/releases)). It
+**Status: version 1.0** (see [the releases](https://github.com/FartyPants/fm1-nachtfahrt/releases)). It
 runs on the FM-1, installed from the [web installer](https://fartypants.github.io/fm1-nachtfahrt/install/), and in the
 [browser emulator](https://fartypants.github.io/fm1-nachtfahrt/emu/), from the same code.
 
