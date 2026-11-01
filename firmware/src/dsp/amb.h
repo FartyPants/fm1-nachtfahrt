@@ -285,6 +285,7 @@ extern volatile uint8_t en_swell;               /* the arc's swell into Flow (th
 /* (BERLIN) the filter motion, by layer (the Drone, the Sequence, the Lead, Sequence 2, the Atmosphere): each one's
  * offset from its brightness knob now, in octaves, and which way it moves (-1 darker, 0 still, +1 brighter) */
 extern volatile float en_fo[5];
+extern volatile int8_t en_dd_dir;               /* (and which way it is going: +1 further from the knob's value, -1 back towards it, 0 settled) */
 extern volatile int8_t en_dd_shift;             /* (2026-11-01) Density's slow drift now, in its units (+ denser, - sparser): the panel's dot
                                                  * and its said text; the Sequence's Density as heard is the knob's plus this */
 extern volatile int8_t en_fo_dir[5];

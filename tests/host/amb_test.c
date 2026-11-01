@@ -1349,7 +1349,7 @@ static void test_piano_lead(void)
      * at 0 never), over 10 minutes of bars (tempo 250) reaching both sides by 15 or more and spending more than a second of its
      * time away from the middle (it moves); it eases (one bar moves it by 8 or less) */
     {
-        int b, mn = 999, mx = -999, away = 0, last = 0, jump = 0, off0 = 0;
+        int b, mn = 999, mx = -999, away = 0, last = 0, jump = 0, off0 = 0, out = 0, back = 0, wrong = 0;
         fresh();
         en_set(P_TEMPO, 250), en_set(P_MOTION, 0), en_set(P_SEQ, 0), en_set(P_SEQ2, 0), en_set(P_LEAD, 0), en_set(P_CHORD, 0);
         en_play(1);
@@ -1367,6 +1367,10 @@ static void test_piano_lead(void)
             o = en_dd_off();
             mn = o < mn ? o : mn, mx = o > mx ? o : mx;
             away += o > 8 || o < -8;
+            if (o > 6 || o < -6) {               /* (which way it goes: further from the knob's value, or back: both, and a
+                                                  * step by step: out means a bigger offset a bar on, back a smaller) */
+                out += en_dd_dir > 0, back += en_dd_dir < 0;
+            }
             if (!(b % 168)) {                    /* (about a bar at 250: 0.96 s) */
                 jump = o - last > jump ? o - last : last - o > jump ? last - o : jump;
                 last = o;
@@ -1378,6 +1382,8 @@ static void test_piano_lead(void)
         CHECK(mn >= -43 && mx <= 43 && mn <= -15 && mx >= 15, "test_density_drift: range %d .. %d (within +-43: 85%% of the way to 0 and to 100, reaching +-15)", mn, mx);
         CHECK(away > (int)(1.0f * 44100.0f / 256.0f), "test_density_drift: moved from the middle for %d blocks only", away);
         CHECK(jump <= 8, "test_density_drift: a bar moved it by %d", jump);
+        CHECK(out > 0 && back > 0, "test_density_drift: its direction, out %d blocks, back %d (both expected: the dot and the text say which)", out, back);
+        (void)wrong;
         en_play(0);
     }
     /* (the arps' Piano steals voices) a sequence rings 3 Piano notes at most, the oldest let go in ~40 ms when a fourth

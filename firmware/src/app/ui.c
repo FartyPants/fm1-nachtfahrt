@@ -687,6 +687,17 @@ static int dens_knob(int v)
             return i;
     return -1;
 }
+/* (2026-11-01, the user: "at the bottom of the movement, say -30, and moving back up it would still say moving sparser,
+ * but that's not true") a drift said by where it is AND which way it goes: 1 further out, -1 coming back, 0 still.
+ * off: its offset (any unit), dir: the way it moves (the filter's: its sign; Density's: +1 out, -1 back) */
+static int move_state(float off, int dir, int signed_dir)
+{
+    if (dir == 0)
+        return 0;
+    if (!signed_dir)
+        return dir;
+    return (off > 0.0f) == (dir > 0) ? 1 : -1;
+}
 static int dens_dot(void)                        /* the knob's value plus the drift, kept in its range */
 {
     const int x = proj.par[P_DENSITY] + (int)en_dd_shift;
@@ -1673,6 +1684,36 @@ static void arc(int32_t cx, int32_t cy, int32_t r, float v, uint16_t track, uint
 {
     arc_th(cx, cy, r, 3.4f, v, track, fill, bg, bipolar);
 }
+/* (2026-11-01, the user: "the dot should draw its own arc from the set point to it, two concentric arcs, the original and the
+ * red; the filter's cyan should be the same: any knob automation should use the same visual") a knob moved by the music
+ * itself (the filter motion, Density's drift): inside its ring, a second arc from where the knob is set to where the sound
+ * is now, the Sequence's pink, a dot at its moving end. Every such knob draws it this way */
+#define K_AUTO K_BELL
+static void arc_span(int32_t cx, int32_t cy, int32_t r, float th, float v0, float v1, uint16_t col)
+{
+    const float a0 = 0.375f, sweep = 0.75f, ro = (float)r, ri = ro - th, rm = ro - th * 0.5f, fx = (float)cx + 0.5f,
+                fy = (float)cy + 0.5f, lo = fm_clampf(v0 < v1 ? v0 : v1, 0.0f, 1.0f), hi = fm_clampf(v0 < v1 ? v1 : v0, 0.0f, 1.0f);
+    int32_t x, y;
+    for (y = -r - 1; y <= r + 1; y++)
+        for (x = -r - 1; x <= r + 1; x++) {
+            float dx = (float)x, dy = (float)y, d = fm_sqrtf(dx * dx + dy * dy), t, a;
+            a = fm_clampf(ro + 0.5f - d, 0.0f, 1.0f) * fm_clampf(d - ri + 0.5f, 0.0f, 1.0f);
+            if (a <= 0.0f)
+                continue;
+            t = turns(dy, dx) - a0;
+            if (t < 0.0f)
+                t += 1.0f;
+            t /= sweep;
+            if (t > 1.0f || t < lo || t > hi)
+                continue;
+            px_blend(cx + x, cy + y, col, (uint32_t)(a * 16.0f + 0.5f));
+        }
+    {   /* (round ends; the moving end, v1, a dot a little bigger) */
+        const float e0 = (a0 + sweep * v0) * FM_TWO_PI, e1 = (a0 + sweep * fm_clampf(v1, 0.0f, 1.0f)) * FM_TWO_PI;
+        disc(fx + fm_cosf(e0) * rm - 0.5f, fy + fm_sinf(e0) * rm - 0.5f, th * 0.5f, col);
+        disc(fx + fm_cosf(e1) * rm - 0.5f, fy + fm_sinf(e1) * rm - 0.5f, th * 0.5f + 0.7f, col);
+    }
+}
 /* a mark across a knob's ring at v (0..1 of its sweep), a little past both its edges: where a knob's behaviour changes
  * (Motion's regions, 40 and 70) */
 static void arc_mark(int32_t cx, int32_t cy, int32_t r, float v, uint16_t col)
@@ -2428,21 +2469,25 @@ static void draw_main(void)
         int layer;
         float per;
         if (bright_of(ui.view, &layer, &per) >= 0 && fm_fabsf(en_fo[layer]) >= 0.1f) {
-            char t[32], *q = t;
-            const char *w = en_fo[layer] < 0.0f ? "MOVING DARKER, -" : "MOVING BRIGHTER, +";
+            char t[44], *q = t;
+            const int st = move_state(en_fo[layer], en_fo_dir[layer], 1);   /* (further out: moving; back: easing back) */
+            const char *w = en_fo[layer] < 0.0f ? (st > 0 ? "MOVING DARKER, -" : "DARKER, -")
+                                                : (st > 0 ? "MOVING BRIGHTER, +" : "BRIGHTER, +");
             const int tenths = (int)(fm_fabsf(en_fo[layer]) * 10.0f + 0.5f);
             while (*w)
                 *q++ = *w++;
             *q++ = (char)('0' + tenths / 10 % 10), *q++ = '.', *q++ = (char)('0' + tenths % 10);
-            w = " OCT";
+            w = st < 0 ? " OCT, EASING BACK" : " OCT";
             while (*w)
                 *q++ = *w++;
             *q = 0;
-            text_c(120, 130, &FONT_XS, t, K_ACC);
+            text_c(120, 130, &FONT_XS, t, K_AUTO);   /* (the same pink for every knob the music moves) */
         }
         if (dens_knob(ui.view) >= 0 && (en_dd_shift >= 3 || en_dd_shift <= -3)) {   /* (the Sequence's page: its Density's drift) */
-            char t[32], *q = t;
-            const char *w = en_dd_shift < 0 ? "MOVING SPARSER, -" : "MOVING DENSER, +";
+            char t[44], *q = t;
+            const int st = move_state((float)en_dd_shift, en_dd_dir, 0);   /* (further out: moving; back: easing back) */
+            const char *w = en_dd_shift < 0 ? (st > 0 ? "MOVING SPARSER, -" : "SPARSER, -")
+                                            : (st > 0 ? "MOVING DENSER, +" : "DENSER, +");
             const int n = en_dd_shift < 0 ? -en_dd_shift : en_dd_shift;
             while (*w)
                 *q++ = *w++;
@@ -2450,8 +2495,12 @@ static void draw_main(void)
                 *q++ = '1';
             if (n >= 10)
                 *q++ = (char)('0' + n / 10 % 10);
-            *q++ = (char)('0' + n % 10), *q = 0;
-            text_c(120, 130, &FONT_XS, t, K_BELL);
+            *q++ = (char)('0' + n % 10);
+            w = st < 0 ? ", EASING BACK" : "";
+            while (*w)
+                *q++ = *w++;
+            *q = 0;
+            text_c(120, 130, &FONT_XS, t, K_AUTO);
         }
     }
     draw_oct(now);
@@ -2562,15 +2611,15 @@ static void draw_knobs(void)
                 cv_round(cx - w0 / 2 + j * (pw + gap), 33, pw, 8, 2, j == v - lo ? fill : K_LINE);
         } else if (k != K_CPU) {
             arc(cx, 37, 12, hi > lo ? (float)(v - lo) / (float)(hi - lo) : 0.0f, K_LINE, fill, bg, lo < 0);
-            if (knob_dot(ui.view) > -999 && (int)i == bright_of(ui.view, &(int){0}, &(float){0.0f}) && hi > lo) {
-                /* (BERLIN) the filter motion: where the filter is now, a cyan dot on the ring */
-                const float a = (0.375f + 0.75f * (float)(knob_dot(ui.view) - lo) / (float)(hi - lo)) * FM_TWO_PI;
-                cv_disc(cx + (int32_t)(fm_cosf(a) * 12.0f + 0.5f), 37 + (int32_t)(fm_sinf(a) * 12.0f + 0.5f), 2, K_ACC);
-            }
-            if (k == P_DENSITY && en_dd_shift != 0 && hi > lo) {
-                /* (2026-11-01) Density's drift: where it is now, a dot in the Sequence's colour on the ring */
-                const float a = (0.375f + 0.75f * (float)(dens_dot() - lo) / (float)(hi - lo)) * FM_TWO_PI;
-                cv_disc(cx + (int32_t)(fm_cosf(a) * 12.0f + 0.5f), 37 + (int32_t)(fm_sinf(a) * 12.0f + 0.5f), 2, K_BELL);
+            {   /* (a knob the music moves: the filter motion's, Density's drift: where the sound is now, as a second arc inside the
+                 * ring, from the set point to it) */
+                int heard = -999;
+                if (k == P_DENSITY && en_dd_shift != 0)
+                    heard = dens_dot();
+                else if (knob_dot(ui.view) > -999 && (int)i == bright_of(ui.view, &(int){0}, &(float){0.0f}))
+                    heard = knob_dot(ui.view);
+                if (heard > -999 && heard != v && hi > lo)
+                    arc_span(cx, 37, 8, 2.4f, (float)(v - lo) / (float)(hi - lo), (float)(heard - lo) / (float)(hi - lo), K_AUTO);
             }
             if (k == P_MOTION) {                 /* (Motion's three regions: the loop held, variations, Breaks) */
                 arc_mark(cx, 37, 12, 0.4f, K_TEXT);
@@ -2851,7 +2900,9 @@ static void sp_garden(void)
             const int oct = (int)(fm_fabsf(en_fo[layer]) + 0.5f);
             sp_cat(". ");
             sp_cat(KNOB_LABEL[ui.view][k]);
-            sp_cat(en_fo[layer] < 0.0f ? " moving darker, about " : " moving brighter, about ");
+            const int st = move_state(en_fo[layer], en_fo_dir[layer], 1);   /* (a drift said by where it is and which way it goes) */
+            sp_cat(en_fo[layer] < 0.0f ? (st > 0 ? " moving darker, about " : " darker, about ")
+                                       : (st > 0 ? " moving brighter, about " : " brighter, about "));
             if (oct) {
                 sp_cat(en_fo[layer] < 0.0f ? "-" : "+");
                 sp_int((uint32_t)oct);
@@ -2859,12 +2910,17 @@ static void sp_garden(void)
             } else {
                 sp_cat("half an octave");
             }
+            if (st < 0)
+                sp_cat(", easing back");
         }
     }
     if (dens_knob(ui.view) >= 0 && (en_dd_shift >= 3 || en_dd_shift <= -3)) {   /* (the Sequence's page: Density's drift) */
-        sp_cat(". Density moving ");
+        const int st = move_state((float)en_dd_shift, en_dd_dir, 0);
+        sp_cat(st > 0 ? ". Density moving " : ". Density ");
         sp_cat(en_dd_shift < 0 ? "sparser, about -" : "denser, about +");
         sp_int((uint32_t)(en_dd_shift < 0 ? -en_dd_shift : en_dd_shift));
+        if (st < 0)
+            sp_cat(", easing back");
     }
     sp_cat(". Scale");
     for (i = 0; i < 12; i++) {

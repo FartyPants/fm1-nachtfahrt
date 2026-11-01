@@ -686,6 +686,8 @@ static int expect(const char *what, const char *val)
         got = en_ext;
     else if (!strcmp(what, "dd_shift"))
         got = en_dd_shift;
+    else if (!strcmp(what, "dd_dir"))
+        got = en_dd_dir;
     else if (!strcmp(what, "dd_shift_abs"))
         got = en_dd_shift < 0 ? -en_dd_shift : en_dd_shift;
     else if (!strcmp(what, "midi_out"))

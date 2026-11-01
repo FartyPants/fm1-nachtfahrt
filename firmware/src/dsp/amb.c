@@ -1344,7 +1344,7 @@ static void s2o_section(void)
  * random, a new target every 16 to 39 bars, so a swell or a thinning takes a minute or two and the next goes where it
  * goes; its own random stream (no other generator's draws move). From nothing at a piece's start, the first target
  * after 4 bars */
-volatile int8_t en_dd_shift;
+volatile int8_t en_dd_shift, en_dd_dir;
 static uint32_t dd_rng = 0x2545F491u;
 static float dd_w, dd_t;
 static int dd_left;
@@ -1353,7 +1353,7 @@ static void dd_reset(void)
     dd_w = dd_t = 0.0f;
     dd_left = 4;
     dd_off = 0;
-    en_dd_shift = 0;
+    en_dd_shift = en_dd_dir = 0;
 }
 static void dd_tick_bar(void)
 {
@@ -1361,7 +1361,13 @@ static void dd_tick_bar(void)
         dd_t = (float)(seq_rand(&dd_rng) >> 8) * (2.0f / 16777216.0f) - 1.0f;
         dd_left = 16 + (int)(seq_rand(&dd_rng) % 24u);
     }
-    dd_w += (dd_t - dd_w) * 0.08f;
+    {
+        const float was = dd_w < 0.0f ? -dd_w : dd_w;
+        float now;
+        dd_w += (dd_t - dd_w) * 0.08f;
+        now = dd_w < 0.0f ? -dd_w : dd_w;
+        en_dd_dir = (int8_t)(now - was > 0.002f ? 1 : now - was < -0.002f ? -1 : 0);   /* (away from the knob's value, or back) */
+    }
     {
         const float reach = fm_minf((float)par[P_MOTION] * (1.0f / 30.0f), 1.0f) * 0.85f,
                     room = dd_w >= 0.0f ? (float)(100 - par[P_DENSITY]) : (float)par[P_DENSITY];
