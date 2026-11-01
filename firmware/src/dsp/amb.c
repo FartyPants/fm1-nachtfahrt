@@ -202,13 +202,30 @@ static const int16_t PC_CYBORG[] = {          /* Schulze, Cyborg: early, raw, de
     P_LEAD, 70, P_LVOICE, 3, P_LDENS, 30, P_LOCT, -1, P_LDIN, 8,
     P_MW0, 50, P_MT0, 70, P_MR0, 45, P_MW2, 10, P_BRIDGE, 30,
     P_ARC, 15, P_MOTION, 35, P_LMEM, 35, -1};
+static const int16_t PC_UMEDA[] = {           /* (2026-10-31) the tenth piece, the user's: Kankyo Ongaku, the piano in the
+                                                * plazas of Umeda; F sharp major pentatonic at 50 (a sixteenth 0.3 s: the
+                                                * motive's own grid), a quiet Organ pad on the home chord, the Piano on
+                                                * both sequences (sparse, low) and the Lead, the Lead's theme the user's
+                                                * second motive (ld_seed), Stereo Rain under it */
+    P_TEMPO, 50, P_ROOT, 6, P_MODE, MODE_PENT_MAJ,
+    P_SEQ, 25, P_SVOICE, 16, P_DENSITY, 20, P_SEQOCT, -1, P_MI1, 8,   /* (the user, in the browser: the Piano on both
+                                                  * sequences; Sequence: Volume 25, Density 20, octave -1, Intro 8) */
+    P_SEQ2, 30, P_S2VOICE, 17, P_SCH1, 65, P_SEQ2OCT, -2, P_S2DEC, 70,   /* (Sequence 2: Volume 30, Chance 65, octave -2,
+                                                  * Decay 70) */
+    P_CHORD, 45, P_CVOICE, 0, P_PEDAL, 85, P_DRIFT, 1, P_PMODE, EN_WALK_HOME,   /* (the user: "the drone sounds better with
+                                                  * Organ"; Drift 4 bars; by ear in the browser, "the current good volumes":
+                                                  * Drone 45, Atmosphere 15, then 10) */
+    P_LEAD, 70, P_LVOICE, 9, P_GLIDE, 0, P_LDENS, 50, P_LDIN, 2,   /* (the user: no glide, a piano's notes struck) */
+    P_NCHAR, 8, P_CRACKLE, 10,                   /* (the Rain at 10, the user's: 20, then 15, then 10) */
+    P_REVERB, 60,
+    P_ARC, 15, P_MOTION, 30, P_LMEM, 60, -1};
 static const struct {
     const char *name;
     const int16_t *set;
 } PIECES[EN_NPIECES] = {
     {"Timewind", PC_TIMEWIND}, {"Wahnfried", PC_WAHNFRIED}, {"Phaedra", PC_PHAEDRA},   {"Rubycon", PC_RUBYCON},
     {"Stratosfear", PC_STRATOSFEAR}, {"Sunrain", PC_SUNRAIN}, {"Mirage", PC_MIRAGE}, {"Cyborg", PC_CYBORG},
-    {"Sakura Rain", PC_SAKURA},
+    {"Sakura Rain", PC_SAKURA}, {"Umeda", PC_UMEDA},
 };
 
 const char *en_piece_name(int i) { return PIECES[(unsigned)i < EN_NPIECES ? i : 0].name; }
@@ -228,7 +245,7 @@ const char *const EN_CV_NAME[EN_NCV] = {"Organ", "Strings", "Horn", "Saws", "Gla
                                                  * the voices batch: Horn was Choir, its place kept; the formant Choir
                                                  * appended: pieces and saves sound the same) */
 const char *const EN_BV_NAME[EN_NBV] = {"Odyssey", "Mini", "Flute", "Theremin", "Synthi", "FM Lead", "FM Reed",
-                                        "FM Brass", "Choir"};   /* (BERLIN: the Lead's) */
+                                        "FM Brass", "Choir", "Piano"};   /* (BERLIN: the Lead's) */
 const char *const EN_CQ_NAME[EN_NCQ] = {"Empty", "Major", "Minor", "Sus2", "Sus4", "Dim", "Aug"};
 const char *const EN_CX_NAME[EN_NCX] = {"Triad", "6", "7", "Maj7", "9", "11", "Add9"};
 static const char *const ETIME_NAME[6] = {"1/8", "1/8.", "1/4", "1/4.", "1/2", "1 bar"};
@@ -260,6 +277,7 @@ static char *itoa_s(int v, char *b)
  * voices after it (item 5), the Sequence's 6.. their 7..; a value out of range: 2600 */
 #define SV_PLUCK 6
 #define SV_FM0 7                                 /* (the engine's first FM voice: 7 .. 16, SV_FM_REC's) */
+#define SV_PIANO 17                              /* (and the Piano after them: both sequences', sampled: pn_seq_start) */
 static int sv_of(int l, int v)
 {
     if (l)
@@ -476,7 +494,7 @@ const char *en_chord_name(const int *pcs, int n, char *buf)
 }
 
 /* ------------------------------------------------------------ commands --- */
-enum { C_SET, C_POOL, C_PLAY, C_NEXT, C_FREEZE, C_SEED, C_PANIC, C_CLOCK, C_REGROW, C_MUTE, C_PERF, C_FX, C_SEQ, C_MACRO, C_PROT, C_REWALK, C_LOCK, C_SEQSET, C_LKEY, C_MOVE, C_LFORGET };
+enum { C_SET, C_POOL, C_PLAY, C_NEXT, C_FREEZE, C_SEED, C_PANIC, C_CLOCK, C_REGROW, C_MUTE, C_PERF, C_FX, C_SEQ, C_MACRO, C_PROT, C_REWALK, C_LOCK, C_SEQSET, C_LKEY, C_MOVE, C_LFORGET, C_THEME };
 #define QN 512u                                 /* (a piece is every parameter at once: room for twice over and more) */
 _Static_assert(QN >= 2u * (P_NPARAMS + 8), "the command queue can't hold a piece's parameters twice over");
 static uint32_t q[QN];
@@ -499,6 +517,7 @@ void en_seed(uint32_t s) { post(C_SEED, 0, (int)(s & 0xFFFFu)); }
 void en_panic(void) { post(C_PANIC, 0, 0); }
 void en_clock(int msg) { post(C_CLOCK, msg, 0); }
 void en_regrow(void) { post(C_REGROW, 0, 0); }
+void en_piece_theme(int i) { post(C_THEME, i, 0); }
 void en_mute(uint32_t m) { post(C_MUTE, (int)(m & 0xFFu), 0); }
 void en_perf(uint32_t f) { post(C_PERF, (int)(f & 0xFFu), 0); }
 void en_fx(uint32_t m) { post(C_FX, 0, (int)(m & 0xFFFFu)); }
@@ -1351,6 +1370,16 @@ static void ar_tick_bar(void)                    /* a bar line (the first, at th
  * (Repeat A, Repeat B: only into a rest), and Sequence 2 (layer 1, channel 4). A pattern grown here is thinned by
  * Density as it plays; one written (en_seq_set) plays as written */
 #define NPLUCK 6
+typedef struct {                                 /* (SEA read head, the Rain's and the Piano's: below, at the Rain) */
+    int32_t st[8];                               /* the decoder's state (4 samples, 4 weights), after the last group decoded */
+    int16_t b[2][20];                            /* the group the head is in and the one after it */
+    uint32_t pos, g0;                            /* the position (Q12 samples: 98588 << 12 fits 32 bits, << 16 did not: the
+                                                  * first build wrapped after 1.5 s, a tick), the group it is in */
+    uint8_t cur;                                 /* which of b is the group it is in */
+    const uint8_t *d;                            /* its sound's chunks (the Rain loop's, or a Piano note's: the same
+                                                  * quantiser table), its samples, its groups */
+    uint32_t n, ng;
+} rl_head_t;
 typedef struct {
     uint8_t on, note, layer, voice;
     float ph, ph2, dt, dt2, amp, att, adec, env, edec, gl, gr, cut, c1[4], c2[4], s1[2], s2[2];
@@ -1361,8 +1390,14 @@ typedef struct {
                                                   * read and the last read between two (the average's); the output's
                                                   * gain (the velocity's, from the line's units) */
     fm_v fm;                                     /* (the voices batch, item 5) an FM voice's note (fm.c) */
+    rl_head_t pn;                                /* (the Piano: its note's read head, its step (Q12) and the samples left) */
+    uint32_t pn_step;
+    int32_t pn_left;
 } pluck_t;
 static pluck_t pluck[NPLUCK];
+static void pn_seq_start(pluck_t *v, int note);  /* (the Piano as a Sequence's voice: its note struck; a sample's worth each
+                                                  * tick, rendered) */
+static float pn_seq_tick(pluck_t *v);
 
 /* (the voices batch, item 2) Pluck: a plucked string, Karplus-Strong. After fm1_open's third_party/synth/pluck.c
  * (M-VAVE's FM1 adaptation of DaisySP's String; MIT licence, notice below), written again for this engine: a burst of
@@ -1409,14 +1444,14 @@ volatile int8_t en_s2oct_shift;
 volatile uint16_t en_seq_lane[5], en_seq_acc[2];   /* (the Pattern page's lanes as Auto plays them: each sequence's
                                                   * steps (as Density thins them), octaves; the Sequence's skips; accents) */
 const char *const EN_SV_NAME[EN_NS2V] = {"2600", "Moog", "Synthi", "Pulse", "Glass", "Sub", "Pluck", "FM Keys",
-    "FM Bell", "FM EP", "FM Clav", "FM Guitar", "FMMarimba", "FM Vibes", "FM Metal", "FM Bass", "FM Sub"};
+    "FM Bell", "FM EP", "FM Clav", "FM Guitar", "FMMarimba", "FM Vibes", "FM Metal", "FM Bass", "FM Sub", "Piano"};
 /* (the voices batch, item 5) the sequences' FM voices, SV_FM0 on: fm.c's recipes, in the user's order (2026-10-30:
  * "plucked for arps", and the two basses); each one's level (the user: "quieter than normal voices"): matched to the
  * mean of the Sequence's other six (+2.4 dB over 2600 there), by RMS on the Sequence alone (a note every quarter at
  * 120, the knobs' defaults), each as 10^(dB/20); the user's ear has the last word */
-static const uint8_t SV_FM_REC[EN_NS2V - SV_FM0] = {FM_NEON_KEYS, FM_ORBIT_BELL, FM_SOFT_EP, FM_DRY_CLAV, FM_GUITAR,
-                                                     FM_MARIMBA, FM_VIBES, FM_METAL_HIT, FM_ROUND_BASS, FM_SUB_BASS};
-static const float SV_FM_G[EN_NS2V - SV_FM0] = {1.18f, 1.58f, 1.29f, 3.16f, 1.60f, 1.74f, 1.33f, 1.74f, 1.84f, 1.23f};
+static const uint8_t SV_FM_REC[SV_PIANO - SV_FM0] = {FM_NEON_KEYS, FM_ORBIT_BELL, FM_SOFT_EP, FM_DRY_CLAV, FM_GUITAR,
+                                                      FM_MARIMBA, FM_VIBES, FM_METAL_HIT, FM_ROUND_BASS, FM_SUB_BASS};
+static const float SV_FM_G[SV_PIANO - SV_FM0] = {1.18f, 1.58f, 1.29f, 3.16f, 1.60f, 1.74f, 1.33f, 1.74f, 1.84f, 1.23f};
 
 /* a piece's patterns, kept (en_seq_get, en_seq: EN_SEQ_N bytes): each one's degrees (16 + 16), steps, octaves and
  * accents (two bytes each, low first) and Density's order (16 + 16) */
@@ -1547,13 +1582,18 @@ static void pluck_voice(int l, int n, int vel, int rep)   /* rep: a repeat, pann
     v->dt2 = v->dt * (v->voice == 1 ? 1.004f : v->voice == 4 ? 3.5f : 0.5f);   /* Moog's second saw, Glass's
                                                                                 * modulator, Sub's octave under */
     v->ph = v->ph2 = 0.0f;
-    if (v->voice >= SV_FM0)                      /* (an FM voice: its recipe from the top, at this note) */
+    if (v->voice >= SV_FM0 && v->voice < SV_PIANO)   /* (an FM voice: its recipe from the top, at this note) */
         fm_start(&v->fm, SV_FM_REC[v->voice - SV_FM0], n);
+    else if (v->voice == SV_PIANO)
+        pn_seq_start(v, n);
     v->amp = (float)vel * (1.0f / 127.0f);
     v->att = 0.0f;
     v->env = 1.0f;
     v->adec = l ? sq2_adec : sq_adec;
     v->edec = l ? sq2_edec : sq_edec;
+    if (v->voice == SV_PIANO)                    /* (the Piano rings: Decay's range, 0.12 .. 0.37 s to -60 dB, is a pluck's;
+                                                  * its length 8 times that, ~1 .. 3 s: the user, "the pluck is very short") */
+        v->adec = fm_exp2f(fm_log2f(v->adec) * 0.125f);
     v->cut = l ? sq2_cut * fo_mul(FO_SEQ2) : sq_cut * fo_mul(FO_SEQ) * (perf & EN_PF_SWEEP ? 4.0f : 1.0f);   /* (the knob's,
                                                   * moved by the filter motion; PERFORM's Sweep held: the Sequence's two
                                                   * octaves open) */
@@ -1745,6 +1785,9 @@ static struct {
  * of the Lead's other five (-0.7 dB under Odyssey), by RMS on the Lead alone (a key held), as the Sequences' are */
 #define BV_FM0 EN_BV_FM
 #define BV_CHOIR 8                               /* (the voice after the three FM voices: the Drone's Choir, a Lead's) */
+#define BV_PIANO 9                               /* (and the Piano after it: a Lead's own, pn_note) */
+static void pn_note(int note, float vel);
+static void pn_reset(void);
 static const uint8_t BV_FM_REC[BV_CHOIR - BV_FM0] = {FM_SOFT_LEAD, FM_WOOD_REED, FM_SOFT_BRASS};
 static const float BV_FM_G[BV_CHOIR - BV_FM0] = {2.66f, 3.02f, 2.99f};
 #ifdef EN_HOST
@@ -1868,6 +1911,7 @@ static void ld_reseed(void)                      /* a new piece, or FORGET: new 
 static uint32_t ld_cmask(void);
 #ifdef EN_HOST
 int en_heard(int p) { return pe(p); }
+int en_par_get(int p) { return par[p]; }         /* (a test's: its piece's settings put back as they were) */
 void en_lead_motif(int slot, const int8_t *off, const uint8_t *dur, int n)
 {
     ld_motif_t *m = &ld_bank[slot & 3];
@@ -2951,6 +2995,31 @@ static int ld_take(void)
     return c >= 3;
 }
 
+/* a piece's written theme (Umeda's, the user's second motive from the plaza's recording, as the piano plays it: C#6
+ * F#6 C#6 A#6 C#6 F#6, as scale degrees over F#4 in F# major pentatonic (the Lead's octave 0 puts the root at F#6, so
+ * these are degrees 3 5 3 7 3 5 over it), their lengths in sixteenths at 50: the notes
+ * at 0, 1, 5, 6, 8 and 11 of 16, 0.3 s each) taken as the keys' theme is (ld_take: slot 0, LD_PLAYED, so its
+ * offspring follow it as its kinship falls), but not played as a call at once: the first block is the theme, when
+ * the Lead comes in. Over the chord now, degrees from its root */
+static int8_t theme_pc = -1;
+static const int8_t UM_DEG[6] = {3, 5, 3, 7, 3, 5};
+static const uint8_t UM_DUR[6] = {1, 4, 1, 2, 3, 5};
+static void ld_seed(void)
+{
+    ld_motif_t *m = &ld_bank[0];
+    const int r = ld_cdeg(0);
+    int i;
+    if (theme_pc != 9)
+        return;
+    for (i = 0; i < 6; i++)
+        m->off[i] = (int8_t)(UM_DEG[i] - r), m->dur[i] = UM_DUR[i];
+    m->n = 6;
+    m->heard = 1;
+    m->cm = (uint16_t)(ld_cmask() | LD_PLAYED);
+    ld_prep = 4;                                 /* (the theme thought of: its 4 draws done, the first block may start) */
+    ld_kin = 0;
+}
+
 static void lead_note(int n)                     /* the next note: legato (it glides there), or from silence */
 {
     const int legato = lead.on;
@@ -2966,6 +3035,8 @@ static void lead_note(int n)                     /* the next note: legato (it gl
     } else                                       /* (another voice: no FM note, so turning back onto an FM voice
                                                   * starts one: render_lead) */
         lead.fm.rec = FM_NREC;
+    if (par[P_LVOICE] == BV_PIANO)
+        pn_note(n, 1.0f);                        /* (a piano's note: its own voice, ringing on; not legato) */
     lead.note = (uint8_t)n;
     lead.on = 1;
     lead.vt = 0.0f;
@@ -3866,7 +3937,9 @@ void en_init(void)
     walk_prev = 0;
     memset(pluck, 0, sizeof pluck);              /* (BERLIN's voices from rest: none sounding, none to let go) */
     memset(&lead, 0, sizeof lead);
+    pn_reset();                                  /* (the Piano's notes, none ringing) */
     ld_key = -1;
+    theme_pc = -1;                               /* (no piece's written theme till en_piece_theme) */
     ld_reseed();
     dr_on[0] = dr_on[1] = dr_midi[0] = dr_midi[1] = 0;
     dr_lvl[0] = dr_lvl[1] = 0.0f;
@@ -4089,7 +4162,11 @@ static void drain(void)
             ar_start();                          /* (BERLIN) a piece (changed, or back to its recipe) from its arc's
                                                   * start: its intros (Emerge), or Flow at once */
             ld_reseed();                         /* (the Lead's ideas new: a new piece; its phrase let go) */
+            ld_seed();                           /* (a written theme, if the piece has one) */
             lead_off();
+            break;
+        case C_THEME:
+            theme_pc = (int8_t)a;
             break;
         case C_SEQ:
             seq_have = (uint8_t)a;
@@ -4228,7 +4305,7 @@ static void widen(uint32_t n)
  * a second; a little of it into the plate.
  * Four controls shape it, each -1..+1 around the piece's own (0), and a character (a preset of the mix): ready
  * on ARP's Noise page (P_NCOL .. P_NCHAR, into nctl) */
-const char *const EN_NCHAR_NAME[EN_NNCHAR] = {"None", "Wind", "Surf", "Space", "Air", "Tape", "Drops", "Hail", "Stereo Rain"};   /* (BERLIN: the
+const char *const EN_NCHAR_NAME[EN_NNCHAR] = {"None", "Wind", "Surf", "Space", "Air", "Tape", "Drops", "Hail", "Stereo Rain", "Water"};   /* (BERLIN: the
                                                   * Atmosphere's; the voices batch: Rain appended, so every one before it
                                                   * keeps its number in the pieces and the saves;
                                                   * NCHAR below is the dub's noise machine, heard as Tape) */
@@ -4361,7 +4438,7 @@ static void noise_step(int s)
  * poles, Paul Kellet's "economy" filter) -> brown (a leaky integrator), its DRFT (the cutoff wandering, the level
  * following it) and its DUST (sparse impulses through a resonance); written again in float. The user: the FM-1's
  * speaker is bright, the noise was hissy; each level is matched by its A-weighted loudness to the one he tuned.) */
-enum { ATM_NONE, ATM_WIND, ATM_SURF, ATM_SPACE, ATM_AIR, ATM_TAPE, ATM_RAIN, ATM_WINDOW, ATM_RAINLOOP };   /* (ATM_RAIN:
+enum { ATM_NONE, ATM_WIND, ATM_SURF, ATM_SPACE, ATM_AIR, ATM_TAPE, ATM_RAIN, ATM_WINDOW, ATM_RAINLOOP, ATM_WATER };   /* (ATM_RAIN:
                                                   * Drops on the screen since 2026-10-30; ATM_WINDOW: Hail) */
 static inline float svf_lp(const float *c, float *s, float x, float *bp);
 static float atm_gate, atm_w[2] = {0.3f, 0.6f}, atm_wt[2] = {0.5f, 0.5f}, atm_gu = 0.5f, atm_gt = 0.5f, atm_s[2][2],
@@ -4493,22 +4570,17 @@ static void rain_drop(float col, float ring, float rate)
  * product's high bits summed (>>2) and the low two bits' sum added back, then >>11 (== >>13 of the whole). Colour is a
  * balanced tilt about 1 kHz (-50 dark, 0 as recorded, +50 bright); Density the level, Drift its swells (as Hail's showers) */
 #include "rainloop.c"
+#include "waterloop.c"                      /* (the Water: its loop, the Rain's quantiser table) */
 #define RL_NG ((RL_N + 19u) / 20u)               /* its groups of 20 samples */
 #define RL_G 1.75f                               /* its level (as loud as Wind at the same level) */
-typedef struct {
-    int32_t st[8];                               /* the decoder's state (4 samples, 4 weights), after the last group decoded */
-    int16_t b[2][20];                            /* the group the head is in and the one after it */
-    uint32_t pos, g0;                            /* the position (Q12 samples: 98588 << 12 fits 32 bits, << 16 did not: the
-                                                  * first build wrapped after 1.5 s, a tick), the group it is in */
-    uint8_t cur;                                 /* which of b is the group it is in */
-} rl_head_t;
-static rl_head_t rl_h[2];
+static rl_head_t rl_h[2], wl_h[2];              /* (the Rain's heads, the Water's) */
 static float rl_lp[2];
+#define WL_G 1.75f                               /* the Water's level (its own; set against Wind at the same level) */
 static const uint32_t RL_STEP[2] = {2048u, 2075u};   /* (Q12 samples a 44.1 kHz sample: 0.5, and 0.5 x 1.013: 1.0132) */
-static uint32_t rl_next(uint32_t g) { return g + 1u < RL_NG ? g + 1u : 0u; }
+static uint32_t rl_next(const rl_head_t *h, uint32_t g) { return g + 1u < h->ng ? g + 1u : 0u; }
 static void rl_group(rl_head_t *h, uint32_t G, int16_t *out)   /* group G (a chunk's first seeds the state) into out[20] */
 {
-    const uint8_t *c = RL_DATA + (G >> 4) * 228u;
+    const uint8_t *c = h->d + (G >> 4) * 228u;
     const unsigned gi = G & 15u, scale = (c[20u + gi / 2u] >> (gi & 1u ? 0 : 4)) & 15u;
     int32_t *s = h->st;
     unsigned i, j;
@@ -4539,12 +4611,21 @@ static void rl_start(rl_head_t *h, uint32_t chunk)      /* the head at a chunk's
     h->g0 = chunk * 16u;
     h->cur = 0;
     rl_group(h, h->g0, h->b[0]);
-    rl_group(h, rl_next(h->g0), h->b[1]);
+    rl_group(h, rl_next(h, h->g0), h->b[1]);
+}
+static void rl_aim(rl_head_t *h, const uint8_t *d, uint32_t n)   /* the head on a sound of n samples */
+{
+    h->d = d, h->n = n, h->ng = (n + 19u) / 20u;
 }
 static void rl_reset(void)                       /* from the top: the left at the loop's start, the right half a loop on */
 {
+    rl_aim(&rl_h[0], RL_DATA, RL_N), rl_aim(&rl_h[1], RL_DATA, RL_N);
     rl_start(&rl_h[0], 0);
     rl_start(&rl_h[1], 154);
+    rl_aim(&wl_h[0], WL_DATA, WL_N), rl_aim(&wl_h[1], WL_DATA, WL_N);   /* (the Water: the left from the top, the right
+                                                  * half its 223 chunks on) */
+    rl_start(&wl_h[0], 0);
+    rl_start(&wl_h[1], 111);
     rl_lp[0] = rl_lp[1] = 0.0f;
 }
 static inline float rl_read(rl_head_t *h, uint32_t step)  /* a sample (linear between two), the head a step on */
@@ -4552,15 +4633,15 @@ static inline float rl_read(rl_head_t *h, uint32_t step)  /* a sample (linear be
     uint32_t i = h->pos >> 12;
     uint32_t k = i - h->g0 * 20u;
     const float f = (float)(h->pos & 0xFFFu) * (1.0f / 4096.0f), s0 = (float)h->b[h->cur][k],
-                s1 = (float)(i == RL_N - 1u || k + 1u >= 20u ? h->b[h->cur ^ 1u][0] : h->b[h->cur][k + 1u]);
+                s1 = (float)(i == h->n - 1u || k + 1u >= 20u ? h->b[h->cur ^ 1u][0] : h->b[h->cur][k + 1u]);
     h->pos += step;
-    if (h->pos >= RL_N << 12)
-        h->pos -= RL_N << 12;
+    if (h->pos >= h->n << 12)
+        h->pos -= h->n << 12;
     i = h->pos >> 12;
     if (i / 20u != h->g0) {                      /* into the next group: that one was ready; the one after it now */
         h->g0 = i / 20u;
         h->cur ^= 1u;
-        rl_group(h, rl_next(h->g0), h->b[h->cur ^ 1u]);
+        rl_group(h, rl_next(h, h->g0), h->b[h->cur ^ 1u]);
     }
     return s0 + (s1 - s0) * f;
 }
@@ -4569,6 +4650,7 @@ uint32_t en_rl_wrap(int head)
 {
     rl_head_t h;
     uint32_t n = 0, last = 0;
+    rl_aim(&h, RL_DATA, RL_N);
     rl_start(&h, 0);
     do {
         last = h.pos;
@@ -4577,14 +4659,157 @@ uint32_t en_rl_wrap(int head)
     } while (h.pos > last);
     return n;
 }
+uint32_t en_wl_hash(void)                        /* (the Water loop's checksum, as the Rain's) */
+{
+    rl_head_t h;
+    int16_t g[20];
+    uint32_t G, i, x = 2166136261u;
+    rl_aim(&h, WL_DATA, WL_N);
+    for (G = 0; G < h.ng; G++) {
+        rl_group(&h, G, g);
+        for (i = 0; i < 20u && G * 20u + i < WL_N; i++)
+            x = (x ^ (uint16_t)g[i]) * 16777619u;
+    }
+    return x;
+}
 uint32_t en_rl_hash(void)
 {
     rl_head_t h;
     int16_t g[20];
     uint32_t G, i, x = 2166136261u;
+    rl_aim(&h, RL_DATA, RL_N);
     for (G = 0; G < RL_NG; G++) {
         rl_group(&h, G, g);
         for (i = 0; i < 20u && G * 20u + i < RL_N; i++)
+            x = (x ^ (uint16_t)g[i]) * 16777619u;
+    }
+    return x;
+}
+#endif
+/* (2026-10-31, Umeda) the Piano voice (BV_PIANO, the Lead's; SV_PIANO, the sequences'): three notes of a grand piano
+ * (pianosamp.c: C3, C5 and C6 of the Kawai grand of Versilian Studios' Virtual Community Sample Library, CC0, from
+ * Felucca, whose files name them C2, C4 and C5; 22.05 kHz, the first 2.38 s of each, its tail faded out; SEA5 like the
+ * Rain, the same read head and quantiser table; 113 KB), the nearest one read at the pitch asked (linear, the head's
+ * step 2048 x 2^(semitones / 12) in Q12: the C3 under 60, the C5 under 78, else the C6: the Lead's notes (60 .. 94)
+ * at most 12 down and 11 up; the arps' (30 .. 70, the C3 for the low ones) as far as 18 down; no sample lower, the
+ * user: "if we don't need deep piano sounds then we can avoid the deeper samples"). Up to PN_ACT voices ring at once, each to the end of its sample (the key's release doesn't stop it:
+ * a piano's note goes on, the Lead's rests and its mute let it ring); a note over that one fades the oldest in
+ * ~40 ms, in a spare slot (PN_N slots in all). The Tone knob dims it (a one-pole low-pass); Glide, Vibrato, Attack, the
+ * Lead's envelope are not its */
+#include "pianosamp.c"
+#define PN_ACT 4                                 /* (voices ringing, not fading) */
+#define PN_SLOTS 6                               /* (and the ones fading out) */
+#define PN_G 1.0f
+typedef struct {
+    rl_head_t h;
+    uint32_t step;
+    int32_t left;                                /* (output samples to the end of the note; 0: free) */
+    float g, fade;                               /* (its gain; the factor it is fading out by each sample, 1: not fading) */
+    uint32_t age;                                /* (notes struck since: the oldest steals first) */
+} pn_t;
+static pn_t pn[PN_SLOTS];
+static uint32_t pn_age;
+static float pn_lp, pn_pk;
+/* the sample nearest a note, and the semitones from it: the real C3 (48) under 60, the C5 (72) under 78, else the C6 (84) */
+static const uint8_t *pn_pick(int note, float *semis)
+{
+    const int r = note < 60 ? 48 : note < 78 ? 72 : 84;
+    *semis = (float)(note - r);
+    return r == 48 ? PN_DATA0 : r == 72 ? PN_DATA1 : PN_DATA2;
+}
+static void pn_reset(void)
+{
+    memset(pn, 0, sizeof pn);
+    pn_lp = pn_pk = 0.0f;
+}
+static void pn_note(int note, float vel)
+{
+    int k, f = -1, act = 0, old = -1;
+    float semis;
+    const uint8_t *d = pn_pick(note, &semis);
+    pn_t *v;
+    for (k = 0; k < PN_SLOTS; k++)
+        if (pn[k].left > 0 && pn[k].fade == 1.0f) {
+            act++;
+            if (old < 0 || pn[k].age < pn[old].age)
+                old = k;
+        }
+    if (act >= PN_ACT && old >= 0)
+        pn[old].fade = 0.9994f;                  /* (~40 ms to nothing: -60 dB over 1800 samples) */
+    for (k = 0; k < PN_SLOTS; k++)
+        if (pn[k].left <= 0) {
+            f = k;
+            break;
+        }
+    if (f < 0) {                                 /* (no slot free: the one fading furthest) */
+        f = 0;
+        for (k = 1; k < PN_SLOTS; k++)
+            if (pn[k].g * pn[k].fade < pn[f].g * pn[f].fade)
+                f = k;
+    }
+    v = &pn[f];
+    rl_aim(&v->h, d, PN_N);
+    rl_start(&v->h, 0);
+    v->step = (uint32_t)(2048.0f * fm_exp2f(semis * (1.0f / 12.0f)) + 0.5f);
+    v->left = (int32_t)(((PN_N - 2u) << 12) / v->step);
+    v->g = vel * (1.0f / 32768.0f);
+    v->fade = 1.0f;
+    v->age = ++pn_age;
+}
+/* the Piano as a Sequence's voice (SV_PIANO, either sequence's): each note its own read head in its pluck slot, the
+ * nearer sample at the pitch asked (as the Lead's: a note far under the samples is slower and duller, down to 3
+ * octaves under C5; its own decay to the end of the sample, Decay shaping it as it shapes the other voices; Cutoff
+ * its brightness, the filter every voice has) */
+#define PN_SG 1.4f
+static void pn_seq_start(pluck_t *v, int note)
+{
+    float semis;
+    const uint8_t *d = pn_pick(note, &semis);
+    semis = fm_clampf(semis, -36.0f, 24.0f);
+    rl_aim(&v->pn, d, PN_N);
+    rl_start(&v->pn, 0);
+    v->pn_step = (uint32_t)(2048.0f * fm_exp2f(semis * (1.0f / 12.0f)) + 0.5f);
+    v->pn_left = (int32_t)(((PN_N - 2u) << 12) / v->pn_step);
+}
+static float pn_seq_tick(pluck_t *v)
+{
+    if (v->pn_left <= 0)
+        return 0.0f;
+    v->pn_left--;
+    return rl_read(&v->pn, v->pn_step) * (PN_SG / 32768.0f);
+}
+static float pn_mix[BLK];
+static int pn_render(uint32_t n)                 /* the voices ringing, into pn_mix; 0 if none */
+{
+    int k, any = 0;
+    uint32_t j;
+    for (k = 0; k < PN_SLOTS; k++) {
+        pn_t *v = &pn[k];
+        if (v->left <= 0)
+            continue;
+        if (!any)
+            for (j = 0; j < n; j++)
+                pn_mix[j] = 0.0f;
+        any = 1;
+        for (j = 0; j < n && v->left > 0; j++, v->left--) {
+            pn_mix[j] += rl_read(&v->h, v->step) * v->g;
+            v->g *= v->fade;
+        }
+        if (v->g < 1e-7f)
+            v->left = 0;
+    }
+    return any;
+}
+#ifdef EN_HOST
+uint32_t en_pn_hash(int k)
+{
+    rl_head_t h;
+    int16_t g[20];
+    uint32_t G, i, x = 2166136261u;
+    rl_aim(&h, k == 2 ? PN_DATA2 : k ? PN_DATA1 : PN_DATA0, PN_N);
+    for (G = 0; G < h.ng; G++) {
+        rl_group(&h, G, g);
+        for (i = 0; i < 20u && G * 20u + i < PN_N; i++)
             x = (x ^ (uint16_t)g[i]) * 16777619u;
     }
     return x;
@@ -4664,9 +4889,9 @@ static void render_atmos(uint32_t n)
         for (k = 0; k < wq->nk; k++)
             svf_coefs(wn_c[k], 2.0f * wq->lo * fm_exp2f(step * (float)k) * col, WN_KQ);   /* (x2: the filter works at
                                                   * half the sample rate; its centre stays under 8 kHz) */
-    } else if (c == ATM_RAINLOOP) {              /* (Density the level, Drift the swells, as Hail's showers; Colour the
+    } else if (c == ATM_RAINLOOP || c == ATM_WATER) {   /* (Density the level, Drift the swells, as Hail's showers; Colour the
                                                   * low-pass over the 5 kHz of the loop: darker only) */
-        bed = RL_G * (1.0f / 32768.0f) * fm_exp2f((atm_gu - 0.5f) * 0.83f) * busy;
+        bed = (c == ATM_WATER ? WL_G : RL_G) * (1.0f / 32768.0f) * fm_exp2f((atm_gu - 0.5f) * 0.83f) * busy;
         kt = 1000.0f * (FM_TWO_PI / EN_SR);       /* (Colour a balanced tilt about 1 kHz: the highs x col^1.5, the lows the inverse,
                                                   * so -50 dark (9 dB each way: 18 between), 0 as recorded, +50
                                                   * bright. The first low-pass, 8 kHz x col, sat above the loop's 5 kHz and
@@ -4820,12 +5045,13 @@ static void render_atmos(uint32_t n)
             wn_par ^= 1u;
             break;
         }
-        case ATM_RAINLOOP: {                     /* (one draw, two noises, as Wind's: the hiss under it) */
+        case ATM_RAINLOOP: case ATM_WATER: {     /* (one draw, two noises, as Wind's: the hiss under it) */
+            rl_head_t *const hd = c == ATM_WATER ? wl_h : rl_h;
             const uint32_t rr = seq_rand(&atm_rng);
             xl = (float)(int32_t)(rr << 16) * (1.0f / 2147483648.0f);
             xr = (float)(int32_t)(rr & 0xFFFF0000u) * (1.0f / 2147483648.0f);
-            l = bed * rl_read(&rl_h[0], RL_STEP[0]);     /* (the tilt is applied below, after the Air hiss: it shapes both) */
-            r = bed * rl_read(&rl_h[1], RL_STEP[1]);
+            l = bed * rl_read(&hd[0], RL_STEP[0]);       /* (the tilt is applied below, after the Air hiss: it shapes both) */
+            r = bed * rl_read(&hd[1], RL_STEP[1]);
             break;
         }
         default:                                 /* Air: what a low-pass leaves, breathing with the gusts */
@@ -4846,7 +5072,7 @@ static void render_atmos(uint32_t n)
             atm_hl += 0.35f * (hl - atm_hl), atm_hr += 0.35f * (hr - atm_hr);
             l += 0.12f * air * (hl - atm_hl), r += 0.12f * air * (hr - atm_hr);
         }
-        if (c == ATM_RAINLOOP) {                 /* (Stereo Rain's Colour, over the rain and the hiss under it) */
+        if (c == ATM_RAINLOOP || c == ATM_WATER) {   /* (Stereo Rain's and the Water's Colour, over the loop and the hiss under it) */
             const float l0 = l, r0 = r;
             rl_lp[0] += kt * (l0 - rl_lp[0]);
             rl_lp[1] += kt * (r0 - rl_lp[1]);
@@ -5272,7 +5498,7 @@ static void render_plucks(uint32_t n)           /* (and Pluck's strings: render_
                 const float f = v->cut * fm_exp2f(3.5f * env) * fx_swm;   /* (the grid's Sweep) */
                 svf_coefs(v->c1, f, 1.4f);
                 svf_coefs(v->c2, f, 0.6f);
-                if (v->voice >= SV_FM0)          /* (an FM voice's envelopes: held, the layer ends the note) */
+                if (v->voice >= SV_FM0 && v->voice < SV_PIANO)   /* (an FM voice's envelopes: held, the layer ends the note) */
                     fm_ctrl(&v->fm, 1, 16);
             }
             switch (v->voice) {
@@ -5282,6 +5508,7 @@ static void render_plucks(uint32_t n)           /* (and Pluck's strings: render_
             case 3: x = blep_saw(ph, dt) - blep_saw(frac1(ph + 0.18f), dt); break;
             case 4: x = sine(ph + 2.0f + 1.8f * env * sine(ph2)); break;
             case 5: x = sine(ph) + 0.6f * sine(ph2); break;
+            case SV_PIANO: x = pn_seq_tick(v); break;   /* (the Piano: its note's own decay, Decay's shaping it too) */
             default: x = SV_FM_G[v->voice - SV_FM0] * fm_tick(&v->fm, dt); break;   /* (the FM voices: fm.c) */
             }
             ph += dt;
@@ -5687,6 +5914,28 @@ static void render_lead(uint32_t n)
                 tone = ld_tone * fo_mul(FO_LEAD);   /* (Tone, moved by the filter motion) */
     uint32_t j;
     float dt = 0.0f;
+    if (pn_render(n)) {                          /* (the Piano's notes ringing, whichever voice the Lead is on now) */
+        const float a_lp = fm_clampf(tone, 0.08f, 1.0f);
+        float pk = 0.0f;
+        for (j = 0; j < n; j++) {
+            float a;
+            pn_lp += (pn_mix[j] - pn_lp) * a_lp;
+            a = pn_lp * g * PN_G;
+            mixl[j] += a * gl;
+            mixr[j] += a * gr;
+            rsend[j] += 0.45f * ld_rev * a;
+            esend[j] += 0.6f * ld_echo * a;
+            pk = fm_maxf(pk, a < 0.0f ? -a : a);
+        }
+        pn_lp = fm_flush(pn_lp);
+        pn_pk = fm_maxf(fm_clampf(pk * 8.0f, 0.0f, 1.0f), pn_pk * 0.97f);
+    } else
+        pn_pk *= 0.97f;
+    if (lv == BV_PIANO) {                        /* (nothing else of the Lead's voices is its) */
+        lead.env += ((lead.on ? 1.0f : 0.0f) - lead.env) * 0.05f;   /* (the meter's: the key held) */
+        en_bass_level = pn_pk;
+        return;
+    }
     if (!lead.on && lead.env < 1e-5f) {
         en_bass_level = 0.0f;                    /* (the meter, at rest) */
         if (lc_live) {                           /* (the choir's resonators from silence, its vowel from Tone, at the next note) */

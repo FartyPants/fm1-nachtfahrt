@@ -49,6 +49,10 @@ said VOICE FM Sub
 expect par33 15
 turn ALGO 1
 wait 300
+said VOICE Piano
+expect par33 16
+turn ALGO 1
+wait 300
 said VOICE 2600
 expect par33 0
 # Sequence 2: from Moog (1), six on to the first FM voice, then its last
@@ -98,6 +102,10 @@ turn ALGO 1
 wait 300
 said VOICE Choir
 expect par34 8
+turn ALGO 1
+wait 300
+said VOICE Piano
+expect par34 9
 turn ALGO 1
 wait 300
 said VOICE Odyssey

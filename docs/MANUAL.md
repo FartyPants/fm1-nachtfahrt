@@ -191,8 +191,9 @@ delay line a period long), whose Cutoff is how bright the pluck is and Decay how
 highest octaves, from about C7, a string rings short whatever Decay is set to, as a real one does). After Pluck
 come the **FM voices** (fm1_open's recipes: three pairs of sines, each one bending its partner's pitch, as a DX7
 does): **FM Keys**, **FM Bell**, **FM EP** (an electric piano), **FM Clav**, **FM Guitar**, **FMMarimba**,
-**FM Vibes**, **FM Metal**, **FM Bass** and **FM Sub**; Decay is how long a note lasts and Cutoff how bright, as
-for the others. The
+**FM Vibes**, **FM Metal**, **FM Bass** and **FM Sub**; then the **Piano**, a sampled grand (the Lead's too: three real notes,
+C3, C5 and C6, read at the pitch asked, the nearest one; a note far under C3 comes out slower and duller; its Decay runs eight times as long as the others'); Decay is how long a note lasts and
+Cutoff how bright, as for the others. The
 root step is accented and the others quieter (Accent, on the Pattern page). Density decides how many of the steps sound, the least important dropping out first. Now and then
 (Evolve, Motion) a step changes, a note moves, an octave jumps, the sequence comes round early; it follows the Drone's chord
 (Transpose, on the Key page). Its cutoff wanders slowly over minutes, around the Cutoff you set (its Move page, below; its Width is the
@@ -227,7 +228,8 @@ phaser sweeps it slowly (**Phaser**). The chord walks from degree to degree ever
 **The Lead** (LFO; channel 3) is one voice, gliding: **Odyssey**, **Mini**, **Flute**, **Theremin**, **Synthi**, and three FM voices (fm1_open's recipes): **FM Lead**,
 **FM Reed** and **FM Brass**; or **Choir**, the Drone's formant choir as a single voice (two saws a little apart through
 three vowel resonators: **Tone** is its vowel, 'oo' at the bottom, 'ah' in the middle, 'ee' at the top; its glide and vibrato
-make it sing). It plays
+make it sing); or the **Piano**, a sampled grand: up to four notes ring at once, each to the end of its own decay (a key let
+go does not stop it), Tone dims it, Glide, Vibrato and Attack are not its. It plays
 in pairs: a call that ends open, then, a beat or two later, its answer, the same rhythm ending on the chord's root or
 fifth, held longer. It remembers its motifs: it plays one for a few pairs, then keeps it, varies it a little (a note
 moved, a new tail, its first half twice, slower) or finds a new one. How much it keeps is **Memory** (the Arc page):
@@ -265,7 +267,7 @@ band, swept slowly, louder as it climbs: gusts), **Surf** (waves of dark, deep n
 **Space** (chirps and bursts, far away), **Air**, **Tape** (a crackle ringing on the chord, DUB-1's), **Drops**
 (soft drops, each a short ring at its own pitch, over a quiet hush; it was called Rain), **Hail** (deep, heavy
 thuds over a muffled rain), or **Stereo Rain** (a recording of rain, 4.5 seconds looped by two readers, the right one a little
-faster and starting half a loop on, so the two ears hear different rain and the loop is hard to notice). Wind and Surf are dark, their top end soft (the FM-1's speaker is bright). Hail costs the
+faster and starting half a loop on, so the two ears hear different rain and the loop is hard to notice), or **Water** (the same, for a recording of the water at Umeda, 3.2 seconds). Wind and Surf are dark, their top end soft (the FM-1's speaker is bright). Hail costs the
 FM-1 more than the others: in a heavy piece it can make it thin its sound now and then, and no piece uses it.
 
 Its knobs keep their jobs whatever it is: Density, how busy (on Wind, how often its band turns; on Drops and Hail, how hard it falls; on Rain, its level); Drift, how quickly it changes (Wind's band, Surf's waves, the showers coming and going);
@@ -372,9 +374,10 @@ filter's usable range.
 | 7 | **Mirage** | Schulze, *Mirage* | F♯ minor, 95 | Glass 12 and 11, sparse, in 16ths | Glass + deep phaser, Theremin; a long reverb | Space | A slow opening: the Sequence's Intro 16 bars, Sequence 2's 24; the Atmosphere moves widest |
 | 8 | **Cyborg** | Schulze, *Cyborg* | C Phrygian, 70 | One, quiet (level 20): 2600, 8 steps in 8ths; no Sequence 2 | Organ, deep and beating; Theremin, low and up front (level 70) | None | The Drone's filter moves widely and slowly (Width 50, Time 70) |
 | 9 | **Sakura Rain** | Cranky Man's, after the summers in Japan | B♭ Dorian, 80 | Jean-Michel Jarre's arps: 2600 an octave down, dark (Cutoff 30); Sequence 2 on Sub two octaves down, open (Cutoff 90) | Strings, darker (Colour −30) and quieter (75), the royal road (A♭'s IV△7–V7–iii7–vi7 in B♭ Dorian's notes, looping); Theremin two octaves down, gliding (70): almost singing | None | Wahnfried's melody and moves |
+| 10 | **Umeda** | Cranky Man's, Kankyō Ongaku: the piano in the plazas of Umeda | F♯ major pentatonic, 50 | None | Organ, quiet (45); the Piano Lead, no glide: it starts from a written theme (a slow motive of six notes) and wanders from it within the scale, coming back to it | Stereo Rain (15) | The theme is the Lead's slot 0, as if you had played it: its offspring follow it as its kinship falls |
 
 In every piece the Lead's Width is low: it stays gentle. Its **Memory** (the Arc page): Timewind 55, Wahnfried
-40, Phaedra 75, Rubycon 45, Stratosfear 85, Sunrain 60, Mirage 50, Cyborg 35, Sakura Rain 40 (Stratosfear's and Phaedra's Leads hold
+40, Phaedra 75, Rubycon 45, Stratosfear 85, Sunrain 60, Mirage 50, Cyborg 35, Sakura Rain 40, Umeda 60 (Stratosfear's and Phaedra's Leads hold
 on to their ideas, Cyborg's and Wahnfried's wander). The names are working titles. The keys and tempos are
 starting points from music analysis sites, to be tuned by ear; fast readings such as Phaedra's 149 and
 Rubycon's 144 may be double the felt tempo (they run in eighths, which feel like sixteenths at half the speed).
@@ -537,7 +540,7 @@ screen again, with the section of the arc and its bar, and how far a filter has 
 
 ## 12. Saving
 
-NACHTFAHRT keeps all nine pieces in the FM-1's memory, each as you left it, with Tune, MIDI out and Lights.
+NACHTFAHRT keeps all ten pieces in the FM-1's memory, each as you left it, with Tune, MIDI out and Lights.
 
 - **By itself:** a few seconds after a change, while resting (writing to the memory interrupts the sound
   for a moment, so it never happens while the music plays). A dot at the top means unsaved changes.
@@ -624,6 +627,8 @@ must also share its source code.
 - The Tape atmosphere is DUB-1's crackle, after Bahadirhan Kocer's "Using Resonators in Live".
 - Stereo Rain plays the author's own recording of rain, low-passed at 5 kHz and stored in the SEA format (5.7 bits a sample, 70 KB), as in M-VAVE's [fm1_open](https://github.com/m-vave/fm1_open), after SEA by Dani Biró
   ([Daninet/sea-codec](https://github.com/Daninet/sea-codec), MIT; the decoder written again here).
+- Water is the same, for the author's own recording of the water at Umeda (22.05 kHz mono, 3.2 s, SEA, 50 KB).
+- The Piano is three notes (C3, C5, C6) of the Kawai grand piano of the Virtual Community Sample Library (Versilian Studios, CC0), as in [Felucca](https://github.com/hugelton/Felucca), shortened, normalised and stored in the SEA format as above (113 KB).
 - Hail hears water as many small drops, each in its own band about an octave wide (never broadband clicks,
   which are heard as fire), after J. H. McDermott and E. P. Simoncelli, "Sound texture perception via statistics of
   the auditory periphery" (Neuron, 2011); each fitted to a recording the author made, then chosen by ear.

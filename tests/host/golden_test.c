@@ -21,6 +21,7 @@ static uint32_t render_piece(int i)
     en_piece(i, pp, &pl);
     for (p = 0; p < P_NPARAMS; p++) en_set(p, pp[p]);
     en_pool(pl);
+    en_piece_theme(i);
     en_regrow();
     en_play(1);
     for (b = 0; b < (int)(60.0f * 44100.0f / 256.0f); b++) {

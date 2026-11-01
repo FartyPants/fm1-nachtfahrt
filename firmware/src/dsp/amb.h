@@ -178,20 +178,22 @@ void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2);
 /* the voices: each layer's sounds (ALGORITHM on the layer's page) */
 #define EN_NCV 6                         /* (BERLIN) the Drone's voices: Organ, Strings, Horn, Saws, Glass, Choir (no FM
                                           * voices: the user's ear, 2026-10-30) */
-#define EN_NBV 9                         /* (BERLIN) the Lead's voices: Odyssey, Mini, Flute, Theremin, Synthi, then the
+#define EN_NBV 10                        /* (BERLIN) the Lead's voices: Odyssey, Mini, Flute, Theremin, Synthi, then the
                                           * three FM voices (the voices batch, item 5): FM Lead, FM Reed, FM Brass, then Choir
-                                          * (2026-10-31: the Drone's formant choir as a voice: Tone is its vowel) */
+                                          * (2026-10-31: the Drone's formant choir as a voice: Tone is its vowel), then
+                                          * Piano (sampled: Umeda's) */
 #define EN_BV_FM 5                       /* the first of them on its knob (the voices before them: what a shake picks
                                           * from) */
-#define EN_NSV 16                       /* (BERLIN) the Sequence's voices: 2600, Moog, Synthi, Pulse, Glass, Pluck,
+#define EN_NSV 17                       /* (BERLIN) the Sequence's voices: 2600, Moog, Synthi, Pulse, Glass, Pluck,
                                          * then the ten FM voices (the voices batch, item 5): FM Keys, FM Bell, FM EP,
-                                         * FM Clav, FM Guitar, FMMarimba, FM Vibes, FM Metal, FM Bass, FM Sub */
-#define EN_NS2V 17                      /* Sequence 2's: the same five, Sub, Pluck, the ten FM voices (the voices batch:
+                                         * FM Clav, FM Guitar, FMMarimba, FM Vibes, FM Metal, FM Bass, FM Sub, then the
+                                         * Piano (2026-10-31, Umeda: sampled, like the Lead's) */
+#define EN_NS2V 18                      /* Sequence 2's: the same five, Sub, Pluck, the ten FM voices (the voices batch:
                                          * Pluck, then the FM voices, appended to both, so every saved value keeps its
                                          * voice; the Sequence's 5 is Pluck, Sequence 2's 5 Sub and 6 Pluck) */
 #define EN_SV_FM 6                      /* the first FM voice on the Sequence's knob, Sequence 2's (the voices before */
 #define EN_S2V_FM 7                     /* them: what a shake picks from) */
-extern const char *const EN_SV_NAME[EN_NS2V];   /* all seventeen: 2600 .. Glass, Sub, Pluck, the FM voices (the engine's
+extern const char *const EN_SV_NAME[EN_NS2V];   /* all eighteen: 2600 .. Glass, Sub, Pluck, the FM voices, Piano (the engine's
                                                  * own numbers) */
 extern volatile uint8_t en_seq_len[2];          /* each sequence's return point as it plays (the performer's moves) */
 extern volatile int8_t en_s2oct_shift;          /* Sequence 2's octave away from its knob's (home): -1, 0, 1 (Motion's,
@@ -244,6 +246,7 @@ uint32_t en_rl_wrap(int head);                 /* (host tests) the 44.1 kHz samp
                                                   * the loop twice (2 x its samples) for the left, a little less for the right */
 float en_lc_gain(float hz);                     /* (host tests) the Choir lead's resonators' gain at hz, as last set */
 uint32_t en_rl_hash(void);                      /* (host tests) the rain loop decoded whole: an FNV-1a of its samples */
+uint32_t en_wl_hash(void);                      /* (host tests) the water loop decoded whole, the same */
 int en_atm_ok(void);                             /* 1: the Atmosphere's float state finite, no denormals */
 int en_lead_cap(void);
 int en_lead_theme(int8_t *off, uint8_t *dur);
@@ -359,10 +362,12 @@ void en_prog_rewalk(void);                     /* the walk's character turned (b
                                                 * the one playing (yours and the gaps kept) */
 enum { EN_WALK_HOME, EN_WALK_WANDER, EN_WALK_FREE, EN_NWALK, EN_PLOOP = 4 };
 extern const char *const EN_WALK_NAME[EN_NWALK];
-#define EN_NNCHAR 9                      /* (BERLIN) the Atmosphere's: None, Wind, Surf, Space, Air, Tape, Drops (was Rain),
+#define EN_NNCHAR 10                     /* (BERLIN) the Atmosphere's: None, Wind, Surf, Space, Air, Tape, Drops (was Rain),
                                           * Hail (2026-10-30: appended, so every saved one keeps its character), Rain
                                           * (2026-10-31: the author's recording of rain, a loop of SEA5 in rainloop.c; the
-                                          * heavy synthesised "Rain" of 0.9.6 to 0.9.8 had this place, taken away) */
+                                          * heavy synthesised "Rain" of 0.9.6 to 0.9.8 had this place, taken away), Water
+                                          * (2026-11-01: the author's recording of the water at Umeda, waterloop.c: the same two
+                                          * read heads) */
 extern const char *const EN_NCHAR_NAME[EN_NNCHAR];   /* the noise's characters */
 extern volatile int8_t en_chord_slot;          /* the slot whose chord sounds, -1: a chord of the scale */
 int en_deg_of(uint32_t pool, int rel);         /* the scale degree for a note above the root (nearest in the pool) */
@@ -370,7 +375,10 @@ void en_chord_iv(int kind, int type, int *iv); /* a slot's voicing: four interva
 const char *en_chord_label(int root, int kind, int type, char *buf);   /* "Fm7", "Bbsus4", "Eb6" ("-": empty) */
 
 /* the pieces: recipes for every parameter (Tune and MIDI out included, but they are the player's) */
-#define EN_NPIECES 9
-/* (2026-10-30: Sakura Rain, the ninth piece, the user's: one more save slot of the two the project's sector holds) */
+#define EN_NPIECES 10
+/* (2026-10-30: Sakura Rain, the ninth piece, the user's: one more save slot of the two the project's sector holds;
+ * 2026-10-31: Umeda, the tenth, the last slot the sector holds) */
 const char *en_piece_name(int i);
 void en_piece(int i, int16_t *par, uint16_t *pool);
+void en_piece_theme(int i);                    /* the piece playing, for en_regrow: a piece with a written theme (Umeda)
+                                                * starts its Lead from it (the keys' kind of theme: its offspring follow) */
