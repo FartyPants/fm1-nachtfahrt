@@ -194,7 +194,7 @@ does): **FM Keys**, **FM Bell**, **FM EP** (an electric piano), **FM Clav**, **F
 **FM Vibes**, **FM Metal**, **FM Bass** and **FM Sub**; then the **Piano**, a sampled grand (the Lead's too: three real notes,
 C3, C5 and C6, read at the pitch asked, the nearest one; a note far under C3 comes out slower and duller; its Decay runs eight times as long as the others'); Decay is how long a note lasts and
 Cutoff how bright, as for the others. The
-root step is accented and the others quieter (Accent, on the Pattern page). Density decides how many of the steps sound, the least important dropping out first. Now and then
+root step is accented and the others quieter (Accent, on the Pattern page). Density decides how many of the steps sound, the least important dropping out first. It also drifts by itself, slowly, as the music goes: swelling towards 100 (the arp fills, the energy rises) and thinning towards 0 (it falls away, calms), over a minute or two a time, up to 85% of the way each side of the knob's value. **Motion** (the Nachtfahrt page) is how far: at 30 or more all of it, less in proportion, at 0 the Density stays where it is. Now and then
 (Evolve, Motion) a step changes, a note moves, an octave jumps, the sequence comes round early; it follows the Drone's chord
 (Transpose, on the Key page). Its cutoff wanders slowly over minutes, around the Cutoff you set (its Move page, below; its Width is the
 **Sweep**, also on PERFORM).

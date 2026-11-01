@@ -236,6 +236,7 @@ extern volatile uint8_t en_wn_part;              /* (Hail's calibration: 1 the d
 extern volatile float en_pl_steal;               /* the loudest a sounding sequence voice was (its last output sample)
                                                   * when taken for a new note, since it was last set to 0 */
 int en_ks_ok(void);                              /* 1: Pluck's strings' float state finite, no denormals */
+int en_dd_off(void);                             /* (host tests) Density's slow drift now, in its units */
 int en_pn_act(int l);                            /* (host tests) a sequence's Piano notes ringing and not stolen */
 int en_pl_on(void);                              /* the sequences' voices sounding now (of the six) */
 int en_fm_ok(void);                              /* (the voices batch, item 5) 1: every FM voice's state (the sequences',

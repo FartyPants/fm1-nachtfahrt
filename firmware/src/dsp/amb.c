@@ -603,11 +603,14 @@ static float ec_g = 0.6f, ec_lpc = 0.68f, ec_wide = 1.0f;   /* the echo's Blur, 
 static int8_t mac[EN_NMAC];                     /* the master actions, -50..50 */
 volatile int8_t en_mac[EN_NMAC];
 static int8_t pofs[P_NPARAMS];
+static int dd_off;                               /* (the density's slow drift, below: added to Density as heard) */
 static float dub_up;                            /* Dub turned up, 0..1: the echo darker, feeding back past its knob */                  /* what they add to the piece's parameters */
 static int pe(int p)                            /* a parameter as heard: the piece's, moved by the master actions */
 {
     int v = par[p] + (par[p] || (p != P_SEQ && p != P_SEQ2) ? pofs[p] : 0);   /* (a sequence the piece keeps silent,
                                                   * level 0, stays silent: Energy doesn't wake it) */
+    if (p == P_DENSITY)
+        v += dd_off;
     return v < PARAMS[p].lo ? PARAMS[p].lo : v > PARAMS[p].hi ? PARAMS[p].hi : v;
 }
 static uint32_t pool = 0xAADu;                  /* Ionian until told */
@@ -1287,10 +1290,12 @@ static void fo_step(uint32_t n)                  /* once a chunk: the clock on, 
     }
 }
 
+static void dd_reset(void);
 static void ar_start(void)                       /* the arc from its start: Emerge (an Intro opening), or Flow at once;
                                                   * the intros and the long rise from their start */
 {
     int i;
+    dd_reset();                                  /* (Density's drift from nothing too) */
     ar_bar = 0;
     ar_pos = 0.0f;
     ar_cue = 0;
@@ -1331,6 +1336,39 @@ static void s2o_section(void)
         d = -d;
     en_s2oct_shift = (int8_t)d;
 }
+/* (2026-11-01, the user: "a slow drift would probably work, especially as increasing density feels like energy was added and
+ * decreasing would put things back, which can work well for every preset"; Umeda's 20 "became monotonous: a high number
+ * would bring the energy, a very low number or 0 would calm it down") Density drifts: a slow wander about the knob's value,
+ * both sequences', up to 85% of the way to 100 and to 0, its reach from Motion (the piece's own moving: 30 or more all of
+ * it, less in proportion, at 0 it holds): every bar the wander eases (12 bars to most of the way) to a target drawn at
+ * random, a new target every 16 to 39 bars, so a swell or a thinning takes a minute or two and the next goes where it
+ * goes; its own random stream (no other generator's draws move). From nothing at a piece's start, the first target
+ * after 4 bars */
+static uint32_t dd_rng = 0x2545F491u;
+static float dd_w, dd_t;
+static int dd_left;
+static void dd_reset(void)
+{
+    dd_w = dd_t = 0.0f;
+    dd_left = 4;
+    dd_off = 0;
+}
+static void dd_tick_bar(void)
+{
+    if (--dd_left <= 0) {
+        dd_t = (float)(seq_rand(&dd_rng) >> 8) * (2.0f / 16777216.0f) - 1.0f;
+        dd_left = 16 + (int)(seq_rand(&dd_rng) % 24u);
+    }
+    dd_w += (dd_t - dd_w) * 0.08f;
+    {
+        const float reach = fm_minf((float)par[P_MOTION] * (1.0f / 30.0f), 1.0f) * 0.85f,
+                    room = dd_w >= 0.0f ? (float)(100 - par[P_DENSITY]) : (float)par[P_DENSITY];
+        dd_off = (int)(dd_w * reach * room + (dd_w < 0.0f ? -0.5f : 0.5f));
+    }
+}
+#ifdef EN_HOST
+int en_dd_off(void) { return dd_off; }
+#endif
 static void ar_tick_bar(void)                    /* a bar line (the first, at the start, already counted) */
 {
     if (ar_first) {
@@ -1338,6 +1376,7 @@ static void ar_tick_bar(void)                    /* a bar line (the first, at th
         return;
     }
     ar_bar++;
+    dd_tick_bar();
     if (--ar_left <= 0) {
         const float r = (float)(seq_rand(&ar_rng) >> 8) * (1.0f / 16777216.0f);
         const uint8_t was = ar_sec;
@@ -3998,6 +4037,7 @@ void en_init(void)
     memset(pluck, 0, sizeof pluck);              /* (BERLIN's voices from rest: none sounding, none to let go) */
     memset(&lead, 0, sizeof lead);
     pn_reset();                                  /* (the Piano's notes, none ringing) */
+    dd_reset();
     ld_key = -1;
     theme_pc = -1;                               /* (no piece's written theme till en_piece_theme) */
     ld_reseed();

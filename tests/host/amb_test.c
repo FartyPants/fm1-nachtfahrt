@@ -1343,6 +1343,43 @@ static void test_piano_lead(void)
         CHECK(!bad && pk > 0.01f && pk < 4.0f, "test_piano_poly: six notes, peak %f, bad %d, %d samples", (double)pk, bad, k);
         en_play(0);
     }
+    /* (2026-11-01, the user: "a slow drift would probably work, especially as increasing density feels like energy was added")
+     * Density drifts about the knob's value, up to 85% of the way to 100 and to 0 (Density 50: +-42; the user: "to a high
+     * number it would bring the energy, a very low number or 0 would calm it"), its reach from Motion (30 or more: all of it;
+     * at 0 never), over 10 minutes of bars (tempo 250) reaching both sides by 15 or more and spending more than a second of its
+     * time away from the middle (it moves); it eases (one bar moves it by 8 or less) */
+    {
+        int b, mn = 999, mx = -999, away = 0, last = 0, jump = 0, off0 = 0;
+        fresh();
+        en_set(P_TEMPO, 250), en_set(P_MOTION, 0), en_set(P_SEQ, 0), en_set(P_SEQ2, 0), en_set(P_LEAD, 0), en_set(P_CHORD, 0);
+        en_play(1);
+        for (b = 0; b < (int)(300.0f * 44100.0f / 256.0f); b++) {
+            en_render(buf, 256, 2048);
+            off0 = en_dd_off() != 0 ? 1 : off0;
+        }
+        CHECK(!off0, "test_density_drift: at Motion 0 it moved");
+        fresh();
+        en_set(P_TEMPO, 250), en_set(P_MOTION, 100), en_set(P_DENSITY, 50), en_set(P_SEQ, 0), en_set(P_SEQ2, 0), en_set(P_LEAD, 0), en_set(P_CHORD, 0);
+        en_play(1);
+        for (b = 0; b < (int)(600.0f * 44100.0f / 256.0f); b++) {
+            int o;
+            en_render(buf, 256, 2048);
+            o = en_dd_off();
+            mn = o < mn ? o : mn, mx = o > mx ? o : mx;
+            away += o > 8 || o < -8;
+            if (!(b % 168)) {                    /* (about a bar at 250: 0.96 s) */
+                jump = o - last > jump ? o - last : last - o > jump ? last - o : jump;
+                last = o;
+
+            }
+        }
+        printf("  density drift at Motion 100, Density 50: %d .. %d, %d%% of the time over 8 away, biggest step a bar %d\n", mn, mx,
+               100 * away / (int)(600.0f * 44100.0f / 256.0f), jump);
+        CHECK(mn >= -43 && mx <= 43 && mn <= -15 && mx >= 15, "test_density_drift: range %d .. %d (within +-43: 85%% of the way to 0 and to 100, reaching +-15)", mn, mx);
+        CHECK(away > (int)(1.0f * 44100.0f / 256.0f), "test_density_drift: moved from the middle for %d blocks only", away);
+        CHECK(jump <= 8, "test_density_drift: a bar moved it by %d", jump);
+        en_play(0);
+    }
     /* (the arps' Piano steals voices) a sequence rings 3 Piano notes at most, the oldest let go in ~40 ms when a fourth
      * comes: 16ths at 200, Decay 100, both sequences; never over 3 a sequence, 3 reached (the stealing is used) */
     {
