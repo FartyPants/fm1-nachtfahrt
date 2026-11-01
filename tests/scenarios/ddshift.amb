@@ -1,0 +1,7 @@
+# Density's slow drift (2026-11-01): from nothing at a piece's start, the first target after 4 bars; with Motion 30 or more
+# all of its reach: a few minutes on it has moved the Sequence's Density from the knob's value (the panel's dot and its said
+# text follow it)
+wait 500
+expect dd_shift 0
+wait 400000
+expect dd_shift_abs >2

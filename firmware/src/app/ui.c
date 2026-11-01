@@ -677,6 +677,22 @@ static int knob_dot(int v)                       /* the knob's value where its f
     }
 }
 
+/* (2026-11-01) the Density knob's drift: where Density is now, the knob's value moved by the engine's slow drift (the same
+ * idea as the filter's dot): the knob index on the page (-1: none) */
+static int dens_knob(int v)
+{
+    int i;
+    for (i = 0; i < 4; i++)
+        if (VIEW_KNOB[v][i] == P_DENSITY)
+            return i;
+    return -1;
+}
+static int dens_dot(void)                        /* the knob's value plus the drift, kept in its range */
+{
+    const int x = proj.par[P_DENSITY] + (int)en_dd_shift;
+    return x < 0 ? 0 : x > 100 ? 100 : x;
+}
+
 static int view_voice(int v)
 {
     v = page_of(v);
@@ -2424,6 +2440,19 @@ static void draw_main(void)
             *q = 0;
             text_c(120, 130, &FONT_XS, t, K_ACC);
         }
+        if (dens_knob(ui.view) >= 0 && (en_dd_shift >= 3 || en_dd_shift <= -3)) {   /* (the Sequence's page: its Density's drift) */
+            char t[32], *q = t;
+            const char *w = en_dd_shift < 0 ? "MOVING SPARSER, -" : "MOVING DENSER, +";
+            const int n = en_dd_shift < 0 ? -en_dd_shift : en_dd_shift;
+            while (*w)
+                *q++ = *w++;
+            if (n >= 100)
+                *q++ = '1';
+            if (n >= 10)
+                *q++ = (char)('0' + n / 10 % 10);
+            *q++ = (char)('0' + n % 10), *q = 0;
+            text_c(120, 130, &FONT_XS, t, K_BELL);
+        }
     }
     draw_oct(now);
     draw_card(now);
@@ -2451,6 +2480,8 @@ static void draw_knobs(void)
     if (sel_on)
         h = hash(h, 0x53454Cu ^ (uint32_t)(knob_get(K_ENERGY) + 64) << 24);
     h = hash(h, (uint32_t)now_touch | (uint32_t)(knob_dot(ui.view) + 1000) << 1);   /* (the filter's dot moving) */
+    if (dens_knob(ui.view) >= 0)
+        h = hash(h, (uint32_t)(dens_dot() + 1000));   /* (Density's dot moving) */
     if (h == ui.sig[2])
         return;
     ui.sig[2] = h;
@@ -2535,6 +2566,11 @@ static void draw_knobs(void)
                 /* (BERLIN) the filter motion: where the filter is now, a cyan dot on the ring */
                 const float a = (0.375f + 0.75f * (float)(knob_dot(ui.view) - lo) / (float)(hi - lo)) * FM_TWO_PI;
                 cv_disc(cx + (int32_t)(fm_cosf(a) * 12.0f + 0.5f), 37 + (int32_t)(fm_sinf(a) * 12.0f + 0.5f), 2, K_ACC);
+            }
+            if (k == P_DENSITY && en_dd_shift != 0 && hi > lo) {
+                /* (2026-11-01) Density's drift: where it is now, a dot in the Sequence's colour on the ring */
+                const float a = (0.375f + 0.75f * (float)(dens_dot() - lo) / (float)(hi - lo)) * FM_TWO_PI;
+                cv_disc(cx + (int32_t)(fm_cosf(a) * 12.0f + 0.5f), 37 + (int32_t)(fm_sinf(a) * 12.0f + 0.5f), 2, K_BELL);
             }
             if (k == P_MOTION) {                 /* (Motion's three regions: the loop held, variations, Breaks) */
                 arc_mark(cx, 37, 12, 0.4f, K_TEXT);
@@ -2824,6 +2860,11 @@ static void sp_garden(void)
                 sp_cat("half an octave");
             }
         }
+    }
+    if (dens_knob(ui.view) >= 0 && (en_dd_shift >= 3 || en_dd_shift <= -3)) {   /* (the Sequence's page: Density's drift) */
+        sp_cat(". Density moving ");
+        sp_cat(en_dd_shift < 0 ? "sparser, about -" : "denser, about +");
+        sp_int((uint32_t)(en_dd_shift < 0 ? -en_dd_shift : en_dd_shift));
     }
     sp_cat(". Scale");
     for (i = 0; i < 12; i++) {

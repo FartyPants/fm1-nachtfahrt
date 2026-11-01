@@ -684,6 +684,10 @@ static int expect(const char *what, const char *val)
         got = (int)en_bars;
     else if (!strcmp(what, "ext"))
         got = en_ext;
+    else if (!strcmp(what, "dd_shift"))
+        got = en_dd_shift;
+    else if (!strcmp(what, "dd_shift_abs"))
+        got = en_dd_shift < 0 ? -en_dd_shift : en_dd_shift;
     else if (!strcmp(what, "midi_out"))
         got = (int)midi_out_count;
     else if (!strcmp(what, "pad_level"))

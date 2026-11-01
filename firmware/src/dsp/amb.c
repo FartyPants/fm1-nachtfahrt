@@ -1344,6 +1344,7 @@ static void s2o_section(void)
  * random, a new target every 16 to 39 bars, so a swell or a thinning takes a minute or two and the next goes where it
  * goes; its own random stream (no other generator's draws move). From nothing at a piece's start, the first target
  * after 4 bars */
+volatile int8_t en_dd_shift;
 static uint32_t dd_rng = 0x2545F491u;
 static float dd_w, dd_t;
 static int dd_left;
@@ -1352,6 +1353,7 @@ static void dd_reset(void)
     dd_w = dd_t = 0.0f;
     dd_left = 4;
     dd_off = 0;
+    en_dd_shift = 0;
 }
 static void dd_tick_bar(void)
 {
@@ -1365,6 +1367,7 @@ static void dd_tick_bar(void)
                     room = dd_w >= 0.0f ? (float)(100 - par[P_DENSITY]) : (float)par[P_DENSITY];
         dd_off = (int)(dd_w * reach * room + (dd_w < 0.0f ? -0.5f : 0.5f));
     }
+    en_dd_shift = (int8_t)dd_off;
 }
 #ifdef EN_HOST
 int en_dd_off(void) { return dd_off; }
