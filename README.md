@@ -134,6 +134,6 @@ Synth Seeker's videos on Berlin School sequencing. (The Bob Ross of Berlin Schoo
 installer) is [Felucca](https://github.com/hugelton/Felucca)'s by Leo Kuroshita (Hügelton Instruments), by way
 of [X0X](https://github.com/charlesvestal/fm1-x0x), FoMni-1, AMB-1 and DUB-1. The idea of running FM-1 firmware
 in the browser comes from [Groove OS](https://www.groove-os.com/). GPL-3.0-only; see [LICENSING.md](LICENSING.md).
-The snoring you hear in your head is Cranky Man himself.
+The concept, compositions and snoring you hear in your head is Cranky Man himself.
 
 M-VAVE and FM-1 are trademarks of their owners. NACHTFAHRT is not affiliated with M-VAVE or Hügelton Instruments.
