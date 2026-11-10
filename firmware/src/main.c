@@ -8,7 +8,11 @@
 #include "fm1_sys.h"
 #include "fm1_irq.h"
 #include "fm1_guard.h"
-#include "fm1_input.h"
+#if BOARD_SMK37
+#include "smk_input.h"        /* the SMK-37 panel: velocity keybed, pads, faders, wheels (same API as fm1_input.h) */
+#else
+#include "fm1_input.h"        /* the FM-1 panel */
+#endif
 #include "fm1_timer.h"
 #include "fm1_audio.h"
 #include "fm1_adc.h"
