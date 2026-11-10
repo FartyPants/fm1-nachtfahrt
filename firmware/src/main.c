@@ -14,6 +14,7 @@
 #include "fm1_adc.h"
 #include "fm1_lcd_hw.h"
 #include "fm1_flash.h"
+#include "fm1_flash_map.h"   /* the board's allow-list (BOARD_SMK37); the FM-1 values are unchanged */
 #include "fm1_xip.h"
 #include "fm1_perf.h"
 
