@@ -15,13 +15,20 @@
 #endif
 #include "fm1_timer.h"
 #include "fm1_audio.h"
-#include "fm1_adc.h"
-#include "fm1_lcd_hw.h"
-#include "fm1_flash.h"
 #if BOARD_SMK37
-#include "fm1_flash_map.h"   /* the SMK's flash map: it REPLACES the FM-1 ranges (FL_DATA, FL_OTA, FL_STORE_OK)
-                              * and is what storage.c's SMK assertions and the JEDEC check are read against */
+/* smk_input.h brings its own: the battery on mux C, MASTER as the virtual K1 (the SMK has no pot) */
+#else
+#include "fm1_adc.h"
 #endif
+#include "fm1_lcd_hw.h"
+#if BOARD_SMK37
+/* BEFORE fm1_flash.h, which defines FL_RANGE_OK under #ifndef: a map included after it could only
+ * redefine the macro while the RAM driver's own erase and program kept the FM-1's net. Included
+ * first, the driver's net is the SMK's (FL_DATA 0x9D000..0xBB000 and FL_SMP 0xC2000..0xEA000,
+ * never BTIF/USRTRIM at 0xC0000..0xC1FFF nor key_mac above 0xFF000), and fm1_flash.h leaves it be. */
+#include "fm1_flash_map.h"
+#endif
+#include "fm1_flash.h"
 #include "fm1_xip.h"
 #include "fm1_perf.h"
 

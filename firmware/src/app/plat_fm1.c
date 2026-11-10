@@ -4,29 +4,68 @@
 
 uint32_t plat_ms(void) { return fm1_ms; }
 
+#if BOARD_SMK37
+/* The SMK-37's 14 buttons, by their printed names (smk37-port.yaml map: printed). The FM-1's fourteen
+ * are named after its own pages, which the SMK has not got, so the app's B_* keep their jobs and the
+ * printed key that means the same thing takes them:
+ *   HOME the home page        GLOBE         SEL  PERFORM        PARA
+ *   EDIT the Chords page      CHORD         SAVE the Noise page PATCH
+ *   ENV  the Drone page       BT            LFO  the Lead page   NOTE REPEAT
+ *   ARP  the Sequence page    ARP           SEQ  Sequence 2      SEQ
+ *   FX   the Space page       FX            GLO  the Setup page  KNOB BANK
+ *   PLAY / REC                SEQ PLAY / SEQ REC                OCT- / OCT+  OCTAVE- / OCTAVE+
+ * What the SMK has and NACHTFAHRT has no job for (BT, the page arrows, the fader bank) is left to the
+ * controls in smk_controls.h and to the stock firmware's own use. */
+static const uint8_t SMK_BTN_APP[NB] = {14, 13, 11, 7, 9, 0, 10, 12, 6, 15, 16, 17, 4, 5};
+#endif
+
 uint32_t plat_buttons(void)
 {
+#if BOARD_SMK37
+    /* (the SMK's buttons are fixed: a calibration taught on the FM-1 would name the wrong keys) */
+    uint32_t raw = fm1_in.buttons, out = 0, i;
+    for (i = 0; i < NB; i++)
+        if (raw & (1u << SMK_BTN_APP[i]))
+            out |= 1u << i;
+    return out;
+#else
     uint32_t raw = fm1_in.buttons, out = 0, i;
     for (i = 0; i < NB; i++)
         if (raw & (1u << panel.btn[i]))
             out |= 1u << i;
     return out;
+#endif
 }
 
+
 uint32_t plat_keys(void) { return fm1_in.notes & ((1u << NKEYS) - 1u); }
+
+#if BOARD_SMK37
+/* The SMK's eight knobs, by the printed K1..K8 (smk37-port.yaml knobs: layout fm1):
+ *   K1 MASTER the output (the FM-1's MASTER pot, virtual here: fm1_adc_read reports it)
+ *   K2 SELECT  K3 ALGORITHM  K4 PRESETS   the FM-1's own three, in its screen order
+ *   K5..K8     the screen's four dials (KNOB 1..4) */
+static const uint8_t SMK_ENC_APP[NE] = {1, 2, 3, 4, 5, 6, 7};
+#endif
 
 int32_t plat_enc(int role)
 {
     if (role < 0 || role >= NE)
         return 0;
+#if BOARD_SMK37
+    return fm1_enc_take(SMK_ENC_APP[role]) * panel.dir[role];
+#else
     return fm1_enc_take(panel.enc[role]) * panel.dir[role];
+#endif
 }
 
 static volatile uint32_t master_q12 = 2048;
 uint32_t plat_master(void) { return master_q12; }
 
 /* LEDs: the picture is built off-line and copied one byte per column (Felucca: clearing
- * and relighting would let the 10 kHz scan catch the dark gap and flicker) */
+ * and relighting would let the 10 kHz scan catch the dark gap and flicker). The SMK has no
+ * per-key LED at all: its own plat_leds is below. */
+#if !BOARD_SMK37
 static uint8_t led_pos[FM1_NKEY];
 static void led_pos_init(void)
 {
@@ -47,6 +86,26 @@ void plat_glow(int on) { glow_on = (uint8_t)(on != 0); }
  * column 8, row PA5 (found on the device). Green, unless recording. */
 static uint8_t play_red;
 void plat_play_red(int red) { play_red = (uint8_t)(red != 0); }
+#endif  /* !BOARD_SMK37 */
+
+#if BOARD_SMK37
+/* Glow is the FM-1's: unlit buttons stay dark on this panel (the stock firmware lights nothing either),
+ * but the app calls plat_glow whatever the board. */
+void plat_glow(int on) { (void)on; }
+void plat_play_red(int red) { (void)red; }
+
+/* The SMK's 19 LEDs sit on its buttons (one each, SEQ PLAY's two-colour, SEQ REC's red): there is no
+ * per-key LED, so the keys' picture (the step grid, the effects) is the screen's job here, and the
+ * pads carry it (smk_controls.h). A button's LED is fm1_led_key(SMK id), the HAL's own table. Glow is
+ * the FM-1's: unlit buttons stay dark on this panel (the stock firmware lights nothing either). */
+void plat_leds(uint32_t buttons, uint32_t keys)
+{
+    uint32_t i;
+    (void)keys;
+    for (i = 0; i < NB; i++)
+        fm1_led_key(SMK_BTN_APP[i], (int)((buttons >> i) & 1u));
+}
+#else
 void plat_leds(uint32_t buttons, uint32_t keys)
 {
     uint8_t nl[FM1_NCOL] = {0}, dl[FM1_NCOL] = {0};
@@ -70,6 +129,7 @@ void plat_leds(uint32_t buttons, uint32_t keys)
     }
     fm1_led_dim_div = glow_on ? GLOW_DIV : 0u;
 }
+#endif
 
 /* MIDI: Felucca's rings carry 4-byte USB-MIDI event packets, byte 0 = cable / CIN */
 int plat_midi_in(uint32_t *pkt)

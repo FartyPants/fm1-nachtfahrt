@@ -284,7 +284,9 @@ static void fm1_main(void)
     fm1_input_init();
     fm1_adc_init();
     panel_init();
-    led_pos_init();
+#if !BOARD_SMK37
+    led_pos_init();                              /* (the SMK has no per-key LED to place: fm1_led_key by button) */
+#endif
     en_init();
     project_load();                                 /* defaults when nothing (or another format) is saved */
     project_apply();
