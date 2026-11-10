@@ -18,7 +18,10 @@
 #include "fm1_adc.h"
 #include "fm1_lcd_hw.h"
 #include "fm1_flash.h"
-#include "fm1_flash_map.h"   /* the board's allow-list (BOARD_SMK37); the FM-1 values are unchanged */
+#if BOARD_SMK37
+#include "fm1_flash_map.h"   /* the SMK's flash map: it REPLACES the FM-1 ranges (FL_DATA, FL_OTA, FL_STORE_OK)
+                              * and is what storage.c's SMK assertions and the JEDEC check are read against */
+#endif
 #include "fm1_xip.h"
 #include "fm1_perf.h"
 
