@@ -89,6 +89,20 @@ static void smk_faders_tick(void)
 static int32_t smk_bend, smk_mod;
 static int32_t smk_wheel_bend(void) { return smk_bend; }
 static int32_t smk_wheel_mod(void) { return smk_mod; }
+void smk_wheel(int which, int value);                /* (dsp/amb.c) 0 = pitch, 1 = mod */
+static int32_t smk_bend_sent, smk_mod_sent;          /* what the engine last heard, so a resting wheel is quiet */
+
+static void smk_wheels_send(void)
+{
+    if (smk_bend != smk_bend_sent) {
+        smk_bend_sent = smk_bend;
+        smk_wheel(0, (int)smk_bend);
+    }
+    if (smk_mod != smk_mod_sent) {
+        smk_mod_sent = smk_mod;
+        smk_wheel(1, (int)smk_mod);
+    }
+}
 
 static void smk_wheels_tick(void)
 {
@@ -165,5 +179,6 @@ static void smk_controls_tick(void)
     smk_pads_tick();
     smk_faders_tick();
     smk_wheels_tick();
+    smk_wheels_send();
     smk_outer_tick();
 }
