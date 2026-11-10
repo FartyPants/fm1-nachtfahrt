@@ -52,6 +52,9 @@ SDK_SHA256 = {
 }
 
 PRODUCT = "FM-1_197000000"          # package identity; release builds are FM-1_197XXYYZZ (see main)
+# The SMK-37's own identity ("SMK-37 Elite_8NNNNNN"), overridable so the number is not baked into the
+# source of a build that goes to a unit: BOARD_SMK37=1 SMK_PRODUCT=... python tools/build.py
+SMK_PRODUCT = "SMK-37 Elite_8000001"
 VERSION = None                      # FELUCCA_VERSION for release builds (default: firmware/src/ui.c)
 
 
@@ -348,7 +351,10 @@ def main():
     ap.add_argument("--release", metavar="X.Y[.Z]", help="release build: identity FM-1_197XXYYZZ, version string X.Y[.Z]")
     ap.add_argument("--sdk", type=Path, help="JieLi AC79 SDK checkout (default: $AC79_SDK)")
     a = ap.parse_args()
+    global PRODUCT
     name = "amb.fwsc"
+    if os.environ.get("BOARD_SMK37") == "1":
+        PRODUCT = os.environ.get("SMK_PRODUCT") or SMK_PRODUCT
     if a.release:
         # identity FM-1_197 ("197x") + major, minor, patch as two digits each (1.0 -> FM-1_197010000): FM-1 is the
         # model the update tools match on; the number is ours. Nine digits: no other firmware in The Firmware Hub's
@@ -381,7 +387,16 @@ def main():
         print("  FAIL ", e)
     if errors:
         raise SystemExit("build: checks failed")
-    pkg = fm1pkg_make.ufw(fm1pkg_make.flash_image(img, fm1pkg_make.KEY), ota, PRODUCT)
+    if os.environ.get("BOARD_SMK37") == "1":
+        # The SMK-37's update is a different layout and a different identity (smk37-port.yaml, delivery:
+        # upstream), so this path builds its package the way the stock firmware's packager does.
+        if a.release:
+            raise SystemExit("--release is the FM-1's identity scheme; the SMK-37 takes --product")
+        flash = fm1pkg_make.smk_flash_image(img, os.environ.get("SMK37_PACK"))
+        pkg = fm1pkg_make.smk_ufw(flash, ota, PRODUCT)
+        name = "smk37.fwsc"
+    else:
+        pkg = fm1pkg_make.ufw(fm1pkg_make.flash_image(img, fm1pkg_make.KEY), ota, PRODUCT)
     (OUT / name).write_bytes(pkg)
     print(f"app      {OUT / 'amb.bin'}  {len(img)} B")
     print(f"loader   {LDR / 'ota.bin'}  {len(ota)} B")
