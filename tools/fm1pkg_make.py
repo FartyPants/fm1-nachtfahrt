@@ -290,7 +290,7 @@ def smk_ufw(flash, ota, product):
     for i, (typ, name, d) in enumerate([(0, "flash.bin", flash), (100, "ota.bin", ota)]):
         r = 64 + i * 80
         at = 1024 if i == 0 else loader_at
-        struct.pack_into("<HHHIIII", u, r, typ, i, crc16(d), at, len(d), (len(d) + 31) & ~31, 0)
+        struct.pack_into("<HHHHIII", u, r, typ, i, crc16(d), 0, at, len(d), (len(d) + 31) & ~31)
         u[r + 64:r + 64 + len(name)] = name.encode()
         enc(u, r, 80, 0xFFFF)
     struct.pack_into("<IHH", u, 4, total, 2, 4)
