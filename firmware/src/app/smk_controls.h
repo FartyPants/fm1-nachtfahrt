@@ -23,6 +23,7 @@
  * the two hooks below are the whole contract: ui.c defines them, this file calls them. */
 static void smk_ui_mute_toggle(uint32_t layer);      /* ui.c: the FM-1's SEL white key 1-5 */
 static void smk_ui_solo_toggle(uint32_t layer);      /* ui.c: the FM-1's SEL black key 1-5 */
+void en_lead_midi(int note, int on);                 /* (dsp/amb.h) a note into the Lead, folded onto the scale */
 
 /* which pads are down now, so a mute toggles on the press and not on every frame while held */
 static uint16_t smk_pad_down;
@@ -119,9 +120,50 @@ static void smk_wheels_tick(void)
     }
 }
 
+/* ------------------------------------------------------------------ outer keys --- */
+/* The SMK's keybed is 37 keys; the FM-1 has 27 (F3..G5, keybed keys 5..31). The ten that fall outside
+ * - C3..E3 below and G#5..C6 above (smk37-port.yaml keys: outer extend, "confirmed") - play the Lead
+ * through the same path MIDI in uses: en_lead_midi takes a note number and folds it onto the nearest
+ * note of the piece's scale, so a key outside the FM-1's range still lands on a degree. Nothing here
+ * invents a mapping of its own, and the FM-1's 27 keys are untouched: the HAL never puts them in this
+ * queue (smk_input.h: keybed keys 5..31 go to fm1_in.notes, the rest to smk_extkey_take). */
+#define SMK_KEY_F3 5u                       /* (smk_input.h): keybed key 5 is F3 */
+#define SMK_MIDI_C3 48                      /* keybed key 0 is C3, so keybed key k is MIDI 48 + k */
+#define SMK_OUTER_N 5u                      /* five keys each side: C3..E3 below, G#5..C6 above */
+static uint8_t smk_outer[FM1_NKEY];         /* the velocity an outer key went down at, 0 = up (a held key
+                                             * sends no repeats; the HAL queues edges only) */
+/* An outer key is one the FM-1 does not have: below F3 (keybed 0..4) or above G5 (32..36). */
+static int32_t smk_outer_note(uint32_t k)
+{
+    if (k >= SMK_KEY_F3 && k < SMK_KEY_F3 + 27u)
+        return -1;                          /* the FM-1's own 27 (F3..G5): the HAL already reports those */
+    if (k >= SMK_KEY_F3 + 27u + SMK_OUTER_N)
+        return -1;                          /* past the keybed */
+    return (int32_t)SMK_MIDI_C3 + (int32_t)k;
+}
+
+static void smk_outer_tick(void)
+{
+    int32_t v;
+    while ((v = smk_extkey_take()) >= 0) {
+        uint32_t k = (uint32_t)v >> 8, vel = (uint32_t)v & 0xFFu;
+        int32_t note = smk_outer_note(k);
+        if (note < 0 || k >= FM1_NKEY)
+            continue;
+        if (vel) {
+            smk_outer[k] = (uint8_t)vel;
+            en_lead_midi((int)note, 1);
+        } else {
+            smk_outer[k] = 0;
+            en_lead_midi((int)note, 0);
+        }
+    }
+}
+
 static void smk_controls_tick(void)
 {
     smk_pads_tick();
     smk_faders_tick();
     smk_wheels_tick();
+    smk_outer_tick();
 }
