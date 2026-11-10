@@ -141,4 +141,7 @@ static int ann_wire_send(const uint8_t *p, uint32_t n)   /* never waits: no room
 #include "app/plat_fm1.c"
 #include "app/project.c"
 #include "app/ui.c"
+#if BOARD_SMK37
+#include "app/smk_controls.h"   /* the SMK-37's pads, faders and wheels, over ui.c's own handlers */
+#endif
 #include "app/main_fm1.c"

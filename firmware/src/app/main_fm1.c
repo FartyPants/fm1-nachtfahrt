@@ -315,6 +315,9 @@ static void fm1_main(void)
     for (;;) {
         fm1_wdt_feed();
         usb_retry(fm1_ms);
+#if BOARD_SMK37
+        smk_controls_tick();                        /* the pads, faders and wheels the FM-1 has not got */
+#endif
         if (fm1_ms > 30000u && bootguard.pending) {     /* a crash or hang in the first 30 s counts */
             bootguard.pending = 0;
             bootguard.failed = 0;

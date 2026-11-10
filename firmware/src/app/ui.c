@@ -775,6 +775,16 @@ static void lock_toggle(void)                    /* SEL held: Lock, on or off: t
     say("LOCK", ui.lock ? "ON" : "OFF");
     card_show("LOCK", ui.lock ? "the sequences kept" : "the sequences free", K_ACC, 0);
 }
+static void perf_key(uint32_t key, int down);      /* (the SMK pads below call it) */
+
+#if BOARD_SMK37
+/* The SMK-37's pads are the FM-1's PERFORM keys: the top row's five mute the same five layers,
+ * the bottom row's five solo them, through this page's own handler. A pad and a key therefore
+ * cannot disagree: both change ui.mutes / ui.solo and both go through perf_mutes (smk_controls.h). */
+static void smk_ui_mute_toggle(uint32_t layer) { if (layer < 5u) { perf_key(PERF_KEY[layer], 1); perf_key(PERF_KEY[layer], 0); } }
+static void smk_ui_solo_toggle(uint32_t layer) { if (layer < 5u) perf_key(PERF_KEY[10u + layer], 1); }
+#endif
+
 static void perf_key(uint32_t key, int down)
 {
     int i;
