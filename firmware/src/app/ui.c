@@ -979,6 +979,12 @@ static const uint8_t BLACK_DO[NBLACK] = {EN_FX_TAKEOFF, EN_FX_SUPERNOVA, EN_FX_T
                                          100 + EN_MV_TRANSPOSE};
 static const char *const BLACK_NAME[NBLACK] = {"Take-off", "Supernova", "Twitter", "Repeat", "Shimmer", "Freeze",
                                                "Octave", "Return", "Rise", "Close", "Transpose"};
+#if BOARD_SMK37
+/* (SMK-37) a black key's note, as MIDI: keybed key 0 is C3 (48) and key 5 is F3 (53), so keybed key k is
+ * MIDI 48 + k (smk_input.h SMK_KEY_F3; smk_controls.h's SMK_MIDI_C3 is the same number, after this file) */
+#define SMK_KEY_C3 48
+static int smk_black_midi(uint32_t k) { return (int)(SMK_KEY_C3 + (int32_t)k); }
+#endif
 static int black_of(uint32_t key)                /* the black key's index (0..10), or -1 */
 {
     int b;
@@ -1484,10 +1490,18 @@ static void input(void)
                     ;
                 if (st < 16 && down)
                     en_lead_key(st, 1);          /* (its release sent above) */
+#if BOARD_SMK37
+                else if (down)                   /* (SMK-37, the owner's design: the keybed is a piano; the black
+                                                  * keys' effects are on the pads, smk_pads.h) */
+                    en_lead_midi((int)smk_black_midi(i), 1);
+                else if (black_of(i) >= 0)
+                    en_lead_midi((int)smk_black_midi(i), 0);
+#else
                 else if (down && black_of(i) >= 0) {   /* the black keys: their effects (spec 13) */
                     black_set(black_of(i), 1);
                     say(BLACK_NAME[black_of(i)], 0);
                 }
+#endif
             }
         }
     if (btn || keys || ch)

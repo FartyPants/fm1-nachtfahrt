@@ -5,7 +5,7 @@
  * HAL's readings into the firmware's own calls, so the screen, the buttons and these controls
  * always show one state. The FM-1 build never compiles it (main.c includes it under BOARD_SMK37).
  *
- *   pads     the five layers' mute (top row) and solo (bottom row), as the FM-1's SEL keys do
+ *   pads     (smk_pads.h: the FM-1's black keys, the effects, with red/green LEDs)
  *   faders   four banks, soft takeover
  *   wheels   pitch bend +-2 semitones, mod wheel vibrato
  *   keys     the ten outer keys extend the keybed by notes
@@ -13,20 +13,12 @@
  * The mutes and solos go through ui.mutes / ui.solo and ui_perf_mutes(), the same state the
  * FM-1's PERFORM page uses: a pad cannot disagree with a key.
  *
- * What is NOT here, and is engine work rather than panel work: playing the wheels as bend and
- * vibrato needs the sampler's read head (the Felucca layer's smk_wheels_block in seq.c). Until
- * that lands with bring-up, smk_wheel_bend() / smk_wheel_mod() carry the calibrated values and
- * nothing consumes them yet. */
+ * The wheels reach the engine as C_WHEEL commands (dsp/amb.c smk_wheel_set), read by the Lead's
+ * pitch and vibrato. */
 
-/* The app's mute/solo state and the layers' engine bits live in ui.c (ui.mutes, ui.solo,
- * LAYER_MUTE, perf_mutes), which main.c includes after this file. Rather than guess at them,
- * the two hooks below are the whole contract: ui.c defines them, this file calls them. */
-static void smk_ui_mute_toggle(uint32_t layer);      /* ui.c: the FM-1's SEL white key 1-5 */
-static void smk_ui_solo_toggle(uint32_t layer);      /* ui.c: the FM-1's SEL black key 1-5 */
+/* The outer keys go through the engine's own MIDI-in path (dsp/amb.c), so a key outside the
+ * FM-1's 27 lands on a degree of the piece's scale like any other note. */
 void en_lead_midi(int note, int on);                 /* (dsp/amb.h) a note into the Lead, folded onto the scale */
-
-/* which pads are down now, so a mute toggles on the press and not on every frame while held */
-static uint16_t smk_pad_down;
 
 /* The fader banks. A parameter the bank cannot reach on this firmware is 0xFF and the fader
  * ignores it, rather than writing something arbitrary. */
@@ -38,31 +30,6 @@ static const uint8_t smk_fbank_par[SMK_NBANK][4] = {
     {P_EVOLVE, P_MOTION, P_DRIFT, P_DENSITY},      /* D: the NACHTFAHRT page's motion */
 };
 static uint8_t smk_fbank;
-
-static void smk_pads_tick(void)
-{
-    uint32_t p;
-    for (p = 0; p < SMK_NPAD; p++) {
-        uint16_t bit = (uint16_t)(1u << p);
-        uint8_t down = (uint8_t)((fm1_in.pnotes >> SMK_WHITE_NOTE[p]) & 1u);
-        if (down == ((smk_pad_down & bit) != 0))
-            continue;
-        if (down)
-            smk_pad_down |= bit;
-        else
-            smk_pad_down &= (uint16_t)~bit;
-        if (!down)                                 /* a pad acts on the press; the release does nothing */
-            continue;
-        if (p < 5u)                                /* top row, pads 1-5: mute layer p */
-            smk_ui_mute_toggle(p);
-        else if (p >= 8u && p < 13u)               /* bottom row, pads 9-13: solo layer p-8 */
-            smk_ui_solo_toggle(p - 8u);
-        /* pads 6, 7, 8, 14, 15 and 16 (the levels page, SWEEP, CHAOS, the Lead's forget, both
-         * sequences out, LOCK) are the firmware's own gestures: they call its handlers, which
-         * live in ui.c's PERFORM page. Wired at bring-up, once that page's key map is settled
-         * (an open item in smk37-port.yaml). */
-    }
-}
 
 /* Soft takeover: a fader acts only once it has moved, and the first reading after a bank change
  * arms it instead of writing, so nothing jumps. */
@@ -142,7 +109,9 @@ static void smk_wheels_tick(void)
  * invents a mapping of its own, and the FM-1's 27 keys are untouched: the HAL never puts them in this
  * queue (smk_input.h: keybed keys 5..31 go to fm1_in.notes, the rest to smk_extkey_take). */
 #define SMK_KEY_F3 5u                       /* (smk_input.h): keybed key 5 is F3 */
+#ifndef SMK_MIDI_C3
 #define SMK_MIDI_C3 48                      /* keybed key 0 is C3, so keybed key k is MIDI 48 + k */
+#endif
 #define SMK_OUTER_N 5u                      /* five keys each side: C3..E3 below, G#5..C6 above */
 static uint8_t smk_outer[FM1_NKEY];         /* the velocity an outer key went down at, 0 = up (a held key
                                              * sends no repeats; the HAL queues edges only) */
@@ -176,7 +145,7 @@ static void smk_outer_tick(void)
 
 static void smk_controls_tick(void)
 {
-    smk_pads_tick();
+    smk_pads_frame();                            /* (smk_pads.h: the pads, then their LEDs) */
     smk_faders_tick();
     smk_wheels_tick();
     smk_wheels_send();

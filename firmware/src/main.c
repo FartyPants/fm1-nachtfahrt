@@ -10,6 +10,7 @@
 #include "fm1_guard.h"
 #if BOARD_SMK37
 #include "smk_input.h"        /* the SMK-37 panel: velocity keybed, pads, faders, wheels (same API as fm1_input.h) */
+#include "smk_rgb.h"          /* the SMK-37 pad LEDs: SPI1, after a frame (never from the scan ISR) */
 #else
 #include "fm1_input.h"        /* the FM-1 panel */
 #endif
@@ -152,6 +153,7 @@ static int ann_wire_send(const uint8_t *p, uint32_t n)   /* never waits: no room
 #include "app/project.c"
 #include "app/ui.c"
 #if BOARD_SMK37
-#include "app/smk_controls.h"   /* the SMK-37's pads, faders and wheels, over ui.c's own handlers */
+#include "app/smk_pads.h"       /* the SMK-37's pads (the FM-1's black keys) and their red/green LEDs */
+#include "app/smk_controls.h"   /* the SMK-37's faders, wheels and outer keys, over ui.c's own handlers */
 #endif
 #include "app/main_fm1.c"

@@ -505,6 +505,17 @@ static volatile uint32_t q_w, q_r;
  * The FM-1 has no wheels, so this exists only for the SMK and its object code is untouched. */
 static int16_t smk_bend_v, smk_mod_v;
 #endif
+static void post(uint32_t c, int a, int b);
+#if BOARD_SMK37
+/* (taken off the queue in drain(): a = which wheel (0 pitch, 1 mod), b = its value) */
+static void smk_wheel_set(int a, int b)
+{
+    if (a == 0)
+        smk_bend_v = (int16_t)b;
+    else if (a == 1)
+        smk_mod_v = (int16_t)b;
+}
+#endif
 static void post(uint32_t c, int a, int b)
 {
     uint32_t w = q_w;
@@ -2053,14 +2064,6 @@ void en_lead_key(int d, int on) { post(C_LKEY, d, on); }
 void en_lead_midi(int note, int on) { post(C_LMIDI, note, on); }
 #if BOARD_SMK37
 void smk_wheel(int which, int value) { post(C_WHEEL, which, value); }
-/* (SMK-37) taken off the queue: a = which wheel (0 pitch, 1 mod), b = its value */
-static void smk_wheel_set(int a, int b)
-{
-    if (a == 0)
-        smk_bend_v = (int16_t)b;
-    else if (a == 1)
-        smk_mod_v = (int16_t)b;
-}
 #endif
 void en_lead_forget(void) { post(C_LFORGET, 0, 0); }
 
@@ -4310,6 +4313,9 @@ static void drain(void)
         case C_PERF: perf = (uint32_t)a; break;
         case C_FX: fxm = c & 0xFFFFu; break;
         case C_MOVE: mvm = c & 0xFFu; break;
+#if BOARD_SMK37
+        case C_WHEEL: smk_wheel_set(a, b); break;   /* (the SMK's two wheels: the Lead's bend and vibrato) */
+#endif
         case C_LFORGET:                          /* (the user's design: PERFORM's top key) the Lead forgets everything it
                                                   * remembers: its ideas and its theme (the keys' too), a figure on the
                                                   * keys, an answer due, the offspring; its note let go (not a key's: the

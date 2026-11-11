@@ -283,6 +283,9 @@ static void fm1_main(void)
     en_dbg.max_us = 0;
     fm1_input_init();
     fm1_adc_init();
+#if BOARD_SMK37
+    smk_rgb_init();                              /* (the pads' LEDs: dark until the first frame) */
+#endif
     panel_init();
 #if !BOARD_SMK37
     led_pos_init();                              /* (the SMK has no per-key LED to place: fm1_led_key by button) */
@@ -385,6 +388,9 @@ static void fm1_main(void)
             last_frame = fm1_ms;
             en_dbg.ui_frames++;
             ui_frame();
+#if BOARD_SMK37
+            smk_rgb_service();                   /* (the pads' LEDs: the display's SPI1 is idle again) */
+#endif
         } else {
             ui_input_only();
         }

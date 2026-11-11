@@ -105,6 +105,17 @@ static volatile uint8_t smk_pad_piano;
 static uint8_t smk_pad_note[SMK_NPAD];   /* the note key a pad pressed (+1; 0 = none): its release ends that one */
 #define SMK_WHITE_OF_PAD(p) (smk_pad_grid ? (p) : (p) < 8u ? (p) + 8u : (p) - 8u)
 
+/* The owner's layout (2026-11-12): the sixteen pads are the FM-1's BLACK keys, so the eleven effects are
+ * played on the pads and the SMK's own black keys are free to play notes. The pads keep the FM-1's order
+ * (PERF/BLACK_KEY: F#3, G#3, A#3, C#4, D#4, F#4, G#4, A#4, C#5, D#5, F#5 = note keys 1, 3, 5, 8, 10, 13,
+ * 15, 17, 20, 22, 25); the five left over (pads 12..16, the top row's right end: the three the owner
+ * called useless and two more) are dark and do nothing. */
+static const uint8_t SMK_PAD_BLACK[SMK_NPAD] = {1, 3, 5, 8, 10, 13, 15, 17, 20, 22, 25, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+static volatile uint8_t smk_pad_black;  /* set by the UI: the pads are the black keys (the effects) */
+/* the note key hardware pad p presses, -1 = none */
+#define SMK_PAD_NOTE(p) (smk_pad_black ? (int32_t)(SMK_PAD_BLACK[p] == 0xFFu ? 0xFFu : SMK_PAD_BLACK[p]) : \
+                         smk_pad_piano ? (int32_t)SMK_PIANO_NOTE[p] : (int32_t)SMK_WHITE_NOTE[SMK_WHITE_OF_PAD(p)])
+
 #define SMK_TRIM_FLASH 0xC1000u   /* USRTRIM: the factory calibration record ("trimdat"), never written here */
 /* 5-point velocity curves (trimdata, flash 0xC1000: +0x08 16 pads x 5 u16, +0xA8 37 keys x 5 u16) */
 static uint16_t smk_trim_pad[SMK_NPAD][5], smk_trim_key[FM1_NKEY][5];
@@ -437,7 +448,9 @@ static void fm1__frame(void)
 
 static void smk__padq(uint32_t pad, uint32_t vel)     /* a pad hit (vel) or release (0): its white key */
 {
-    int32_t n0 = smk_pad_piano ? SMK_PIANO_NOTE[pad] : (int32_t)SMK_WHITE_NOTE[SMK_WHITE_OF_PAD(pad)];
+    int32_t n0 = SMK_PAD_NOTE(pad);
+    if (n0 >= (int32_t)FM1_NKEY)
+        n0 = -1;                                  /* (a pad left over in the black-key layout: nothing) */
     uint32_t n, bit;
     if (vel) {
         if (n0 < 0)
@@ -459,6 +472,34 @@ static void smk__padq(uint32_t pad, uint32_t vel)     /* a pad hit (vel) or rele
         fm1_in.pnotes &= ~bit;
     }
     fm1_in.notes = fm1_in.knotes | fm1_in.pnotes;
+}
+
+/* the pads' LEDs, lit here and not from the main loop: a hit shows at once, the brightness follows the
+ * pad's pressure (samples every 2.4 ms), so a pad never needs the display's SPI1 and the scan keeps its
+ * rhythm. smk_pads.h (the UI) writes smk_pad_led[]; this is the fast part. */
+#define SMK_PAD_LED_UP 24u        /* (as the hit: above the baseline) */
+#define SMK_PAD_LED_DN 16u        /* (a little lower: the light follows the pressure, no flicker) */
+static volatile uint8_t smk_pad_led[SMK_NPAD];     /* 0 = off, else 1..255, the colour at that brightness */
+static uint8_t smk_pad_led_v[SMK_NPAD];
+
+static void smk__pad_light(uint32_t p, uint32_t raw)
+{
+    uint32_t base = fm1_in.pad_base[p], l = smk_pad_led[p], v;
+    if (l == 0u) {
+        smk_pad_led_v[p] = 0;
+        return;
+    }
+    v = raw > base + SMK_PAD_LED_UP ? raw - base - SMK_PAD_LED_UP : 0u;
+    if (v > 0x600u)
+        v = 0x600u;
+    v = (v >> 2) + (l >> 5);                           /* (l >> 5: a colour never fully dark, the lit floor) */
+    if (v > 255u)
+        v = 255u;
+    if (v > smk_pad_led_v[p] + 2u || v + 2u < smk_pad_led_v[p] || (v == 0u && smk_pad_led_v[p])) {
+        if (smk_pad_led_v[p] && v == 0u && raw < base + SMK_PAD_LED_DN)
+            return;                                    /* (a light touch: still on) */
+        smk_pad_led_v[p] = (uint8_t)v;
+    }
 }
 
 static void smk__pad(uint32_t p, uint32_t raw)
@@ -506,8 +547,10 @@ static void smk__analog(uint32_t slot, uint32_t raw)
     uint32_t a = smk__slot_addr(slot), ch = slot % 3u;
     if (ch == 0u) {
         smk__pad(SMK_PADMUX[a], raw);
+        smk__pad_light(SMK_PADMUX[a], raw);
     } else if (ch == 1u) {
         smk__pad(SMK_PADMUX[a] + 8u, raw);
+        smk__pad_light(SMK_PADMUX[a] + 8u, raw);
     } else if (a < 4u) {
         uint32_t f = SMK_FADMUX[a], h0 = fm1_in.fad_hist[f][0], h1 = fm1_in.fad_hist[f][1], m, v;
         int32_t acc = fm1_in.fad_acc[f];
