@@ -213,10 +213,33 @@ def smk_pack_file(name, size, pack=None):
     return d
 
 
+def smk_encode_boot(plain):
+    """BANKCB-encode the stock uboot.boot, exactly as sdk/Package.cs EncodeBoot does."""
+    import struct as _st
+    d = bytearray(plain)
+    banks = _st.unpack_from("<H", d, 0)[0]
+    if banks < 1 or banks > len(d) // 16:
+        raise SystemExit("fm1pkg_make: invalid boot directory in uboot.boot")
+    prev_end = banks * 16
+    for i in range(banks):
+        h = i * 16
+        ln = _st.unpack_from("<H", d, h + 2)[0]
+        st = _st.unpack_from("<i", d, h + 8)[0]
+        if ln == 0 or st < prev_end or st > len(d) - ln:
+            raise SystemExit("fm1pkg_make: invalid boot bank in uboot.boot")
+        enc(d, h, 16, 0xFFFF)
+        enc(d, st, ln, 0xFFFF)
+        prev_end = st + ln
+    return bytes(d)
+
+
 def smk_flash_image(app, pack=None):
     """The 1 MiB flash image the SMK-37's updater expects, built as sdk/Package.cs builds it."""
     c = SMK
-    boot = smk_pack_file(c["boot"][0], c["boot"][1], pack)
+    boot_plain = smk_pack_file(c["boot"][0], c["boot"][1], pack)
+    # stored BANKCB-encoded, but the record keeps the plain CRC
+    # (Package.cs: Crc(boot) before EncodeBoot)
+    boot = smk_encode_boot(boot_plain)
     config = smk_pack_file(c["pack"][0], c["pack"][1], pack)
     tool = smk_pack_file(c["tool"][0], c["tool"][1], pack)
     # jl-misctools' deterministic chip key descriptor: 16x0x10, then 0x10 XOR (key bit ? 0 : 0xFF)
@@ -248,7 +271,7 @@ def smk_flash_image(app, pack=None):
         struct.pack_into("<H", e, 0, crc16(bytes(e[2:32])))
         f[at:at + 32] = e
 
-    rec(32, "uboot.boot", crc16(boot), boot_at, len(boot), 0, 0)
+    rec(32, "uboot.boot", crc16(boot_plain), boot_at, len(boot), 0, 0)
     rec(64, "isd_config.ini", crc16(bytes(settings)), config_at, len(settings), 0x8002, 0)
     rec(96, "app_dir_head", 0xFFFF, c["area"], 0xFFFFFFFF, 0xFF81, 0)
     rec(128, "key_mac", 0xFFFF, c["flash_limit"], 4096, 0x0112, 0xFFFF)
