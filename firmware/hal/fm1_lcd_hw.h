@@ -22,13 +22,15 @@
 #define FM1_LCD_PC_DIR (*(volatile uint32_t *)0x50088u)
 #define FM1_LCD_IOMAP_CON1 (*(volatile uint32_t *)0x51020u)
 #if BOARD_SMK37
-/* The SMK-37's display runs on the controller's SECOND SPI (0x11E00), not the FM-1's first one. Read
- * out of the image the stock firmware's own init writes, and out of smk37_open's lcd.inc. */
-#define FM1_LCD_SPI_CON (*(volatile uint32_t *)0x11E00u)
-#define FM1_LCD_SPI_BAUD (*(volatile uint32_t *)0x11E04u)
-#define FM1_LCD_SPI_BUF (*(volatile uint32_t *)0x11E08u)
-#define FM1_LCD_SPI_ADR (*(volatile uint32_t *)0x11E0Cu)
-#define FM1_LCD_SPI_CNT (*(volatile uint32_t *)0x11E10u)
+/* The SMK-37's display runs on the controller's FIRST SPI (0x11D00), same as the FM-1's: the stock
+ * firmware's own fm1_lcd_hw.h drives it there (LCD_REGISTER 0x11d00), while the key-scan shift
+ * registers sit on the SECOND SPI (0x11E00, smk_input.h SMK_SPI2). An earlier revision put the LCD
+ * on 0x11E00 too, sharing one peripheral with the scan - the screen stayed black. */
+#define FM1_LCD_SPI_CON (*(volatile uint32_t *)0x11D00u)
+#define FM1_LCD_SPI_BAUD (*(volatile uint32_t *)0x11D04u)
+#define FM1_LCD_SPI_BUF (*(volatile uint32_t *)0x11D08u)
+#define FM1_LCD_SPI_ADR (*(volatile uint32_t *)0x11D0Cu)
+#define FM1_LCD_SPI_CNT (*(volatile uint32_t *)0x11D10u)
 #else
 #define FM1_LCD_SPI_CON (*(volatile uint32_t *)0x11D00u)
 #define FM1_LCD_SPI_BAUD (*(volatile uint32_t *)0x11D04u)
