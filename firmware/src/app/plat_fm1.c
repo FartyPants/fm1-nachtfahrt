@@ -17,6 +17,11 @@ uint32_t plat_ms(void) { return fm1_ms; }
  * What the SMK has and NACHTFAHRT has no job for (BT, the page arrows, the fader bank) is left to the
  * controls in smk_controls.h and to the stock firmware's own use. */
 static const uint8_t SMK_BTN_APP[NB] = {14, 13, 11, 7, 9, 0, 10, 12, 6, 15, 16, 17, 4, 5};
+/* the raw matrix id of a printed button: the SMK's own table, the FM-1's calibrated one (main_fm1.c's
+ * power-on combos and the bootguard's PLAY used panel.btn[], which names the wrong key on the SMK) */
+#define PLAT_RAW_BTN(i) (SMK_BTN_APP[i])
+#else
+#define PLAT_RAW_BTN(i) (panel.btn[i])
 #endif
 
 uint32_t plat_buttons(void)

@@ -214,7 +214,7 @@ static void safe_main(void)
     fm1_timer5_start(isr_timer5, 1);
     fm1_guard_lock_top();
     fm1_irq_enable_all();
-    play = 1u << panel.btn[B_PLAY];
+    play = 1u << PLAT_RAW_BTN(B_PLAY);
     t0 = fm1_ms;
     for (;;) {
         fm1_wdt_feed();
@@ -347,7 +347,7 @@ static void fm1_main(void)
         }
         {   /* OCT- + OCT+ held 5 s: update mode (Felucca's, unchanged) */
             static uint32_t t0, shown;
-            uint32_t both = (1u << panel.btn[B_OCTDN]) | (1u << panel.btn[B_OCTUP]);
+            uint32_t both = (1u << PLAT_RAW_BTN(B_OCTDN)) | (1u << PLAT_RAW_BTN(B_OCTUP));
             if ((fm1_in.buttons & both) != both) {
                 if (shown)
                     ui_say("UPDATE MODE", "CANCELLED");
