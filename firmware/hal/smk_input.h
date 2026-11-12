@@ -149,6 +149,12 @@ static volatile struct {
     uint32_t frames;
 } fm1_in;
 
+/* pad events in the black-key layout (smk_pad_black): pad << 8 | velocity (0 = release). The pads are the
+ * FM-1's black keys there, so they are effects and must not touch the note picture (fm1_in.notes). */
+#define SMK_PADQ 32u
+static volatile uint16_t smk_padq[SMK_PADQ];
+static volatile uint8_t smk_padq_w, smk_padq_r;
+
 /* key events beyond the FM-1's 27 (keybed keys 0..4 and 32..36): key << 8 | velocity (0 = release) */
 #define SMK_EXTQ 32u
 static volatile uint16_t smk_extq[SMK_EXTQ];
@@ -462,6 +468,14 @@ static void smk__padq(uint32_t pad, uint32_t vel)     /* a pad hit (vel) or rele
         n0 = smk_pad_note[pad] - 1;                    /* the key it pressed, whatever the layout is now */
         smk_pad_note[pad] = 0;
     }
+    if (smk_pad_black) {                               /* (the pads are the effects: no note at all) */
+        uint8_t w = smk_padq_w;
+        if ((uint8_t)(w + 1u) % SMK_PADQ != smk_padq_r) {
+            smk_padq[w] = (uint16_t)(pad << 8 | vel);
+            smk_padq_w = (uint8_t)((w + 1u) % SMK_PADQ);
+        }
+        return;
+    }
     n = (uint32_t)n0;
     bit = 1u << n;
     if (vel) {
@@ -682,6 +696,17 @@ static int32_t smk_extkey_take(void)
     if (smk_extq_r != smk_extq_w) {
         v = smk_extq[smk_extq_r];
         smk_extq_r = (uint8_t)((smk_extq_r + 1u) % SMK_EXTQ);
+    }
+    return v;
+}
+
+/* the next pad event in the black-key layout (pad << 8 | velocity, 0 = release), -1 if none */
+static int32_t smk_pad_take(void)
+{
+    int32_t v = -1;
+    if (smk_padq_r != smk_padq_w) {
+        v = smk_padq[smk_padq_r];
+        smk_padq_r = (uint8_t)((smk_padq_r + 1u) % SMK_PADQ);
     }
     return v;
 }

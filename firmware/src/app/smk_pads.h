@@ -34,24 +34,24 @@ static const char *smk_pad_name(uint32_t p)
 
 static void smk_pads_tick(void)
 {
-    uint32_t p;
-    for (p = 0; p < SMK_NPAD; p++) {
+    int32_t v;
+    smk_pad_black = 1;                          /* (the pads are the FM-1's black keys, the HAL's own queue) */
+    while ((v = smk_pad_take()) >= 0) {
+        uint32_t p = (uint32_t)v >> 8;
         uint16_t bit = (uint16_t)(1u << p);
-        uint8_t down = (uint8_t)((fm1_in.pnotes >> SMK_PAD_BLACK[p]) & 1u);   /* (0xFF: a left-over pad, dark) */
-        if (down == ((smk_pad_was & bit) != 0))
-            continue;
-        if (down) {
+        if (p >= SMK_NPAD || SMK_PAD_BLACK[p] == 0xFFu)
+            continue;                            /* (a left-over pad: dark and silent) */
+        if (v & 0xFFu) {
             smk_pad_was |= bit;
-            if (SMK_PAD_BLACK[p] != 0xFFu) {
+            black_set((int)p, 1);
+            {
                 const char *n = smk_pad_name(p);
-                black_set((int)p, 1);
                 if (n)
                     ui_say(n, 0);
             }
         } else {
             smk_pad_was &= (uint16_t)~bit;
-            if (SMK_PAD_BLACK[p] != 0xFFu)
-                black_set((int)p, 0);           /* (as the FM-1's key: the effect ends with the release) */
+            black_set((int)p, 0);                /* (as the FM-1's key: the effect ends with the release) */
         }
     }
 }

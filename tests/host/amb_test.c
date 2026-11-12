@@ -6175,6 +6175,36 @@ int main(void)
     CHECK(peak < 0.01f, "quiet after stopping (%f)", (double)peak);
     CHECK(midi_count > 50u, "MIDI out (%u)", midi_count);
 
+    /* (SMK-37, the owner's report) start, stop, start again: the second start must play as the first did.
+     * The engine's transport is a queued command, so a start posted while a stop is still in the queue has
+     * to end up playing - the SMK's PLAY key posts exactly that. */
+    {
+        float first, second;
+        fresh();
+        en_play(1);
+        run(6.0f);
+        first = peak;
+        en_play(0);
+        run(2.0f);
+        peak = 0.0f;
+        en_play(1);
+        run(6.0f);
+        second = peak;
+        CHECK(first > 1e-3f && second > 1e-3f, "restart after a stop: first %f, second %f", (double)first,
+              (double)second);
+        CHECK(second > first * 0.25f, "the second start is as loud as the first: %f vs %f", (double)second,
+              (double)first);
+        /* and a stop and a start in the same block (a fast double tap): playing, not stuck */
+        en_play(0);
+        en_play(1);
+        run(4.0f);
+        peak = 0.0f;
+        run(2.0f);
+        CHECK(peak > 1e-3f, "a stop and a start in one block still plays (%f)", (double)peak);
+        en_play(0);
+        run(2.0f);
+    }
+
     printf(fails ? "amb: %d FAILED\n" : "amb: ok\n", fails);
     return fails != 0;
 }

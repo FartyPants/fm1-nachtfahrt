@@ -1488,16 +1488,13 @@ static void input(void)
                 int st;
                 for (st = 0; st < 16 && STEP_KEY[st] != i; st++)
                     ;
-#if BOARD_SMK37
-                /* (SMK-37, the owner's design: the keybed is a piano, so every key plays a note through the
-                 * MIDI-in path; the black keys' effects are on the pads, smk_pads.h) */
-                if (down)
-                    en_lead_midi((int)smk_black_midi(i), 1);
-                else
-                    en_lead_midi((int)smk_black_midi(i), 0);
-#else
                 if (st < 16 && down)
                     en_lead_key(st, 1);          /* (its release sent above) */
+#if BOARD_SMK37
+                else if (black_of(i) >= 0)       /* (SMK-37, the owner's design: a black key is a note here, the
+                                                  * effects are on the pads, smk_pads.h) */
+                    en_lead_midi((int)smk_black_midi(i), down);
+#else
                 else if (down && black_of(i) >= 0) {   /* the black keys: their effects (spec 13) */
                     black_set(black_of(i), 1);
                     say(BLACK_NAME[black_of(i)], 0);
