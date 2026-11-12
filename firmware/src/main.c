@@ -8,11 +8,27 @@
 #include "fm1_sys.h"
 #include "fm1_irq.h"
 #include "fm1_guard.h"
-#include "fm1_input.h"
+#if BOARD_SMK37
+#include "smk_input.h"        /* the SMK-37 panel: velocity keybed, pads, faders, wheels (same API as fm1_input.h) */
+#include "smk_rgb.h"          /* the SMK-37 pad LEDs: SPI1, after a frame (never from the scan ISR) */
+#else
+#include "fm1_input.h"        /* the FM-1 panel */
+#endif
 #include "fm1_timer.h"
 #include "fm1_audio.h"
+#if BOARD_SMK37
+/* smk_input.h brings its own: the battery on mux C, MASTER as the virtual K1 (the SMK has no pot) */
+#else
 #include "fm1_adc.h"
+#endif
 #include "fm1_lcd_hw.h"
+#if BOARD_SMK37
+/* BEFORE fm1_flash.h, which defines FL_RANGE_OK under #ifndef: a map included after it could only
+ * redefine the macro while the RAM driver's own erase and program kept the FM-1's net. Included
+ * first, the driver's net is the SMK's (FL_DATA 0x9D000..0xBB000 and FL_SMP 0xC2000..0xEA000,
+ * never BTIF/USRTRIM at 0xC0000..0xC1FFF nor key_mac above 0xFF000), and fm1_flash.h leaves it be. */
+#include "fm1_flash_map.h"
+#endif
 #include "fm1_flash.h"
 #include "fm1_xip.h"
 #include "fm1_perf.h"
@@ -41,7 +57,12 @@ static inline int32_t clamp(int32_t v, int32_t lo, int32_t hi) { return v < lo ?
 #endif
 #include "usb.c"
 #ifndef EN_TRS
+#if BOARD_SMK37
+#define EN_TRS 0                  /* the SMK-37 has no MIDI-in jack: PH8 floats, and its noise read as MIDI clock
+                                   * (0xF8) kept the engine waiting for an outside beat, so PLAY played nothing */
+#else
 #define EN_TRS 1                  /* MIDI IN on the TRS jack */
+#endif
 #endif
 #if EN_TRS
 #include "midi_uart.c"
@@ -136,4 +157,8 @@ static int ann_wire_send(const uint8_t *p, uint32_t n)   /* never waits: no room
 #include "app/plat_fm1.c"
 #include "app/project.c"
 #include "app/ui.c"
+#if BOARD_SMK37
+#include "app/smk_pads.h"       /* the SMK-37's pads (the FM-1's black keys) and their red/green LEDs */
+#include "app/smk_controls.h"   /* the SMK-37's faders, wheels and outer keys, over ui.c's own handlers */
+#endif
 #include "app/main_fm1.c"

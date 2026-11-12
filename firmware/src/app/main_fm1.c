@@ -214,7 +214,7 @@ static void safe_main(void)
     fm1_timer5_start(isr_timer5, 1);
     fm1_guard_lock_top();
     fm1_irq_enable_all();
-    play = 1u << panel.btn[B_PLAY];
+    play = 1u << PLAT_RAW_BTN(B_PLAY);
     t0 = fm1_ms;
     for (;;) {
         fm1_wdt_feed();
@@ -283,8 +283,13 @@ static void fm1_main(void)
     en_dbg.max_us = 0;
     fm1_input_init();
     fm1_adc_init();
+#if BOARD_SMK37
+    smk_rgb_init();                              /* (the pads' LEDs: dark until the first frame) */
+#endif
     panel_init();
-    led_pos_init();
+#if !BOARD_SMK37
+    led_pos_init();                              /* (the SMK has no per-key LED to place: fm1_led_key by button) */
+#endif
     en_init();
     project_load();                                 /* defaults when nothing (or another format) is saved */
     project_apply();
@@ -315,6 +320,9 @@ static void fm1_main(void)
     for (;;) {
         fm1_wdt_feed();
         usb_retry(fm1_ms);
+#if BOARD_SMK37
+        smk_controls_tick();                        /* the pads, faders and wheels the FM-1 has not got */
+#endif
         if (fm1_ms > 30000u && bootguard.pending) {     /* a crash or hang in the first 30 s counts */
             bootguard.pending = 0;
             bootguard.failed = 0;
@@ -339,7 +347,7 @@ static void fm1_main(void)
         }
         {   /* OCT- + OCT+ held 5 s: update mode (Felucca's, unchanged) */
             static uint32_t t0, shown;
-            uint32_t both = (1u << panel.btn[B_OCTDN]) | (1u << panel.btn[B_OCTUP]);
+            uint32_t both = (1u << PLAT_RAW_BTN(B_OCTDN)) | (1u << PLAT_RAW_BTN(B_OCTUP));
             if ((fm1_in.buttons & both) != both) {
                 if (shown)
                     ui_say("UPDATE MODE", "CANCELLED");
@@ -380,6 +388,9 @@ static void fm1_main(void)
             last_frame = fm1_ms;
             en_dbg.ui_frames++;
             ui_frame();
+#if BOARD_SMK37
+            smk_rgb_service();                   /* (the pads' LEDs: the display's SPI1 is idle again) */
+#endif
         } else {
             ui_input_only();
         }

@@ -495,11 +495,27 @@ const char *en_chord_name(const int *pcs, int n, char *buf)
 }
 
 /* ------------------------------------------------------------ commands --- */
-enum { C_SET, C_POOL, C_PLAY, C_NEXT, C_FREEZE, C_SEED, C_PANIC, C_CLOCK, C_REGROW, C_MUTE, C_PERF, C_FX, C_SEQ, C_MACRO, C_PROT, C_REWALK, C_LOCK, C_SEQSET, C_LKEY, C_MOVE, C_LFORGET, C_THEME, C_LMIDI };
+enum { C_SET, C_POOL, C_PLAY, C_NEXT, C_FREEZE, C_SEED, C_PANIC, C_CLOCK, C_REGROW, C_MUTE, C_PERF, C_FX, C_SEQ, C_MACRO, C_PROT, C_REWALK, C_LOCK, C_SEQSET, C_LKEY, C_MOVE, C_LFORGET, C_THEME, C_LMIDI, C_WHEEL };
 #define QN 512u                                 /* (a piece is every parameter at once: room for twice over and more) */
 _Static_assert(QN >= 2u * (P_NPARAMS + 8), "the command queue can't hold a piece's parameters twice over");
 static uint32_t q[QN];
 static volatile uint32_t q_w, q_r;
+#if BOARD_SMK37
+/* (SMK-37) the two wheels, held here so the render sees them without a queue per turn of the wheel.
+ * The FM-1 has no wheels, so this exists only for the SMK and its object code is untouched. */
+static int16_t smk_bend_v, smk_mod_v;
+#endif
+static void post(uint32_t c, int a, int b);
+#if BOARD_SMK37
+/* (taken off the queue in drain(): a = which wheel (0 pitch, 1 mod), b = its value) */
+static void smk_wheel_set(int a, int b)
+{
+    if (a == 0)
+        smk_bend_v = (int16_t)b;
+    else if (a == 1)
+        smk_mod_v = (int16_t)b;
+}
+#endif
 static void post(uint32_t c, int a, int b)
 {
     uint32_t w = q_w;
@@ -2046,6 +2062,9 @@ static void lead_off(void)                       /* the note let go */
 }
 void en_lead_key(int d, int on) { post(C_LKEY, d, on); }
 void en_lead_midi(int note, int on) { post(C_LMIDI, note, on); }
+#if BOARD_SMK37
+void smk_wheel(int which, int value) { post(C_WHEEL, which, value); }
+#endif
 void en_lead_forget(void) { post(C_LFORGET, 0, 0); }
 
 static int ld_deg_raw(int d)                     /* scale degree d (any) as a note, in the Lead's register */
@@ -4196,10 +4215,18 @@ static void drain(void)
             break;
         case C_POOL: pool_set((uint32_t)b & 0xFFFu); break;
         case C_PLAY:
-            if (a && !en_playing)
-                play_start(1);
-            else if (!a && en_playing)
+            if (a) {
+                if (!en_playing)
+                    play_start(1);
+            } else if (en_playing) {
                 play_stop();
+            }
+#if BOARD_SMK37
+            else {
+                quiet();                         /* (already stopped: the tails and any stuck note cleared, so a
+                                                      * start after it is heard) */
+            }
+#endif
             break;
         case C_NEXT:
             if (en_playing)
@@ -4294,6 +4321,9 @@ static void drain(void)
         case C_PERF: perf = (uint32_t)a; break;
         case C_FX: fxm = c & 0xFFFFu; break;
         case C_MOVE: mvm = c & 0xFFu; break;
+#if BOARD_SMK37
+        case C_WHEEL: smk_wheel_set(a, b); break;   /* (the SMK's two wheels: the Lead's bend and vibrato) */
+#endif
         case C_LFORGET:                          /* (the user's design: PERFORM's top key) the Lead forgets everything it
                                                   * remembers: its ideas and its theme (the keys' too), a figure on the
                                                   * keys, an answer due, the offspring; its note let go (not a key's: the
@@ -6039,10 +6069,34 @@ static inline float lc_tick(float x)
     lc_s[6] = lc_s[5], lc_s[5] = y;
     return y;
 }
+/* (SMK-37) the pitch wheel bends the Lead, the mod wheel deepens its vibrato; the FM-1 has neither, and
+ * this is its own note unchanged. fm1_cc.h's BOARD_SMK37 is 0 there, so these are one-line returns. */
+/* (SMK-37) the mod wheel: 0..127 adds up to the Vibrato parameter's own full depth (+0.4, the most
+ * par[P_VIB]=100 gives), so the knob stays the coarse setting and the wheel goes from it upwards. */
+static float ld_wheel_mod(float vib)
+{
+#if BOARD_SMK37
+    return vib + (float)smk_mod_v * (0.4f / 127.0f);
+#else
+    return vib;
+#endif
+}
+
+static float ld_wheel_pitch(float semis)
+{
+#if BOARD_SMK37
+    /* -8192..8192 over two semitones => a semitone is 4096 */
+    return semis + (float)smk_bend_v * (1.0f / 4096.0f);
+#else
+    return semis;
+#endif
+}
+
 static void render_lead(uint32_t n)
 {
     const int lv = (unsigned)par[P_LVOICE] < EN_NBV ? par[P_LVOICE] : 0;
-    const float g = lead_vol * 0.45f, vib = (float)par[P_VIB] * 0.004f + (lv == 3 ? 0.25f : 0.0f), gl = 0.84f, gr = 1.08f,
+    const float g = lead_vol * 0.45f, vib = ld_wheel_mod((float)par[P_VIB] * 0.004f + (lv == 3 ? 0.25f : 0.0f)),
+                gl = 0.84f, gr = 1.08f,
                 tone = ld_tone * fo_mul(FO_LEAD);   /* (Tone, moved by the filter motion) */
     uint32_t j;
     float dt = 0.0f;
@@ -6084,7 +6138,7 @@ static void render_lead(uint32_t n)
     for (j = 0; j < n; j++) {
         float x, bp, a;
         if (!(j & 15u)) {                        /* the glide, the vibrato, the filter: every 16 */
-            const float vd = vib * fm_clampf((lead.vt - 0.4f) * 2.5f, 0.0f, 1.0f), f = mtof(lead.cur + vd * sine(lead.vph));
+            const float vd = vib * fm_clampf((lead.vt - 0.4f) * 2.5f, 0.0f, 1.0f), f = mtof(ld_wheel_pitch(lead.cur + vd * sine(lead.vph)));
             dt = f * (1.0f / EN_SR);
             svf_coefs(lead.c1, f * (3.0f + 6.0f * lead.fenv) * tone, 0.9f);
             svf_coefs(lead.c2, f * (3.0f + 6.0f * lead.fenv) * tone, 0.7f);

@@ -1,0 +1,153 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+/* NACHTFAHRT on the SMK-37: the controls the FM-1 does not have.
+ *
+ * The owner's decisions are in smk37-port.yaml; this is the app-side policy that turns the
+ * HAL's readings into the firmware's own calls, so the screen, the buttons and these controls
+ * always show one state. The FM-1 build never compiles it (main.c includes it under BOARD_SMK37).
+ *
+ *   pads     (smk_pads.h: the FM-1's black keys, the effects, with red/green LEDs)
+ *   faders   four banks, soft takeover
+ *   wheels   pitch bend +-2 semitones, mod wheel vibrato
+ *   keys     the ten outer keys extend the keybed by notes
+ *
+ * The mutes and solos go through ui.mutes / ui.solo and ui_perf_mutes(), the same state the
+ * FM-1's PERFORM page uses: a pad cannot disagree with a key.
+ *
+ * The wheels reach the engine as C_WHEEL commands (dsp/amb.c smk_wheel_set), read by the Lead's
+ * pitch and vibrato. */
+
+/* The outer keys go through the engine's own MIDI-in path (dsp/amb.c), so a key outside the
+ * FM-1's 27 lands on a degree of the piece's scale like any other note. */
+void en_lead_midi(int note, int on);                 /* (dsp/amb.h) a note into the Lead, folded onto the scale */
+
+/* The fader banks. A parameter the bank cannot reach on this firmware is 0xFF and the fader
+ * ignores it, rather than writing something arbitrary. */
+enum { SMK_BANK_LEVEL, SMK_BANK_SOUND, SMK_BANK_SPACE, SMK_BANK_MOVE, SMK_NBANK };
+static const uint8_t smk_fbank_par[SMK_NBANK][4] = {
+    {P_CHORD, P_SEQ, P_LEAD, P_SEQ2},              /* A: the layer levels */
+    {P_CRACKLE, P_CUTOFF, P_SWEEP, P_MOTION},      /* B: the Atmosphere's level, the stab's filter, its tone, the arrangement */
+    {P_ECHO, P_REVERB, P_FEEDBACK, P_SIZE},        /* C: the space */
+    {P_EVOLVE, P_MOTION, P_DRIFT, P_DENSITY},      /* D: the NACHTFAHRT page's motion */
+};
+static uint8_t smk_fbank;
+
+/* Soft takeover: a fader acts only once it has moved, and the first reading after a bank change
+ * arms it instead of writing, so nothing jumps. */
+static uint8_t smk_fad_last[4], smk_fad_armed;
+
+static void smk_faders_tick(void)
+{
+    uint32_t i;
+    for (i = 0; i < 4u; i++) {
+        uint8_t v = fm1_in.fader[i], bit = (uint8_t)(1u << i), par = smk_fbank_par[smk_fbank][i];
+        if (!(smk_fad_armed & bit) || v == smk_fad_last[i]) {
+            smk_fad_last[i] = v;
+            smk_fad_armed |= bit;
+            continue;
+        }
+        smk_fad_last[i] = v;
+        if (par != 0xFF)
+            en_set(par, v);
+    }
+}
+
+/* The wheels self-calibrate: the pitch wheel's rest is its centre, each wheel's range grows to
+ * what it has been seen to reach, and a dead band around the centre keeps a resting wheel quiet. */
+static int32_t smk_bend, smk_mod;
+static int32_t smk_wheel_bend(void) { return smk_bend; }
+static int32_t smk_wheel_mod(void) { return smk_mod; }
+void smk_wheel(int which, int value);                /* (dsp/amb.c) 0 = pitch, 1 = mod */
+static int32_t smk_bend_sent, smk_mod_sent;          /* what the engine last heard, so a resting wheel is quiet */
+
+static void smk_wheels_send(void)
+{
+    if (smk_bend != smk_bend_sent) {
+        smk_bend_sent = smk_bend;
+        smk_wheel(0, (int)smk_bend);
+    }
+    if (smk_mod != smk_mod_sent) {
+        smk_mod_sent = smk_mod;
+        smk_wheel(1, (int)smk_mod);
+    }
+}
+
+static void smk_wheels_tick(void)
+{
+    enum { DEAD = 12, SPAN0 = 80, MOD_LO = 485, MOD_HI = 615 };
+    static int32_t pc, plo, phi, mlo, mhi;
+    int32_t p = fm1_in.wheel[0], m = fm1_in.wheel[1];
+    if (fm1_in.frames < 300u)                      /* (the readings settle) */
+        return;
+    if (!pc) {
+        pc = p;
+        plo = p - SPAN0;
+        phi = p + SPAN0;
+        mlo = m < MOD_LO ? m : MOD_LO;
+        mhi = m > MOD_HI ? m : MOD_HI;
+    }
+    if (p < plo) plo = p;
+    if (p > phi) phi = p;
+    if (m < mlo) mlo = m;
+    if (m > mhi) mhi = m;
+    {
+        int32_t d = p - pc, neg = pc - plo, pos = phi - pc, b = 0;
+        if (d > DEAD && pos > DEAD) b = (d - DEAD) * 8192 / (pos - DEAD);
+        else if (d < -DEAD && neg > DEAD) b = (d + DEAD) * 8192 / (neg - DEAD);
+        smk_bend = b < -8192 ? -8192 : b > 8192 ? 8192 : b;
+    }
+    {
+        int32_t d = mhi - mlo, t = d > 0 ? (mhi - m) * 127 / d : 0;
+        smk_mod = t < 0 ? 0 : t > 127 ? 127 : t;
+    }
+}
+
+/* ------------------------------------------------------------------ outer keys --- */
+/* The SMK's keybed is 37 keys; the FM-1 has 27 (F3..G5, keybed keys 5..31). The ten that fall outside
+ * - C3..E3 below and G#5..C6 above (smk37-port.yaml keys: outer extend, "confirmed") - play the Lead
+ * through the same path MIDI in uses: en_lead_midi takes a note number and folds it onto the nearest
+ * note of the piece's scale, so a key outside the FM-1's range still lands on a degree. Nothing here
+ * invents a mapping of its own, and the FM-1's 27 keys are untouched: the HAL never puts them in this
+ * queue (smk_input.h: keybed keys 5..31 go to fm1_in.notes, the rest to smk_extkey_take). */
+#define SMK_KEY_F3 5u                       /* (smk_input.h): keybed key 5 is F3 */
+#ifndef SMK_MIDI_C3
+#define SMK_MIDI_C3 48                      /* keybed key 0 is C3, so keybed key k is MIDI 48 + k */
+#endif
+#define SMK_OUTER_N 5u                      /* five keys each side: C3..E3 below, G#5..C6 above */
+static uint8_t smk_outer[FM1_NKEY];         /* the velocity an outer key went down at, 0 = up (a held key
+                                             * sends no repeats; the HAL queues edges only) */
+/* An outer key is one the FM-1 does not have: below F3 (keybed 0..4) or above G5 (32..36). */
+static int32_t smk_outer_note(uint32_t k)
+{
+    if (k >= SMK_KEY_F3 && k < SMK_KEY_F3 + 27u)
+        return -1;                          /* the FM-1's own 27 (F3..G5): the HAL already reports those */
+    if (k >= SMK_KEY_F3 + 27u + SMK_OUTER_N)
+        return -1;                          /* past the keybed */
+    return (int32_t)SMK_MIDI_C3 + (int32_t)k;
+}
+
+static void smk_outer_tick(void)
+{
+    int32_t v;
+    while ((v = smk_extkey_take()) >= 0) {
+        uint32_t k = (uint32_t)v >> 8, vel = (uint32_t)v & 0xFFu;
+        int32_t note = smk_outer_note(k);
+        if (note < 0 || k >= FM1_NKEY)
+            continue;
+        if (vel) {
+            smk_outer[k] = (uint8_t)vel;
+            en_lead_midi((int)note, 1);
+        } else {
+            smk_outer[k] = 0;
+            en_lead_midi((int)note, 0);
+        }
+    }
+}
+
+static void smk_controls_tick(void)
+{
+    smk_pads_frame();                            /* (smk_pads.h: the pads, then their LEDs) */
+    smk_faders_tick();
+    smk_wheels_tick();
+    smk_wheels_send();
+    smk_outer_tick();
+}
