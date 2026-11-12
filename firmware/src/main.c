@@ -57,7 +57,12 @@ static inline int32_t clamp(int32_t v, int32_t lo, int32_t hi) { return v < lo ?
 #endif
 #include "usb.c"
 #ifndef EN_TRS
+#if BOARD_SMK37
+#define EN_TRS 0                  /* the SMK-37 has no MIDI-in jack: PH8 floats, and its noise read as MIDI clock
+                                   * (0xF8) kept the engine waiting for an outside beat, so PLAY played nothing */
+#else
 #define EN_TRS 1                  /* MIDI IN on the TRS jack */
+#endif
 #endif
 #if EN_TRS
 #include "midi_uart.c"
