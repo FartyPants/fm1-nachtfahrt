@@ -233,6 +233,10 @@ static struct {
     uint32_t down_t[NB];               /* when each button went down */
     uint32_t turn_t;                   /* the last knob turn */
     uint8_t reset_done;                /* SAVE held: the piece went back to its recipe this hold */
+#if BOARD_SMK37
+    uint8_t want_play;                 /* PLAY's own wish: the engine's en_playing is a block behind, so a toggle
+                                        * read off it could post the same state twice and the transport stuck */
+#endif
     uint8_t dirty;                     /* the project changed since the last save */
     uint32_t act_t, saved_t;
     char msg[2][24];
@@ -1102,6 +1106,19 @@ static void button(int b)
     case B_EDIT:                                 /* (its release: edit_released, in input) */
         break;
     case B_PLAY:
+#if BOARD_SMK37
+        ui.want_play = (uint8_t)!ui.want_play;
+        sp_tp.playing = ui.want_play;
+        sp_tp.play_t = plat_ms();
+        if (ui.want_play) {
+            en_seed(plat_ms());
+            en_play(1);
+            say("PLAYING", 0);
+        } else {
+            en_play(0);
+            say("RESTING", 0);
+        }
+#else
         sp_tp.playing = !en_playing;
         sp_tp.play_t = plat_ms();
         if (en_playing) {
@@ -1112,6 +1129,7 @@ static void button(int b)
             en_play(1);
             say("PLAYING", 0);
         }
+#endif
         break;
     case B_REC:
         if (plat_ms() - ui.down_t[B_REC] >= GRID_HOLD)
@@ -2967,6 +2985,9 @@ static void speak(void)
     }
     if (en_playing != sp_tp.playing && now - sp_tp.play_t > 150u) {   /* MIDI start / stop */
         sp_tp.playing = en_playing;
+#if BOARD_SMK37
+        ui.want_play = en_playing;                   /* (the engine moved it: PLAY's next press follows it) */
+#endif
         ann_say(en_playing ? "PLAYING" : "RESTING", 0, 0);
     }
     if (en_ext != sp.ext) {                           /* a MIDI clock arrived, or stopped */
@@ -3151,6 +3172,9 @@ void ui_init(void)
     lcd_fill(0, 0, 240, 240, K_BG);
     if (!en_playing)
         en_play(1);                              /* it plays from the start */
+#if BOARD_SMK37
+    ui.want_play = 1;
+#endif
     sp_tp.playing = 1;
     sp_tp.play_t = plat_ms();
 }

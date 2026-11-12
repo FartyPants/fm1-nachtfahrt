@@ -4215,10 +4215,18 @@ static void drain(void)
             break;
         case C_POOL: pool_set((uint32_t)b & 0xFFFu); break;
         case C_PLAY:
-            if (a && !en_playing)
-                play_start(1);
-            else if (!a && en_playing)
+            if (a) {
+                if (!en_playing)
+                    play_start(1);
+            } else if (en_playing) {
                 play_stop();
+            }
+#if BOARD_SMK37
+            else {
+                quiet();                         /* (already stopped: the tails and any stuck note cleared, so a
+                                                      * start after it is heard) */
+            }
+#endif
             break;
         case C_NEXT:
             if (en_playing)
