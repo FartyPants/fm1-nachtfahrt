@@ -47,8 +47,11 @@ On macOS with podman instead of Docker, put a `docker` script that runs `exec po
 on your PATH. `EN_JOBS` (default 4) limits parallel compiles: a podman machine drops
 connections when many containers start at once.
 
-Build option: `EN_CDC=1` adds Felucca's USB serial function (off by default: one plain
-MIDI interface).
+Build options: `EN_CDC=1` adds Felucca's USB serial function (off by default: one plain
+MIDI interface). `EN_OTA_FLASH_ID=1` makes the identity reply carry the flash part's JEDEC ID in bytes 24..26,
+which is what lets `tools/fm1_install.py --info` name the chip (off by default: installers that strip the
+identity's padding only from the end — The Firmware Hub's, and this firmware is published there — read a reply
+that carries the part as no FM-1 at all).
 
 The build also generates `build/gen/` (the font). It fails if a soft-double routine is linked
 (a `double` crept in) and checks the image, RAM and pool sizes.

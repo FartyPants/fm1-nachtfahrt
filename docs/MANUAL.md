@@ -558,9 +558,11 @@ build aren't read: NACHTFAHRT starts with its eight recipes.
 
 **The memory chip:** the FM-1 has carried two 1 MiB SPI flash parts — the Puya P25Q80 (JEDEC 856014) in the
 stock units and the UC25HQ80 (B36014) in units sold since autumn 2026, mostly from AliExpress. NACHTFAHRT
-saves to either. `python3 tools/fm1_install.py --info` names the part the FM-1 you have plugged in carries. A
-part other than those two is not written to at all: the unit keeps its pieces in RAM and they are gone at the
-next power off.
+saves to either. `tools/fm1_rescue.py` prints which one a unit carries; `tools/fm1_install.py --info` names it
+too when the firmware was built to report it (`EN_OTA_FLASH_ID=1`, see BUILDING.md — off by default, because
+installers that only strip the end of the identity field, The Firmware Hub's among them, read a reply that
+carries the part as no FM-1 at all). A part other than those two is not written to at all: the unit keeps its
+pieces in RAM and they are gone at the next power off.
 
 ---
 
