@@ -67,9 +67,10 @@ class FakeFM1:
     """a MIDI backend with one FM-1 on it"""
 
     def __init__(self, image, identity="FM-1_015", name="FM-1", unplug_after=None, after_write="FM-1_900",
-                 stall_after=None, bad_addr=None):
+                 stall_after=None, bad_addr=None, jedec=0):
         self.image, self.unplug_after, self.after_write = image, unplug_after, after_write
         self.stall_after, self.bad_addr = stall_after, bad_addr
+        self.jedec = jedec                       # bytes 24..26 of the identity reply: the flash part it has
         self.served = self.bad = self.upgrades = 0
         self.sent, self.links, self.gen, self.lock = [], [], 0, threading.Lock()
         self.boot(identity, name)
@@ -100,7 +101,10 @@ class FakeFM1:
     def rx(self, d):
         if d == I.HS_QUERY:
             t = self.identity.encode()
-            self.tx(b"\xF0" + I.pack7(bytes([0, 0x59, 0x11, 0, 0, 0]) + t + bytes(28 - len(t))) + b"\xF7")
+            body = bytearray(t + bytes(27 - len(t)))
+            if self.jedec and len(t) <= 24:
+                body[24:27] = self.jedec.to_bytes(3, "big")      # the flash's JEDEC ID, as firmware/src/ota.c does
+            self.tx(b"\xF0" + I.pack7(bytes([0, 0x59, 0x11, 0, 0, 0]) + bytes(body) + b"\0") + b"\xF7")
         elif d == I.UPGRADE:
             self.upgrades += 1
             first = self.bad_addr if self.bad_addr is not None else 0
@@ -209,6 +213,19 @@ def installs():
     dev = FakeFM1(image, identity="FM-1_905", name="Felucca")
     rc, out, err = cli(["--info"], dev)
     ok(rc == 0 and "FM-1_905" in out and "running" in out and dev.upgrades == 0, "--info: identity of the connected FM-1")
+
+    dev = FakeFM1(image, identity="FM-1_905", name="Felucca", jedec=0xB36014)
+    rc, out, err = cli(["--info"], dev)
+    ok(rc == 0 and "FM-1_905" in out and "flash: UC25HQ80 (B36014)" in out,
+       "--info: the flash chip from bytes 24..26 (a UC25HQ80 unit)")
+
+    dev = FakeFM1(image, identity="FM-1_905", name="Felucca", jedec=0x856014)
+    rc, out, err = cli(["--info"], dev)
+    ok(rc == 0 and "flash: Puya P25Q80 (856014)" in out, "--info: the stock part is named too")
+
+    dev = FakeFM1(image, identity="FM-1_905", name="Felucca", jedec=0xEF4016)
+    rc, out, err = cli(["--info"], dev)
+    ok(rc == 0 and "flash: unknown part (EF4016)" in out, "--info: a part this firmware does not save to")
 
     dev = FakeFM1(image, identity="ota-FM-1_900", name="Felucca Update")
     rc, out, err = cli(["--info"], dev)

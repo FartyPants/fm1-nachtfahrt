@@ -56,12 +56,22 @@ function parseRequest(pkt) {
   return { fl: u[6], addr: (u[7] | (u[8] << 8) | (u[9] << 16) | (u[10] << 24)) >>> 0, len: u[11] | (u[12] << 8) | (u[13] << 16) };
 }
 
+// The flash parts an FM-1's storage may use, and their names (firmware/src/fm1_flash_parts.h): a page
+// that shows what it found uses flashPartName(identity.flash); 0: the firmware sent no ID.
+export const FLASH_PARTS = { 0x856014: "Puya P25Q80", 0xb36014: "UC25HQ80" };
+export function flashPartName(id) { return FLASH_PARTS[id >>> 0] || null; }
+
 function parseIdentity(pkt) {
   const d = unpack7(pkt.slice(1, -1));
   if (d.length !== 34 || d[0] !== 0 || d[1] !== 0x59 || d[2] !== 0x11) return null;
-  const txt = String.fromCharCode(...d.slice(6, 33)).replace(/\0+$/, "");
+  // the text up to its first 0: a firmware that answers also sends the flash's JEDEC ID in bytes 24..26,
+  // and stripping only the trailing zeros would read those three bytes as part of the identity
+  let end = 6;
+  while (end < 33 && d[end]) end++;
+  const txt = String.fromCharCode(...d.slice(6, end));
+  const flash = end === 33 ? 0 : (d[30] << 16) | (d[31] << 8) | d[32];
   const m = /^([^_]+)_(\d+)$/.exec(txt);
-  return m ? { text: txt, model: m[1], version: parseInt(m[2], 10) } : null;
+  return m ? { text: txt, model: m[1], version: parseInt(m[2], 10), flash } : null;
 }
 
 // one MIDI in/out pair with a SysEx queue

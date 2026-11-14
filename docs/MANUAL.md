@@ -556,6 +556,12 @@ Lock and PERFORM's Filter, Wet and Energy aren't saved; a piece change (or GLO's
 none of one piece's push carries into the next. Projects saved by DUB-1, AMB-1 or an earlier NACHTFAHRT
 build aren't read: NACHTFAHRT starts with its eight recipes.
 
+**The memory chip:** the FM-1 has carried two 1 MiB SPI flash parts — the Puya P25Q80 (JEDEC 856014) in the
+stock units and the UC25HQ80 (B36014) in units sold since autumn 2026, mostly from AliExpress. NACHTFAHRT
+saves to either. `python3 tools/fm1_install.py --info` names the part the FM-1 you have plugged in carries. A
+part other than those two is not written to at all: the unit keeps its pieces in RAM and they are gone at the
+next power off.
+
 ---
 
 ## 13. Troubleshooting
@@ -585,7 +591,8 @@ bash tools/fm1_rescue.sh
 ```
 
 Install the command line developer tools if asked, type your Mac password if asked, then plug the FM-1 in
-and switch it on when the script says it's waiting. It checks the chip, saves a backup of the FM-1's memory
+and switch it on when the script says it's waiting. It checks the chip and its flash part (the Puya P25Q80 or the
+UC25HQ80), saves a backup of the FM-1's memory
 in `fm1-rescue` in your home folder, and asks before it writes. Type **yes**; don't unplug anything until
 it says it's restarting the FM-1, which then starts into its original firmware. The script downloads its
 rescue tool from X0X's repository, M-VAVE's FM-1 V15 firmware and JieLi's flash loader, checks the firmware

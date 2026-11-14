@@ -129,9 +129,13 @@ static void ota_reply_identity(void)
 {
     static const char ID[] = FELUCCA_ID;         /* == the package marker string */
     uint8_t id[27];
-    uint32_t i;
+    uint32_t i, n = sizeof ID - 1u, j = OTA_FLASH_ID();
+    _Static_assert(sizeof ID <= 24u, "FELUCCA_ID: 23 characters at most (the JEDEC ID follows at byte 24)");
     for (i = 0; i < sizeof id; i++)
-        id[i] = i < sizeof ID - 1u ? (uint8_t)ID[i] : 0;
+        id[i] = i < n ? (uint8_t)ID[i] : 0;
+    id[24] = (uint8_t)(j >> 16);                 /* bytes 24..26: the flash's JEDEC ID, as fm1-base does. */
+    id[25] = (uint8_t)(j >> 8);                  /* A host reads the text up to its first 0, so an old host or */
+    id[26] = (uint8_t)j;                         /* an unread part (j == 0) simply sees no ID sent. */
     ota_send_msg(0x11, id, sizeof id);
 }
 

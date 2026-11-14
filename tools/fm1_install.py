@@ -95,8 +95,9 @@ def parse_request(pkt):
 
 
 class Identity:
-    def __init__(self, text, model, version):
+    def __init__(self, text, model, version, flash=0):
         self.text, self.model, self.version = text, model, version
+        self.flash = flash                       # bytes 24..26 of the identity reply: the flash's JEDEC ID, 0: not sent
 
     @property
     def loader(self):
@@ -109,9 +110,15 @@ def parse_identity(pkt):
     d = unpack7(pkt[1:-1])
     if len(d) != 34 or d[:3] != b"\x00\x59\x11":
         return None
-    txt = d[6:33].rstrip(b"\0").decode("latin-1")
+    # the text up to its first 0. A firmware that answers also puts the flash's JEDEC ID in bytes 24..26,
+    # so rstrip'ing the trailing zeros would read those bytes as part of the identity and fail the match.
+    txt = d[6:33].split(b"\0", 1)[0].decode("latin-1")
+    flash = int.from_bytes(d[30:33], "big") if len(txt) < 24 else 0
     m = re.fullmatch(r"([^_]+)_(\d+)", txt)
-    return Identity(txt, m[1], int(m[2])) if m else None
+    return Identity(txt, m[1], int(m[2]), flash) if m else None
+
+
+FLASH_PARTS = {0x856014: "Puya P25Q80", 0xB36014: "UC25HQ80"}   # the parts firmware/src/fm1_flash_parts.h accepts
 
 
 # --------------------------------------------------------------- package ---
@@ -415,7 +422,8 @@ def run(a, backend, out, ask):
             raise not_found(up)
         dev.link.close()
         mode = "update loader (update not finished)" if dev.id.loader else "running"
-        print(f"{dev.id.text}  [{mode}]  port: {dev.name}", file=out)
+        flash = f"  flash: {FLASH_PARTS.get(dev.id.flash, 'unknown part')} ({dev.id.flash:06X})" if dev.id.flash else ""
+        print(f"{dev.id.text}  [{mode}]  port: {dev.name}{flash}", file=out)
         return 0
     product, image = load_package(a.package, a.force)
     print(f"package: {product}  ({a.package})", file=out)

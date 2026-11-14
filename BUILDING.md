@@ -61,7 +61,8 @@ tests/run_tests.sh
 
 Runs, on the build machine: the maths library against libm; the instrument (`tests/host/amb_test.c`:
 Euclidean patterns, scales and chords, voice leading, the render's levels, drift, evolving loops, freeze); flash
-storage; Felucca's update-path tests against `build/amb.fwsc`; and the whole app in the simulator
+storage; which flash parts the storage may use (`tests/host/flash_parts_test.c`: `firmware/src/fm1_flash_parts.h`);
+Felucca's update-path tests against `build/amb.fwsc`; and the whole app in the simulator
 (`tests/scenarios/*.amb`), with its screenshots and audio in `build/scenarios/`.
 
 `host/build_host.sh` builds the simulator alone; `build/host/amb_host SCRIPT OUTDIR` runs one

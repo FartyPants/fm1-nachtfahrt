@@ -112,6 +112,12 @@ static int ota_fread(uint32_t off, void *dst, uint32_t n) { memcpy(dst, nor + of
 static void ota_show(uint32_t step, int32_t code) { if (step == 9) last_code = code; }
 static void ota_commit(const uint8_t *parm) { committed = 1; memcpy(committed_parm, parm, 112); }
 
+/* The id the boot read (main.c's flash_jedec, passed to ota.c as OTA_FLASH_ID): a UC25HQ80, the part
+ * the newer FM-1s carry. 0 to check the answer without it. */
+#ifndef TEST_JEDEC
+#define TEST_JEDEC 0xB36014u
+#endif
+#define OTA_FLASH_ID() TEST_JEDEC
 #include "../firmware/src/ota.c"
 
 static uint32_t ota_body_off(void)                  /* ota.bin data + 0x20 in the logical image */
@@ -176,6 +182,11 @@ int main(int argc, char **argv)
         bad += check("handshake answered", ident_replies == 1);
         bad += check("identity frame is " FELUCCA_ID,
                      ota_msg[2] == 0x11 && !memcmp(ota_msg + 6, FELUCCA_ID, sizeof FELUCCA_ID - 1));
+        bad += check("identity carries the flash JEDEC id (bytes 24..26)",
+                     ota_msg[6 + 24] == (uint8_t)(TEST_JEDEC >> 16) &&
+                     ota_msg[6 + 25] == (uint8_t)(TEST_JEDEC >> 8) &&
+                     ota_msg[6 + 26] == (uint8_t)TEST_JEDEC &&
+                     ota_msg[6 + sizeof FELUCCA_ID - 1] == 0);      /* the zeros between text and id stay */
     }
 
     /* full session */

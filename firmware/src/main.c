@@ -47,7 +47,15 @@ static inline int32_t clamp(int32_t v, int32_t lo, int32_t hi) { return v < lo ?
 #include "midi_uart.c"
 #endif
 
-static uint8_t flash_ok;          /* JEDEC id matched at boot */
+#include "fm1_flash_parts.h"      /* the flash parts the storage may use (EN_FLASH_JEDEC_OK) */
+
+static uint8_t flash_ok;          /* a known flash part (fm1_flash_parts.h), else RAM only */
+static uint32_t flash_jedec;      /* the JEDEC id read at boot: the identity reply carries it (ota.c) */
+static uint8_t flash_take(uint32_t id)            /* record the part the boot read; may the storage use it? */
+{
+    flash_jedec = id;
+    return EN_FLASH_JEDEC_OK(id);
+}
 static void audio_silence(void);
 static int st_read(uint32_t off, void *dst, uint32_t n)   /* 256-byte IRQ-off windows: audio keeps up */
 {
@@ -82,6 +90,7 @@ static int st_prog(uint32_t off, const void *src, uint32_t n)
 
 struct bootguard_s { uint32_t magic, failed, pending; };
 extern struct bootguard_s bootguard;
+#define OTA_FLASH_ID() flash_jedec        /* bytes 24..26 of the identity reply: which flash this FM-1 has */
 #include "ota.c"
 static uint32_t ota_now_ms(void) { return fm1_ms; }
 static void ota_idle(void) { fm1_wdt_feed(); }
