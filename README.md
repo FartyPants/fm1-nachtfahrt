@@ -137,3 +137,5 @@ in the browser comes from [Groove OS](https://www.groove-os.com/). GPL-3.0-only;
 The concept, compositions and snoring you hear in your head is Cranky Man himself.
 
 M-VAVE and FM-1 are trademarks of their owners. NACHTFAHRT is not affiliated with M-VAVE or Hügelton Instruments.
+
+You can also try NACHTFAHRT in the browser, no flashing needed, in the free community [FM-1 Emulator](https://fm1-emulator.atst.tools/).
