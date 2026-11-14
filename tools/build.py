@@ -203,7 +203,7 @@ def build_loader():
 
 def build_app():
     flags = [*CFLAGS, *FPU, "-Ifirmware/hal", "-Ifirmware/src", "-Ibuild/gen"]
-    for flag in ("EN_CDC",):
+    for flag in ("EN_CDC", "EN_OTA_FLASH_ID"):
         v = os.environ.get(flag)    # unset: the default in firmware/src/main.c
         if v in ("0", "1"):
             flags.append(f"-D{flag}={v}")
@@ -359,6 +359,8 @@ def main():
         PRODUCT = "FM-1_197%02d%02d%02d" % (int(m[1]), int(m[2]), int(m[3] or 0))
         VERSION = a.release.upper()
         name = f"nachtfahrt-{a.release}.fwsc"
+    if len(PRODUCT) > 23:        # the identity reply: bytes 24..26 are the flash's JEDEC ID (src/ota.c)
+        raise SystemExit(f"identity {PRODUCT}: 23 characters at most")
     fm1pkg_make.SDK = a.sdk
     for rel, sha in SDK_SHA256.items():          # fail early without the SDK
         if hashlib.sha256(fm1pkg_make.sdk_file(rel)).hexdigest() != sha:

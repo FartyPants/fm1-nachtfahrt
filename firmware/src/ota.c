@@ -125,17 +125,26 @@ static int ota_send_msg(uint32_t cmd, const uint8_t *body, uint32_t n)   /* n <=
     return ota_wire_send(ota_wire, w);
 }
 
+/* the flash's JEDEC ID for the identity reply (a firmware defines it before including this file: the ID it read
+ * at boot), 0: not read. The loader never probes, so its reply carries 0, as it always did.
+ * The app answers only when built with EN_OTA_FLASH_ID=1 (firmware/src/main.c): installers that strip the
+ * identity's padding only from the end -- The Firmware Hub's, and this firmware is published there -- read a reply
+ * carrying the flash ID as no FM-1 at all; fm1-base hit exactly that on its hub ("No FM-1 found", 2026-11-06).
+ * FELUCCA_ID is 23 characters at most, checked in tools/build.py where the identity is composed. */
+#ifndef OTA_FLASH_ID
+#define OTA_FLASH_ID() 0u
+#endif
+
 static void ota_reply_identity(void)
 {
     static const char ID[] = FELUCCA_ID;         /* == the package marker string */
     uint8_t id[27];
     uint32_t i, n = sizeof ID - 1u, j = OTA_FLASH_ID();
-    _Static_assert(sizeof ID <= 24u, "FELUCCA_ID: 23 characters at most (the JEDEC ID follows at byte 24)");
     for (i = 0; i < sizeof id; i++)
         id[i] = i < n ? (uint8_t)ID[i] : 0;
-    id[24] = (uint8_t)(j >> 16);                 /* bytes 24..26: the flash's JEDEC ID, as fm1-base does. */
-    id[25] = (uint8_t)(j >> 8);                  /* A host reads the text up to its first 0, so an old host or */
-    id[26] = (uint8_t)j;                         /* an unread part (j == 0) simply sees no ID sent. */
+    id[24] = (uint8_t)(j >> 16);                 /* bytes 24..26: the JEDEC ID, as fm1-base sends it. A host reads */
+    id[25] = (uint8_t)(j >> 8);                  /* the text up to its first 0, so an old host, or j == 0 (this */
+    id[26] = (uint8_t)j;                         /* build), simply sees no ID sent. */
     ota_send_msg(0x11, id, sizeof id);
 }
 

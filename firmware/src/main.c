@@ -90,7 +90,15 @@ static int st_prog(uint32_t off, const void *src, uint32_t n)
 
 struct bootguard_s { uint32_t magic, failed, pending; };
 extern struct bootguard_s bootguard;
-#define OTA_FLASH_ID() flash_jedec        /* bytes 24..26 of the identity reply: which flash this FM-1 has */
+/* EN_OTA_FLASH_ID=1 (see tools/build.py): the identity reply's bytes 24..26 carry the flash's JEDEC ID, which is
+ * how a host names the part. Off by default: installers that strip the identity's padding only from the end -- The
+ * Firmware Hub's, and this firmware is published there -- read a reply that carries the ID as no FM-1 at all.
+ * fm1-base hit exactly that with its hub ("No FM-1 found", 2026-11-06) and stopped answering it. The tools here
+ * read the text up to its first 0, so a build that answers is safe with them. */
+#ifndef EN_OTA_FLASH_ID
+#define EN_OTA_FLASH_ID 0
+#endif
+#define OTA_FLASH_ID() (EN_OTA_FLASH_ID ? flash_jedec : 0u)      /* always defined here; ota.c's own default (0u) is what the loader unit gets */
 #include "ota.c"
 static uint32_t ota_now_ms(void) { return fm1_ms; }
 static void ota_idle(void) { fm1_wdt_feed(); }
