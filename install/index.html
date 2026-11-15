@@ -1,46 +1,80 @@
 <!doctype html>
 <!-- SPDX-License-Identifier: GPL-3.0-only
      Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
-     NACHTFAHRT: Felucca's installer page (web/index_pkg.html, by way of X0X), branded for NACHTFAHRT, English first.
+     NACHTFAHRT: Felucca's installer page (web/index_pkg.html, by way of X0X and NACHTFAHRT), English first.
      tools/make_pages.py inlines fm1pkg.js and fm1ota.js and the package's metadata. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Install · NACHTFAHRT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600;700&display=swap">
 <style>
-  /* the colours of Ambient 1: Music for Airports (1978), as the site */
-  /* NACHTFAHRT's colours, as its screen, the emulator and the manual: a dark room, a cold teal */
-  :root { --bg: #10141a; --fg: #dee4e8; --dim: #9aa8b6; --accent: #2b6e72; --sheet: #1e252f; --river-2: #5cc4cc; color-scheme: dark; }
-  body { margin: 0; background: var(--bg); color: var(--fg);
-         font: 16px/1.6 "Helvetica Neue", Helvetica, Arial, sans-serif; }
-  main { max-width: 520px; margin: 0 auto; padding: 48px 16px; }
-  h1 { font-size: 28px; font-weight: 300; letter-spacing: .06em; text-transform: uppercase; margin: 0 0 24px; }
-  .lang { float: right; font-size: 13px; color: var(--dim); cursor: pointer; text-decoration: underline; background: none; border: 0; padding: 0; color: var(--dim); }
-  p { margin: 0 0 16px; }
-  button { font: inherit; background: var(--accent); color: var(--fg); border: 1px solid var(--fg); padding: 6px 22px; cursor: pointer; }
-  button:disabled { opacity: .3; cursor: default; }
-  #status, #alert { margin-top: 16px; min-height: 1.6em; }
+  /* the site's colours (the landing page's, the screen's): black, a pale lavender ink, cyan; amber for care; a card per
+     part of the page (the layout after HYP-1's install page) */
+  :root { --ground: #000; --card: #0d0b14; --card-2: #17131f; --ink: #efe7ff; --muted: #a49cb8; --rule: #241f33;
+          --acc: #7fd8ff; --violet: #b48cff; --amber: #ffd27f; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink);
+         font: 400 17px/1.6 "Barlow Semi Condensed", "Helvetica Neue", Helvetica, Arial, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 28px 16px 56px; }
+  h1 { font-size: 1.9rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; margin: 0 0 1.2rem;
+       display: flex; align-items: center; gap: .7rem; line-height: 1.2; }
+  h1::before { content: ""; flex: none; width: 34px; height: 5px; background: linear-gradient(90deg, var(--acc) 0 62%, var(--violet) 62%); }
+  .lang { float: right; font-family: inherit; font-size: 14px; font-weight: 400; color: var(--muted); cursor: pointer;
+          text-decoration: underline; background: none; border: 0; padding: 0; letter-spacing: 0; text-transform: none; }
+  .lang:hover:not(:disabled) { color: var(--acc); background: none; }
+  p { margin: 0 0 14px; }
+  p:last-child, ol:last-child { margin-bottom: 0; }
+  a { color: var(--ink); text-decoration-color: var(--acc); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+  a:hover { color: var(--acc); }
+  button { font: inherit; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; background: var(--acc); color: #05131a;
+           border: 1px solid var(--acc); border-radius: 8px; padding: .6em 1.8em; cursor: pointer; }
+  button:hover:not(:disabled) { background: var(--violet); border-color: var(--violet); }
+  button:disabled { opacity: .35; cursor: default; }
+  #go { font-size: 1.15rem; padding: .7em 2.4em; }
+  #stockgo { background: var(--card-2); border-color: var(--rule); color: var(--ink); }
+  #stockgo:hover:not(:disabled) { border-color: var(--amber); background: var(--amber); color: #1a1205; }
+  #status, #alert { margin-top: 14px; min-height: 1.6em; }
+  #status { color: var(--acc); }
   #alert:empty { display: none; }
-  #alert { font-weight: 600; }
+  #alert { font-weight: 600; color: var(--amber); }
   #alert::before { content: "⚠ "; }
-  a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+  a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  label.bar { display: block; font-size: 13px; color: var(--dim); margin-top: 16px; }
+  label.bar { display: block; font-size: 14px; color: var(--muted); margin-top: 16px; }
   label.bar progress { margin-top: 4px; }
-  .small { color: var(--dim); font-size: 13px; }
-  progress { width: 100%; height: 6px; margin-top: 16px; accent-color: var(--river-2); }
-  pre { color: var(--dim); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 16px; }
+  .small { color: var(--muted); font-size: 15px; }
+  progress { width: 100%; height: 8px; accent-color: var(--acc); }
+  pre { color: var(--muted); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; margin: 14px 0 0;
+        background: var(--card-2); border-radius: 6px; padding: .4em .7em; }
   pre:empty { display: none; }
-  h2 { font-size: 16px; font-weight: 400; text-transform: uppercase; letter-spacing: .06em; margin: 40px 0 12px; padding-top: 8px; border-top: 1px solid var(--fg); }
-  ol { margin: 0 0 16px; padding-left: 20px; }
-  input[type=file] { font: inherit; font-size: 13px; color: var(--dim); max-width: 100%; }
-  .site { display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem 1.2rem; margin: 0 0 1.6rem; padding-bottom: .5rem; border-bottom: 1px solid var(--fg); }
-  .site .home { font-size: 1.05rem; font-weight: 400; letter-spacing: .08em; color: var(--fg); text-decoration: none; }
-  .site .home:hover { color: var(--river-2); background: none; }
-  .site nav { margin-left: auto; display: flex; flex-wrap: wrap; gap: .2rem 1rem; font-size: .92rem; }
-  .site nav a { color: var(--fg); text-decoration-color: var(--river-2); text-underline-offset: 3px; }
-  .site nav a[aria-current] { text-decoration: none; color: var(--river-2); }
+  h2 { font-size: 1.1rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; margin: 2.2rem 0 .8rem; color: var(--acc); }
+  ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin: 0 0 .5rem; }
+  li::marker { color: var(--acc); font-weight: 600; }
+  input[type=file] { font: inherit; font-size: 14px; color: var(--muted); max-width: 100%; margin-top: 4px; }
+  .site { display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem 1.2rem; margin: 0 0 1.6rem; padding-bottom: .8rem; border-bottom: 1px solid var(--rule); }
+  .site .home { font-size: 1.2rem; font-weight: 600; letter-spacing: .08em; color: var(--ink); text-decoration: none; }
+  .site .home:hover { color: var(--acc); }
+  .site nav { margin-left: auto; display: flex; flex-wrap: wrap; gap: .2rem 1rem; font-size: 1rem; }
+  .site nav a[aria-current] { text-decoration: none; color: var(--acc); }
+  .card { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 16px 18px; margin: 0 0 1rem; }
+  .card.go { border-color: var(--acc); }
+  .card.warn { border-color: #6b5426; }
+  .card.note { border-color: var(--amber); border-left-width: 5px; padding: 12px 16px; }
+  .card.note b { color: var(--amber); }
+  .tool { background: var(--card-2); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; margin: .5rem 0 .8rem; }
+  .tool .tag { display: block; font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--violet); margin-bottom: .2rem; }
+  .tool p { margin: 0; }
+  .cmd { display: flex; gap: 8px; align-items: stretch; margin: .45rem 0 0; }
+  .cmd code { flex: 1; min-width: 0; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--ink);
+              background: #000; border: 1px solid var(--rule); border-radius: 6px; padding: .4em .6em; overflow-wrap: anywhere; }
+  .cmd button { flex: none; font-size: 12px; padding: 0 .9em; border-radius: 6px; background: var(--card); color: var(--acc); border-color: var(--rule); }
+  .cmd button:hover:not(:disabled) { background: var(--acc); color: #05131a; border-color: var(--acc); }
+  footer { margin-top: 2.4rem; padding-top: 1rem; border-top: 1px solid var(--rule); }
 </style>
 </head>
 <body>
@@ -48,34 +82,73 @@
   <header class="site"><a class="home" href="../">NACHTFAHRT</a><nav aria-label="NACHTFAHRT"><a href="../emu/">Emulator</a><a href="../install/" aria-current="page">Install</a><a href="../manual/">Manual</a><a href="https://github.com/FartyPants/fm1-nachtfahrt">Source</a></nav></header>
   <button class="lang" id="lang" type="button"></button>
   <h1>Install NACHTFAHRT</h1>
-  <p data-t="intro"></p>
-  <p class="small" data-t="perm"></p>
-  <p data-t="warn"></p>
-  <p class="small" data-t="direct"></p>
-  <p class="small" data-t="beta"></p>
-  <p class="small"><span data-t="brick"></span>
-    <a href="../manual/#recovering-an-fm-1-that-won-t-start" style="color:inherit" data-t="bricklink"></a></p>
-  <p class="small" data-t="back"></p>
-  <p class="small"><a href="https://www.m-vave.com/download" target="_blank" rel="noopener" style="color:inherit">www.m-vave.com/download<span class="sr" data-t="newtab"></span></a></p>
-  <p><button id="go" disabled data-t="install"></button></p>
-  <label class="bar" for="bar"><span data-t="progress"></span>
-    <progress id="bar" max="100" value="0"></progress></label>
-  <p id="status" role="status"></p>
-  <p id="alert" role="alert"></p>
-  <pre id="log"></pre>
+  <div class="card note" role="note"><p class="small"><b data-t="newerh"></b> <span data-t="newer"></span>
+    <a href="#unbrick" data-t="newerlink"></a></p></div>
+  <div class="card go">
+    <ol>
+      <li data-t="intro"></li>
+      <li data-t="perm"></li>
+      <li data-t="warn"></li>
+    </ol>
+    <p><button id="go" disabled data-t="install"></button></p>
+    <label class="bar" for="bar"><span data-t="progress"></span>
+      <progress id="bar" max="100" value="0"></progress></label>
+    <p id="status" role="status"></p>
+    <p id="alert" role="alert"></p>
+    <pre id="log"></pre>
+    <p class="small" data-t="direct"></p>
+  </div>
+  <div class="card warn">
+    <p class="small" data-t="beta"></p>
+    <p class="small"><span data-t="brick"></span> <a href="#unbrick" data-t="bricklink"></a></p>
+    <p class="small"><span data-t="back"></span>
+      <a href="https://www.m-vave.com/download" target="_blank" rel="noopener">www.m-vave.com/download<span class="sr" data-t="newtab"></span></a></p>
+  </div>
+
   <h2 data-t="stockh"></h2>
-  <p class="small" data-t="stockwhy"></p>
-  <ol class="small">
-    <li><span data-t="stock1"></span> <a id="stocklink" href="https://yms-file-store.oss-cn-hongkong.aliyuncs.com/software/firmware/FM-1.fwsc" style="color:inherit">FM-1.fwsc</a></li>
-    <li><label for="stockfile" data-t="stock2"></label><br><input type="file" id="stockfile" accept=".fwsc"></li>
-    <li data-t="stock3"></li>
-  </ol>
-  <p><button id="stockgo" disabled data-t="stockinstall"></button></p>
-  <p><a href="../" style="color:inherit" data-t="manual"></a></p>
-  <p class="small">NACHTFAHRT is built on Felucca by Leo Kuroshita (@kurogedelic), <a href="https://hugelton.com" target="_blank" rel="noopener" style="color:inherit">Hügelton Instruments<span class="sr" data-t="newtab"></span></a>,
+  <div class="card">
+    <p class="small" data-t="stockwhy"></p>
+    <ol class="small">
+      <li><span data-t="stock1"></span> <a id="stocklink" href="https://yms-file-store.oss-cn-hongkong.aliyuncs.com/software/firmware/FM-1.fwsc">FM-1.fwsc</a></li>
+      <li><label for="stockfile" data-t="stock2"></label><br><input type="file" id="stockfile" accept=".fwsc"></li>
+      <li data-t="stock3"></li>
+    </ol>
+    <p><button id="stockgo" disabled data-t="stockinstall"></button></p>
+  </div>
+
+  <h2 id="unbrick" data-t="unh"></h2>
+  <div class="card">
+    <p class="small" data-t="unwhy"></p>
+    <ol>
+      <li><b data-t="un1h"></b> <span data-t="un1"></span></li>
+      <li><b data-t="un2h"></b>
+        <div class="tool"><span class="tag" data-t="unsh"></span>
+          <p class="small" data-t="unsh2"></p>
+          <div class="cmd"><code id="cmd-sh">bash -c "$(curl -fsSL https://raw.githubusercontent.com/charlesvestal/fm1-x0x/main/tools/fm1_rescue.sh)"</code><button type="button" data-copy="cmd-sh" data-t="copy"></button></div>
+        </div>
+        <div class="tool"><span class="tag" data-t="unpy"></span>
+          <p class="small"><a href="https://quixotic7.github.io/MvaveFM1Unbricker/" target="_blank" rel="noopener">MvaveFM1Unbricker<span class="sr" data-t="newtab"></span></a>:
+            <span data-t="unpy2"></span>
+            <a href="https://github.com/Quixotic7/FM1Backups" target="_blank" rel="noopener">Quixotic7/FM1Backups<span class="sr" data-t="newtab"></span></a>.</p>
+          <div class="cmd"><code id="cmd-info">python3 fm1_unbrick.py info</code><button type="button" data-copy="cmd-info" data-t="copy"></button></div>
+          <div class="cmd"><code id="cmd-restore">python3 fm1_unbrick.py restore V15-FM-1.fwsc</code><button type="button" data-copy="cmd-restore" data-t="copy"></button></div>
+        </div>
+      </li>
+      <li><b data-t="un3h"></b> <span data-t="un3"></span></li>
+    </ol>
+    <p class="small"><span data-t="unnone"></span>
+      <a href="https://github.com/kurogedelic/FM-1-transporter" target="_blank" rel="noopener">FM-1-transporter<span class="sr" data-t="newtab"></span></a>.
+      <span data-t="unmore"></span> <a href="../manual/#recovering-an-fm-1-that-won-t-start" data-t="bricklink2"></a>.</p>
+    <p class="small" data-t="uncaveat"></p>
+  </div>
+
+  <footer>
+  <p><a href="../" data-t="manual"></a></p>
+  <p class="small">NACHTFAHRT is built on Felucca by Leo Kuroshita (@kurogedelic), <a href="https://hugelton.com" target="_blank" rel="noopener">Hügelton Instruments<span class="sr" data-t="newtab"></span></a>,
     by way of X0X and FoMni.<br>
     Fonts: Barlow Semi Condensed (SIL OFL 1.1). M-VAVE and FM-1 are trademarks of their respective owners.<br>
     <span data-t="license"></span> <a href="https://github.com/FartyPants/fm1-nachtfahrt" target="_blank" rel="noopener" style="color:inherit">github.com/FartyPants/fm1-nachtfahrt<span class="sr" data-t="newtab"></span></a></p>
+  </footer>
 </main>
 <script type="module">
 // SPDX-License-Identifier: GPL-3.0-only
@@ -114,6 +187,10 @@ function logicalImage(fwsc) {
 // the device sends cmd 0x30 read requests on the logical image and we answer.
 
 const HS_QUERY = [0xF0, 0x00, 0x32, 0x45, 0x00, 0x00, 0x00, 0x40, 0x7F, 0xF7];
+// the handshake with the one-byte body 01: a firmware that cuts its plain answer to NAME_ and three digits
+// ("FM-1_701": M-UPGRADE 3.11 refuses more) answers this one with its whole identity ("FM-1_7010562"). The stock
+// firmware, the update loader and older builds don't answer it
+const HS_FULL = [0xF0, 0x00, 0x32, 0x45, 0x08, 0x00, 0x00, 0x40, 0x00, 0x7E, 0x01, 0xF7];
 const UPGRADE = [0xF0, 0x22, 0x24, 0x35, 0x7F, 0xF7];
 const MAXDATA = 512;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -166,7 +243,8 @@ function parseRequest(pkt) {
 function parseIdentity(pkt) {
   const d = unpack7(pkt.slice(1, -1));
   if (d.length !== 34 || d[0] !== 0 || d[1] !== 0x59 || d[2] !== 0x11) return null;
-  const txt = String.fromCharCode(...d.slice(6, 33)).replace(/\0+$/, "");
+  const z = d.indexOf(0, 6);                     // the text up to its first zero (bytes after it may carry data)
+  const txt = String.fromCharCode(...d.slice(6, z < 0 || z > 33 ? 33 : z));
   const m = /^([^_]+)_(\d+)$/.exec(txt);
   return m ? { text: txt, model: m[1], version: parseInt(m[2], 10) } : null;
 }
@@ -199,17 +277,30 @@ class Link {
   close() { this.input.onmidimessage = null; }
 }
 
+// send a handshake -> the identity answered, null (no answer in ms), false (the send failed)
+async function ask(link, query, ms) {
+  if (!link.send(query)) return false;
+  const end = Date.now() + ms;
+  while (Date.now() < end) {
+    const p = await link.read(end - Date.now());
+    if (!p) break;
+    const id = parseIdentity(p);
+    if (id) return id;
+  }
+  return null;
+}
+
+// the identity: HS_QUERY, then HS_FULL when the answer is NAME_ and three digits (a firmware that cuts its plain
+// answer tells its whole identity so); the plain answer when nothing answers HS_FULL (M-VAVE's, an older build)
 async function handshake(link, tries = 3) {
   link.drain();
   for (let t = 0; t < tries; t++) {
-    if (!link.send(HS_QUERY)) return null;
-    const end = Date.now() + 1000;
-    while (Date.now() < end) {
-      const p = await link.read(end - Date.now());
-      if (!p) break;
-      const id = parseIdentity(p);
-      if (id) return id;
-    }
+    const id = await ask(link, HS_QUERY, 1000);
+    if (id === false) return null;
+    if (id === null) continue;
+    if (IS_OTA(id) || !/^[^_]+_\d{3}$/.test(id.text)) return id;
+    const full = await ask(link, HS_FULL, 600);
+    return full && full.model === id.model && full.text.startsWith(id.text) ? full : id;
   }
   return null;
 }
@@ -333,18 +424,38 @@ const TEXT = {
     install: "インストール", other: "English",
     manual: "NACHTFAHRT のページへ",
     direct: "USB ケーブルはパソコンに直接つないでください。Probe や Transporter などの機材は不要です。",
-    brick: "万一 FM-1 が起動しなくなった場合は、Mac から標準ファームウェアに戻せます:",
-    bricklink: "起動しない FM-1 の復旧（英語）",
     beta: "このカスタムファームウェアを使ったことで FM-1 が壊れたり不具合が起きたりしても、作者は一切の責任を負いません。自己責任でお使いください。",
     back: "公式ファームウェアに戻すには、このページ下の「純正ファームウェアに戻す」か、M-VAVE 公式のアップデーター M-UPGRADE（Downloads → PC Software → M-UPGRADE）を使います。",
+    newerh: "新しい FM-1:",
+    newer: "2026 年秋以降に販売された FM-1 は別のフラッシュチップ（UC25HQ80）を搭載しています。NACHTFAHRT 1.0.1 はこのチップにも対応しており、従来のチップと同じように保存とアップデートができます。この機体ではまだ試されていないので、お持ちの方は GitHub（FartyPants/fm1-nachtfahrt の Issues）で結果を教えてください。1.0.1 より前の NACHTFAHRT が入ったこのチップの FM-1 は、保存もできず、このページや M-UPGRADE からも書き換えられません:",
+    newerlink: "まず下の手順で復旧してください。",
+    brick: "FM-1 が起動しない、またはこのページから見つからない場合:",
+    bricklink: "復旧の手順（下）",
+    unh: "復旧: FM-1 が起動しない・アップデートできないとき",
+    unwhy: "この手順は、どのファームウェアにも消せないチップ内蔵のアップデートモードを使って、M-VAVE の純正ファームウェアを書き戻します。FM-1 が起動しないとき、またはこのページや M-UPGRADE が FM-1 を見つけられない（「FM-1 が見つかりません」、または何も書き込まずに止まる）ときに使います。",
+    un1h: "FM-1 をチップのアップデートモードにする。",
+    un1: "OCT− と OCT+ を同時に 5 秒押し続け、画面が暗くなるまで待ちます（起動時に 2 回続けてクラッシュした FM-1 は自動でこのモードに入ります）。パソコンには WL82 UBOOT1.00 という USB ディスクが現れます。Mac が読み取れないディスクと表示したら「無視」を押してください。「初期化」は押さないでください。",
+    un2h: "次のどちらかのツールで M-VAVE のファームウェアを書き戻す。",
+    unsh: "Mac / Linux: FM-1 rescue（X0X のもの）",
+    unsh2: "ターミナルを開き、この 1 行を貼り付けて Return を押します。自動で準備し、M-VAVE の V16 と V15 を取得・確認し、FM-1 を待ち、フラッシュ全体をバックアップしてから、書き込む前に確認を求めます。パソコンのパスワードを聞かれることがあります。",
+    unpy: "Windows / Mac / Linux: MvaveFM1Unbricker",
+    unpy2: "図解ガイドに従ってください（Python 3 が必要です）。そのフォルダで、1 行目はチップの情報を表示し、2 行目はフラッシュ全体をバックアップしてから M-VAVE の V15 を書き戻します。V15-FM-1.fwsc の入手先:",
+    copy: "コピー",
+    copied: "コピーしました",
+    un3h: "もう一度インストールする。",
+    un3: "FM-1 が M-VAVE のファームウェアで起動したら、このページに戻ってインストールを押してください。",
+    unnone: "どのモードでも USB に何も現れない場合は、追加の機材が必要です:",
+    unmore: "詳しくはマニュアル（英語）:",
+    bricklink2: "起動しない FM-1 の復旧",
+    uncaveat: "どちらのツールも他の方が作ったもので、NACHTFAHRT の一部ではありません。このプロジェクトでは新しい FM-1（UC25HQ80）でまだ試していません。自己責任でお使いください。",
     stockh: "純正ファームウェアに戻す",
-    stockwhy: "M-VAVE の FM-1 V15 を、NACHTFAHRT（またはそのセーフモード）から同じ USB ケーブルで書き込みます。NACHTFAHRT で保存した曲の設定は消えることがあります。",
-    stock1: "M-VAVE の FM-1 V15 をダウンロード:",
+    stockwhy: "M-VAVE の FM-1 純正ファームウェア（V16 または V15）を、NACHTFAHRT（またはそのセーフモード）から同じ USB ケーブルで書き込みます。NACHTFAHRT で保存した曲の設定は消えることがあります。",
+    stock1: "M-VAVE の FM-1 純正ファームウェアをダウンロード（V16。V15 も使えます）:",
     stock2: "ダウンロードしたファイルを選ぶ:",
     stock3: "FM-1 を USB で接続し、下のボタンを押す。",
     stockinstall: "純正ファームウェアを書き込む",
-    stockok: "M-VAVE の FM-1 V15 です。ボタンを押してください。",
-    stockbad: "これは M-VAVE の FM-1 V15 のファイルではありません。上のリンクのファイルを選んでください。",
+    stockok: "M-VAVE の FM-1 純正ファームウェア（V15 または V16）です。ボタンを押してください。",
+    stockbad: "これは M-VAVE の FM-1 V15 / V16 の（変更されていない）ファイルではありません。上のリンクのファイルを選んでください。",
     stockdone: "完了。FM-1 は純正ファームウェアで起動しました。",
     nomidi: "このブラウザでは使えません。Chrome か Edge で開いてください。", loadfail: "読み込めませんでした: ",
     start: "開始します", verify: "確認中", loader: "書き込みモードに切り替え中", write: "書き込み中",
@@ -370,18 +481,38 @@ const TEXT = {
     install: "Install", other: "日本語",
     manual: "Back to NACHTFAHRT",
     direct: "Connect the USB cable directly to the computer. No probe or Transporter is needed.",
-    brick: "If the FM-1 no longer starts, a Mac can put the stock firmware back:",
-    bricklink: "recovering an FM-1 that won't start",
     beta: "The author accepts no responsibility if your FM-1 is damaged or misbehaves because of this custom firmware. Use it at your own risk.",
     back: "To go back to the official firmware, use \"Back to the stock firmware\" below, or M-VAVE's own updater, M-UPGRADE (Downloads → PC Software → M-UPGRADE).",
+    newerh: "Newer FM-1s:",
+    newer: "FM-1s sold from autumn 2026 have a different flash chip (UC25HQ80). NACHTFAHRT 1.0.1 takes it into account: it saves and takes updates on the new chip as on the older one. It has not been tried on such a unit yet, so if you have one, please say how it went on GitHub (FartyPants/fm1-nachtfahrt, Issues). An FM-1 with this chip that runs a NACHTFAHRT before 1.0.1 can neither save nor be updated from this page or M-UPGRADE:",
+    newerlink: "unbrick it first, step by step below.",
+    brick: "If the FM-1 no longer starts, or this page cannot reach it:",
+    bricklink: "unbricking, step by step (below).",
+    unh: "Unbricking: when the FM-1 won't start or can't be updated",
+    unwhy: "These steps write M-VAVE's own firmware back through the chip's built-in update mode, which no firmware can erase. Use them when the FM-1 no longer starts, or when neither this page nor M-UPGRADE can reach it (\"FM-1 not found\", or an install that stops before anything is written).",
+    un1h: "Put the FM-1 in the chip's update mode.",
+    un1: "Hold OCT− and OCT+ together for 5 seconds, until the screen goes dark. (An FM-1 that crashes twice at start goes there by itself.) The computer then sees a USB disk called WL82 UBOOT1.00. A Mac says it cannot read the disk: press Ignore, never Initialise.",
+    un2h: "Write M-VAVE's firmware back with one of these tools.",
+    unsh: "Mac or Linux: FM-1 rescue (X0X's)",
+    unsh2: "Open Terminal, paste this line and press Return. It sets itself up, fetches M-VAVE's V16 and V15 and checks them, waits for the FM-1, backs up its whole flash, and asks before it writes. It may ask for your computer's password.",
+    unpy: "Windows, Mac or Linux: MvaveFM1Unbricker",
+    unpy2: "follow its illustrated guide (it needs Python 3). In its folder, the first line shows the chip; the second backs up the whole flash, then writes M-VAVE's V15 back. V15-FM-1.fwsc is in",
+    copy: "Copy",
+    copied: "Copied",
+    un3h: "Install again.",
+    un3: "When the FM-1 starts with M-VAVE's firmware, come back to this page and press Install.",
+    unnone: "Nothing on USB at all, in any mode? Then recovery needs extra hardware:",
+    unmore: "More in the manual:",
+    bricklink2: "recovering an FM-1 that won't start",
+    uncaveat: "Both tools are other people's work, not part of NACHTFAHRT, and this project has not yet run them on a newer FM-1 (UC25HQ80). Use them at your own risk.",
     stockh: "Back to the stock firmware",
-    stockwhy: "This writes M-VAVE's own FM-1 V15 back, from NACHTFAHRT (or its safe mode, X0X or Felucca) over the same USB cable. The pieces saved in NACHTFAHRT may be lost.",
-    stock1: "Download M-VAVE's FM-1 V15:",
+    stockwhy: "This writes M-VAVE's own FM-1 firmware (V16 or V15) back, from NACHTFAHRT (or its safe mode, X0X or Felucca) over the same USB cable. The pieces saved in NACHTFAHRT may be lost.",
+    stock1: "Download M-VAVE's FM-1 firmware (V16; V15 works too):",
     stock2: "Choose the file you downloaded:",
     stock3: "Connect the FM-1 by USB and press the button below.",
     stockinstall: "Install the stock firmware",
-    stockok: "That is M-VAVE's FM-1 V15. Press the button to install it.",
-    stockbad: "That is not M-VAVE's FM-1 V15 file. Choose the file from the link above.",
+    stockok: "That is M-VAVE's FM-1 firmware (V15 or V16). Press the button to install it.",
+    stockbad: "That is not M-VAVE's FM-1 V15 or V16 file, unchanged. Choose the file from the link above.",
     stockdone: "Done. The FM-1 has restarted with its original firmware.",
     nomidi: "This browser cannot do it. Open the page in Chrome or Edge.", loadfail: "Could not load: ",
     start: "Starting", verify: "Verifying", loader: "Switching to update mode", write: "Writing",
@@ -400,7 +531,7 @@ const TEXT = {
   },
 };
 let lang = "en";                                 /* English first; 日本語 is a click away */
-const t = (k) => TEXT[lang][k];
+const t = (k) => TEXT[lang][k] ?? "";               /* a key one language leaves out shows nothing */
 let lastKey = null, lastArg = "";
 /* what went wrong goes to the alert (read at once), the rest to the status (read when the reader is free) */
 const FAIL = new Set(["nomidi", "loadfail", "stopped", "error", "denied", "notfound", "model", "lost", "noloader", "noreturn",
@@ -417,6 +548,13 @@ function applyLang() {
   if (lastKey) show(lastKey, t(lastKey) + lastArg);
 }
 $("lang").addEventListener("click", () => { lang = lang === "ja" ? "en" : "ja"; applyLang(); });
+/* the unbricking commands: Copy puts the line on the clipboard (or selects it, where the clipboard is not allowed) */
+document.querySelectorAll("[data-copy]").forEach((b) => b.addEventListener("click", async () => {
+  const c = $(b.dataset.copy);
+  try { await navigator.clipboard.writeText(c.textContent); b.textContent = t("copied"); }
+  catch (e) { const r = document.createRange(); r.selectNodeContents(c); getSelection().removeAllRanges(); getSelection().addRange(r); }
+  setTimeout(() => { b.textContent = t("copy"); }, 1500);
+}));
 applyLang();
 const sayK = (k, arg = "") => { lastKey = k; lastArg = arg; show(k, t(k) + arg); };
 /* progress in words: "Writing, 40 percent", at most every 2 s or every 10 percent (the bar moves smoothly) */
@@ -431,7 +569,7 @@ function progress(k, pct) {
 }
 const log = (t) => { $("log").textContent += t + "\n"; };
 let image = null;
-const meta = {"version": "1.0.0", "product": "FM-1_197010000", "pkg": "../firmware/nachtfahrt-1.0.0.fwsc"};
+const meta = {"version": "1.0.1", "product": "FM-1_197010001", "pkg": "../firmware/nachtfahrt-1.0.1.fwsc"};
 
 let writing = false;
 window.addEventListener("beforeunload", (e) => { if (writing) { e.preventDefault(); e.returnValue = t("leave"); } });
@@ -449,9 +587,11 @@ window.addEventListener("beforeunload", (e) => { if (writing) { e.preventDefault
   } catch (e) { sayK("loadfail", e.message); }
 })();
 
-/* stock firmware: M-VAVE's FM-1 V15, chosen by the user (M-VAVE's server allows no cross-site
+/* stock firmware: M-VAVE's FM-1 V15 or V16, chosen by the user (M-VAVE's server allows no cross-site
    download) and checked against its SHA-256 before anything is written */
-const STOCK_SHA256 = "db1642b2b6fa5c2cccb11ffd13878068bb28601678d3644049f99dc40e7edb8a";
+/* V15 and V16 (M-VAVE's link serves V16 since 2026-10-21); firmware/src/ota.c OTA_STOCK pins the same images */
+const STOCK_SHA256 = ["db1642b2b6fa5c2cccb11ffd13878068bb28601678d3644049f99dc40e7edb8a",
+                      "d017fb65e70aca97ee29d944470c3515a74581df5c0576bf70de917c7b2b61d5"];
 let stock = null;
 $("stockfile").addEventListener("change", async (e) => {
   stock = null;
@@ -461,14 +601,15 @@ $("stockfile").addEventListener("change", async (e) => {
   try {
     const raw = new Uint8Array(await f.arrayBuffer());
     const hex = [...new Uint8Array(await crypto.subtle.digest("SHA-256", raw))].map((b) => b.toString(16).padStart(2, "0")).join("");
-    if (hex !== STOCK_SHA256) { sayK("stockbad"); return; }
-    stock = { image: logicalImage(raw), product: productOf(raw) };
+    if (!STOCK_SHA256.includes(hex)) { sayK("stockbad"); return; }
+    const fl = [0x93000, 0xA9000][STOCK_SHA256.indexOf(hex)];   /* V15's, V16's flash.bin: what M-VAVE's loader reads */
+    stock = { image: logicalImage(raw), product: productOf(raw), blocks: Math.ceil(fl / 512) };
     $("stockgo").disabled = writing;
     sayK("stockok");
   } catch (err) { sayK("error", err && err.message); }
 });
 
-async function run(img, product, isStock) {
+async function run(img, product, isStock, blocks = 1167) {
   let midi;
   try { midi = await navigator.requestMIDIAccess({ sysex: true }); }
   catch (e) { sayK("denied"); return; }
@@ -476,7 +617,7 @@ async function run(img, product, isStock) {
   $("go").disabled = $("stockgo").disabled = true;
   try {
     const up = new Updater(midi, log);
-    const total = 74 + 1167;
+    const total = 74 + blocks;                        /* verify, then the write's requests (512 B each) */
     const step = (k, a) => {
       log(`${k} ${a ?? ""}`);
       if (k === "start") sayK("start");
@@ -505,7 +646,7 @@ async function run(img, product, isStock) {
 }
 
 $("go").addEventListener("click", () => run(image, meta.product, false));
-$("stockgo").addEventListener("click", () => { if (stock) run(stock.image, stock.product, true); });
+$("stockgo").addEventListener("click", () => { if (stock) run(stock.image, stock.product, true, stock.blocks); });
 </script>
 </body>
 </html>
