@@ -578,20 +578,30 @@ update mode, and only the rescue below can reach it.
 ### Recovering an FM-1 that won't start
 
 An FM-1 in the chip's own update mode shows a blank screen, and neither the installer nor M-VAVE's updater
-can see it. On a Mac, in a checkout of the source, run:
+can see it. It goes there by itself when safe mode fails twice, and you can send it there: hold **OCT−** and
+**OCT+** for 5 seconds, until the screen goes dark. The computer then sees a USB disk called `WL82 UBOOT1.00`
+(a Mac says it cannot read it: press Ignore, never Initialise). The install page has these steps too, each
+command ready to copy. On a Mac or Linux, in a checkout of the source, run:
 
 ```
 bash tools/fm1_rescue.sh
 ```
 
-Install the command line developer tools if asked, type your Mac password if asked, then plug the FM-1 in
-and switch it on when the script says it's waiting. It checks the chip, saves a backup of the FM-1's memory
-in `fm1-rescue` in your home folder, and asks before it writes. Type **yes**; don't unplug anything until
-it says it's restarting the FM-1, which then starts into its original firmware. The script downloads its
-rescue tool from X0X's repository, M-VAVE's FM-1 V15 firmware and JieLi's flash loader, checks the firmware
-against a known fingerprint, and writes only the firmware area, never the bootloader or the FM-1's own
-settings. If the FM-1 never shows up at all, Felucca's
-[FM-1-transporter](https://github.com/kurogedelic/FM-1-transporter) can still reach it.
+Install the command line developer tools if asked, type your computer's password if asked, then plug the FM-1
+in and switch it on when the script says it's waiting. It checks the chip (the older flash and the UC25HQ80 of
+FM-1s sold from autumn 2026 are both accepted), saves a backup of the FM-1's whole memory in `fm1-rescue` in
+your home folder, and asks before it writes. Type **yes**; don't unplug anything until it says it's restarting
+the FM-1, which then starts into its original firmware. The script downloads X0X's rescue tool (a fixed version,
+checked), M-VAVE's FM-1 firmware (V16 from M-VAVE, V15 from the Internet Archive, both checked against known
+fingerprints) and JieLi's flash loader, and writes the version whose bootloader the FM-1 already has; it never
+writes the bootloader. On Windows, the community's
+[MvaveFM1Unbricker](https://github.com/Quixotic7/MvaveFM1Unbricker) does the same job (its own guide; not part
+of NACHTFAHRT). Neither tool has been tried by this project on an FM-1 with the UC25HQ80 flash. If the FM-1 never
+shows up at all, Felucca's [FM-1-transporter](https://github.com/kurogedelic/FM-1-transporter) can still reach it.
+
+**A newer FM-1 (UC25HQ80 flash) running NACHTFAHRT before 1.0.1:** that version neither saves nor takes updates
+on this chip, so neither the installer nor M-UPGRADE can replace it. Put the stock firmware back as above, then
+install the current version.
 
 ---
 
