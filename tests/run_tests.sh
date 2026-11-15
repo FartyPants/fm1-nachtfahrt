@@ -30,20 +30,38 @@ run golden sh -c "$CC -O2 -ffp-contract=off -std=c99 -Wall -Wextra -Wdouble-prom
     -o $OUT/golden_test tests/host/golden_test.c firmware/src/dsp/amb.c -lm && $OUT/golden_test"
 run seq sh -c "$CC -O2 -ffp-contract=off -std=c99 -Wall -Wextra -Wdouble-promotion -Werror -Ifirmware/src/dsp -o $OUT/seq_test tests/host/seq_test.c firmware/src/dsp/seq.c && $OUT/seq_test"
 run storage sh -c "$CC -O2 -o $OUT/storage_test tests/storage_test.c && $OUT/storage_test"
+# the flash driver's wait for an erase / page program (never back to XIP while the part is busy)
+run flash-wait sh -c "$CC -O1 -w -o $OUT/flash_wait_test tests/flash_wait_test.c && $OUT/flash_wait_test"
+# the update handshake's identity: cut for M-UPGRADE 3.11 (FM-1_197010001 -> FM-1_197), whole to the installers; a
+# short identity's; the update loader's
+run ota-identity sh -c "$CC -std=c11 -O1 -w -o $OUT/ota_hs_long tests/ota_hs_test.c && $OUT/ota_hs_long && \
+    $CC -std=c11 -O1 -w '-DTEST_ID=\"FM-1_197\"' -o $OUT/ota_hs_short tests/ota_hs_test.c && $OUT/ota_hs_short && \
+    $CC -std=c11 -O1 -w -DFELUCCA_LOADER=1 -o $OUT/ota_hs_loader tests/ota_hs_test.c && $OUT/ota_hs_loader"
 # the update path, against the firmware package (Felucca's tests; needs ./build.sh)
 if [ -f build/amb.fwsc ]; then
-    run ota-entry sh -c "$CC -o $OUT/ota_test tests/ota_test.c && $OUT/ota_test build/amb.fwsc"
+    # FM1_STOCK_DIR: a folder with M-VAVE's official packages (FM-1.fwsc V15 / V16), to check the pins
+    STOCK=""
+    V16=""
+    if [ -n "${FM1_STOCK_DIR:-}" ]; then
+        STOCK=$(ls "$FM1_STOCK_DIR"/*.fwsc 2>/dev/null | tr '\n' ' ')
+        for f in $STOCK; do   # the loader test takes V16 (its flash.bin is 0xA9000)
+            if [ "$(sha256sum "$f" | cut -c1-16)" = d017fb65e70aca97 ]; then V16="$f"; fi
+        done
+    fi
+    run ota-entry sh -c "$CC -o $OUT/ota_test tests/ota_test.c && $OUT/ota_test build/amb.fwsc $STOCK"
     if [ -z "${AC79_SDK:-}" ]; then
         echo "  skip update-loader (needs AC79_SDK, as the build)"
     else
     run update-loader sh -c "head -c 100000 build/amb.bin > $OUT/old_app.bin && \
         python3 tools/fm1pkg_make.py $OUT/old_app.bin build/loader/ota.bin $OUT/old.fwsc >/dev/null && \
-        $CC -o $OUT/ldr_test tests/ldr_test.c && $OUT/ldr_test $OUT/old.fwsc build/amb.fwsc"
+        $CC -o $OUT/ldr_test tests/ldr_test.c && $OUT/ldr_test $OUT/old.fwsc build/amb.fwsc $V16"
     fi
     run installer python3 tests/install_test.py
 else
     echo "  skip update-path tests (no build/amb.fwsc: run ./build.sh)"
 fi
+# tools/fm1_rescue.py's write policy against a simulated UBOOT (both flash parts; V15 / V16 with FM1_STOCK_DIR)
+run rescue python3 tests/rescue_test.py
 run host-build sh host/build_host.sh
 if command -v emcc >/dev/null 2>&1; then
     run emu sh -c "sh web/emu/build.sh >/dev/null && node tests/host/emu_test.mjs build/emu/amb.wasm"

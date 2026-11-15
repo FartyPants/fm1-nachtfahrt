@@ -7,7 +7,9 @@ then "device asks, host answers" reads of the logical image. Run from the repo r
   python3 tests/install_test.py
 Also checks logical_image/product_of against web/fm1pkg.js (needs node and
 build/amb.fwsc, skipped otherwise)."""
+import hashlib
 import io
+import os
 import queue
 import shutil
 import subprocess
@@ -21,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import fm1_install as I  # noqa: E402
 
-I.DELAY.update(open=0, start=0.01, reply=0, loader=0.01, reboot=0.01, retry=0.02, poll=0.05, hs=0.1,
+I.DELAY.update(open=0, start=0.01, reply=0, loader=0.01, reboot=0.01, retry=0.02, poll=0.05, hs=0.1, hs_full=0.1,
                idle_check=0.4, idle_write=0.4, wait_loader=2, wait_reboot=2)
 failed = 0
 
@@ -67,10 +69,11 @@ class FakeFM1:
     """a MIDI backend with one FM-1 on it"""
 
     def __init__(self, image, identity="FM-1_015", name="FM-1", unplug_after=None, after_write="FM-1_900",
-                 stall_after=None, bad_addr=None):
+                 stall_after=None, bad_addr=None, new_ota=()):
         self.image, self.unplug_after, self.after_write = image, unplug_after, after_write
+        self.new_ota = set(new_ota)                # identities whose ota.c cuts the plain answer to NAME_ + 3 digits
         self.stall_after, self.bad_addr = stall_after, bad_addr
-        self.served = self.bad = self.upgrades = 0
+        self.served = self.bad = self.upgrades = self.hs_full = 0
         self.sent, self.links, self.gen, self.lock = [], [], 0, threading.Lock()
         self.boot(identity, name)
 
@@ -97,10 +100,18 @@ class FakeFM1:
             if link.gen == self.gen and not link.closed:
                 link.q.put(bytes(pkt))
 
+    def ident(self, text):
+        b = text.encode() + bytes(27 - len(text))
+        self.tx(b"\xF0" + I.pack7(bytes([0, 0x59, 0x11, 27, 0, 0]) + b + bytes([~sum(b) & 0xFF])) + b"\xF7")
+
     def rx(self, d):
+        new = self.identity in self.new_ota       # ota.c from M-UPGRADE 3.11's fix on: NAME_ + 3 digits to HS_QUERY
         if d == I.HS_QUERY:
-            t = self.identity.encode()
-            self.tx(b"\xF0" + I.pack7(bytes([0, 0x59, 0x11, 0, 0, 0]) + t + bytes(28 - len(t))) + b"\xF7")
+            self.ident(self.identity[:self.identity.index("_") + 4] if new else self.identity)
+        elif d == I.HS_FULL:
+            self.hs_full += 1
+            if new:
+                self.ident(self.identity)
         elif d == I.UPGRADE:
             self.upgrades += 1
             first = self.bad_addr if self.bad_addr is not None else 0
@@ -180,6 +191,13 @@ def wire():
     ok(I.product_of(raw) == "FM-1_906" and len(I.logical_image(raw)) == len(raw) - 20, "product_of / logical_image (synthetic)")
     raw = package("FM-1_9001000")                  # X0X from 0.10: major, minor, patch, two digits each
     ok(I.product_of(raw) == "FM-1_9001000", "product_of: a 12-character identity")
+    ok(I.HS_FULL == b"\xF0" + I.pack7(bytes([0, 0x59, 0x11, 1, 0, 0, 1, 0xFE])) + b"\xF7"
+       and I.unpack7(I.HS_FULL[1:-1])[:8] == bytes([0, 0x59, 0x11, 1, 0, 0, 1, 0xFE]),
+       "HS_FULL: 00 59 11, length 1, body 01, checksum FE")
+    b = bytearray(b"FM-1_197000999" + bytes(13))
+    b[24:27] = b"\xB3\x60\x14"                   # bytes after the text's zero (felucca-bsp puts the flash id there)
+    i = I.parse_identity(b"\xF0" + I.pack7(bytes([0, 0x59, 0x11, 27, 0, 0]) + b + bytes([~sum(b) & 0xFF])) + b"\xF7")
+    ok(i and i.text == "FM-1_197000999" and i.version == 197000999, "parse_identity: the text up to its first zero")
 
 
 def installs():
@@ -212,7 +230,29 @@ def installs():
 
     dev = FakeFM1(image, identity="ota-FM-1_900", name="Felucca Update")
     rc, out, err = cli(["--info"], dev)
-    ok(rc == 0 and "update loader" in out, "--info: device in update mode")
+    ok(rc == 0 and "update loader" in out and dev.hs_full == 0, "--info: device in update mode (never asked with 01)")
+
+    # M-UPGRADE 3.11 takes NAME_ and 1-3 digits: ota.c answers HS_QUERY with FM-1_197, HS_FULL with the whole identity
+    rawl = package("FM-1_197010100")
+    dev = FakeFM1(I.logical_image(rawl), identity="FM-1_197010000", name="FM-1", after_write="FM-1_197010100",
+                  new_ota={"FM-1_197010000", "FM-1_197010100"})
+    rc, out, err = cli([pkgfile("long.fwsc", rawl), "--yes"], dev)
+    ok(rc == 0 and dev.bad == 0 and "device:  FM-1_197010000" in out and "done: the FM-1 runs FM-1_197010100" in out,
+       "install: FM-1_197 to the plain query, the whole identity to HS_FULL")
+    rawl = package("FM-1_197010000")
+    dev = FakeFM1(I.logical_image(rawl), identity="FM-1_197000999", name="FM-1", after_write="FM-1_197010000",
+                  new_ota={"FM-1_197010000"})
+    rc, out, err = cli([pkgfile("long.fwsc", rawl), "--yes"], dev)
+    ok(rc == 0 and dev.bad == 0 and "done: the FM-1 runs FM-1_197010000" in out,
+       "install: from a build before it (whole identity to the plain query) to one after")
+    dev = FakeFM1(image, identity="FM-1_700", name="FM-1", new_ota={"FM-1_700"})
+    rc, out, err = cli(["--info"], dev)
+    ok(rc == 0 and "FM-1_700" in out and dev.hs_full == 1, "--info: a dev build's FM-1_700, the same both ways")
+    dev = FakeFM1(image, identity="FM-1_015", name="FM-1")
+    t0 = time.monotonic()
+    rc, out, err = cli(["--info"], dev)
+    ok(rc == 0 and "FM-1_015" in out and dev.hs_full == 1 and time.monotonic() - t0 < 2,
+       "--info: the stock firmware doesn't answer HS_FULL: its plain answer")
 
 
 def errors():
@@ -262,6 +302,21 @@ def errors():
     dev = FakeFM1(I.logical_image(package(marker=False)))
     rc, out, err = cli([plain, "--yes", "--force"], dev)
     ok(rc == 0 and dev.bad == 0, "... installs with --force")
+    fake16 = pkgfile("fake16.fwsc", package("FM-1_016", marker=False))
+    rc, out, err = cli([fake16, "--yes"], FakeFM1(image))
+    ok(rc == 2 and "V15 or V16" in err, "an FM-1_016 package that is not M-VAVE's V16 -> exit 2")
+    stock = os.environ.get("FM1_STOCK_DIR")
+    if stock:                                       # the real files (BUILDING.md): exactly these two pass
+        for f in sorted(Path(stock).glob("*.fwsc")):
+            raw = f.read_bytes()
+            if hashlib.sha256(raw).hexdigest() not in I.OFFICIAL.values():
+                continue
+            prod, img = I.load_package(str(f), False)
+            ok(prod in I.OFFICIAL and img == I.logical_image(raw), f"{f.name}: M-VAVE's {prod} accepted")
+            bad = bytearray(raw)
+            bad[len(bad) // 2] ^= 1
+            rc, out, err = cli([pkgfile("changed.fwsc", bytes(bad)), "--yes"], FakeFM1(image))
+            ok(rc == 2 and "V15 or V16" in err, f"{f.name} with one byte changed -> exit 2")
     rc, out, err = cli([pkgfile("short.fwsc", b"\0" * 100), "--yes"], FakeFM1(image))
     ok(rc == 2 and "too short" in err, "not a package -> exit 2")
     rc, out, err = cli([str(TMP / "missing.fwsc"), "--yes"], FakeFM1(image))

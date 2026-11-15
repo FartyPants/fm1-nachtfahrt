@@ -38,6 +38,8 @@ On Linux x86-64 the toolchain runs natively and Docker is not needed.
 ./build.sh
 ```
 
+M-VAVE's official packages are not in the repository. With them in a folder, `FM1_STOCK_DIR=folder tests/run_tests.sh` also checks the updater's pins (`firmware/src/ota.c` OTA_STOCK, the installers' stock hashes) against the real V15 / V16 files, the return to stock over each boot area (`tests/ota_test.c`, `tests/rescue_test.py`), and the update loader over V16's boot area (`tests/ldr_test.c`).
+
 `JIELI_TOOLCHAIN` and `AC79_SDK` override the default locations
 (`~/.jieli/toolchain`, `~/fw-AC79_AIoT_SDK`).
 
@@ -78,7 +80,7 @@ python3 tools/fm1_install.py --info          # identity of the connected FM-1
 
 Installing firmware is at your own risk. Hold OCT− and OCT+ for 5 seconds for Felucca's update
 mode. If the FM-1 no longer starts but reaches the chip's update mode (4C4A:8057 on USB),
-`tools/fm1_rescue.sh` puts stock firmware back from a Mac; otherwise recovery needs
+`tools/fm1_rescue.sh` puts stock firmware (V15 or V16) back from a Mac or Linux; otherwise recovery needs
 [FM-1-transporter](https://github.com/kurogedelic/FM-1-transporter).
 
 ## Publishing a release
