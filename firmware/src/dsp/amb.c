@@ -57,7 +57,7 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Octaves 2", -32768, 32767, 0},  {"Skips", -32768, 32767, 0},
     {"Accents", -32768, 32767, 0},   {"Accents 2", -32768, 32767, 0},   {"Seq2 intro", 0, 64, 0},
     {"Lead intro", 0, 64, 0},    {"Seq2 width", 0, 100, 20},
-    {"Chance", 0, 100, 100}, {"Chance 2", 0, 100, 100}, {"Lead in", 0, 64, 16}, {"Seq2 time", 0, 100, 50},
+    {"Chance", 0, 100, 100}, {"Chance 2", 0, 100, 100}, {"Lead in", 0, EN_LDIN_OFF, 16}, {"Seq2 time", 0, 100, 50},
     {"Seq2 rate", 0, 100, 30},
     {"Accent", 0, 100, 50}, {"Seq play", 0, 1, 0},
     {"Noise tone", -50, 50, 0}, {"Noise density", -50, 50, 0}, {"Air", -50, 50, 0}, {"Noise drift", -50, 50, 0},
@@ -326,6 +326,8 @@ void en_param_text(int i, int v, char *b)
         s = EN_NOTE_NAME[(unsigned)v < 12u ? v : 0];
     else if (i == P_DRIFT && !en_drift_bars(v))
         s = "Hold";
+    else if (i == P_LDIN && v >= EN_LDIN_OFF)
+        s = "Off";                               /* (the keys and MIDI in only) */
     if (s) {
         int k = 0;
         while (s[k] && k < 9) {
@@ -3156,12 +3158,14 @@ static void lead_release(int id)
 static void lead_tick(void)                      /* a sixteenth: the phrase goes on, or the breath */
 {
     int planned = 0;
+    const int off = par[P_LDIN] >= EN_LDIN_OFF;  /* (Lead in Off: no phrase of its own begins, no answer, no theme
+                                                  * taken from the keys; a phrase already playing ends as it would) */
     if (ar_cue) {                                /* the arc's moment for the theme (dropped, not kept, before Lead in; under
                                                   * Memory 20, the wandering end: a fresh motif every pair, but for a
                                                   * theme the player played; and while the theme is playing, its answer
                                                   * too) */
         ar_cue = 0;
-        if (ar_sec != EN_SEC_EMERGE && ar_bar >= par[P_LDIN] &&
+        if (!off && ar_sec != EN_SEC_EMERGE && ar_bar >= par[P_LDIN] &&
             ((ld_blen ? ld_mem : par[P_LMEM]) >= 20 || (ld_bank[0].cm & LD_PLAYED)) &&
             !(ld_slot == 0 && ld_blen && (ld_pair < ld_blen || ld_due == 1 || ld_n)))
             ld_cb = 1;
@@ -3173,8 +3177,12 @@ static void lead_tick(void)                      /* a sixteenth: the phrase goes
                                                   * sixteenth more of quiet after it (two beats: taken, or let go) */
         if (ld_key >= 0 && (ld_cap & CP_HELD))
             cp_du[cp_n - 1] = (uint8_t)(cp_du[cp_n - 1] < 32 ? cp_du[cp_n - 1] + 1 : 32);
-        else if (++cp_q >= 8)
-            ld_take();
+        else if (++cp_q >= 8) {
+            if (off)
+                cp_n = cp_q = 0;                 /* (Off: the figure only played, not kept) */
+            else
+                ld_take();
+        }
     }
     if (ld_key >= 0)                             /* (the keys play it: its own phrases wait) */
         return;
@@ -3182,12 +3190,12 @@ static void lead_tick(void)                      /* a sixteenth: the phrase goes
                                                   * after its breath */
         if (ld_gap)
             ld_gap--;
-        else if (!(sixteenth & 3u))
+        else if (!off && !(sixteenth & 3u))
             lead_plan(), planned = 1;
     } else if (!(sixteenth & 15u) && !ld_n) {    /* a bar line, between pairs */
         if (ld_rest)
             ld_rest--;
-        else if (ar_sec != EN_SEC_EMERGE && ar_bar >= par[P_LDIN] && (ld_blen || ld_prep >= 4 || ld_next >= 0) &&
+        else if (!off && ar_sec != EN_SEC_EMERGE && ar_bar >= par[P_LDIN] && (ld_blen || ld_prep >= 4 || ld_next >= 0) &&
                  (ld_due || ld_cb || seq_rand(&ld_rng) % 100u < (uint32_t)(20 + 6 * pe(P_LDENS) / 10) /
                                                                    (ar_sec == EN_SEC_FLOW ? 3u : 1u)))
             lead_plan(), planned = 1;            /* (the block's next pair, or the theme due, at once; a block not

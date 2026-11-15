@@ -246,7 +246,8 @@ The white keys play the Lead too, and **write its theme**. Play three notes or m
 play are kept, at most sixteen notes and rests) and pause for two beats. What you played was the call, and the Lead
 **answers** it a beat or two later: your rhythm, its own notes but close to yours (it picks up a step or two from your
 last note, and on the strong beats it lands on a chord note next to yours), ending on the chord. It doesn't play your
-notes back to you. It does this in any part of the piece, Emerge too, even before **Lead in**: you asked by playing.
+notes back to you. It does this in any part of the piece, Emerge too, even before **Lead in**: you asked by playing (but not with Lead in
+**Off**, the Arc page: then your notes are only played, and the Lead plays nothing else).
 From then on your notes are the piece's theme: they come back whole where the theme does, over whatever chord is
 playing, varied a little at a time like any of its ideas, even when the Lead otherwise keeps little (a theme you
 played is never thrown away). One or two notes are just played, nothing is kept; notes played while the Lead is muted
@@ -346,8 +347,10 @@ Energy does. A new piece, or PLAY from the top, starts the motion from its begin
 
 ### The Arc page
 
-GLO twice. **Lead in** (0–64 bars): how long after the piece starts the Lead may play. **Bridge** (0–100): see
-above. **Arc** (0–100): the length of the Sequence's slow rise: its filter climbs towards a peak (four fifths
+GLO twice. **Lead in** (0–64 bars): how long after the piece starts the Lead may play. At its top, past 64, it is
+**Off**: the Lead plays only what you play on the white keys or over MIDI in, in its own voice: no phrases of its own,
+no answers, and your notes aren't taken as its theme (set it per piece; it is saved with the piece). **Bridge** (0–100):
+see above. **Arc** (0–100): the length of the Sequence's slow rise: its filter climbs towards a peak (four fifths
 of the way through) and settles, then does it again, for ever (0: no rise; 1–100: about 130 to 770 bars).
 **Memory** (0–100): how much the Lead keeps its ideas: the chance that, after a few pairs on one motif, it keeps
 it rather than varying it or finding a new one (see [The layers](#5-the-layers)). Each piece sets its own (see

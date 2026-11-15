@@ -103,6 +103,14 @@ wait 300
 said Lead in 33
 turn K1 -1
 wait 300
+# (fm1-nachtfahrt #3) at Lead in's top, Off: the Lead plays only the keys and MIDI in; back to 32
+spin K1 40
+wait 300
+said Lead in Off
+shot arc_lead_off.png
+spin K1 -33
+wait 300
+said Lead in 32
 # (the Lead's memory) the fourth knob: Memory, Timewind's 55, the Lead's own parameter (130)
 turn K4 1
 wait 300

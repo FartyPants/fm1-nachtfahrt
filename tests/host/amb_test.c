@@ -1294,6 +1294,38 @@ static float pn_pk(int a, int b)
         m = fmaxf(m, fabsf(pn_out[i]));
     return m;
 }
+/* (fm1-nachtfahrt #3: "turn off the lead answering, I just want to play the lead myself") Lead in's top, Off: in
+ * 40 bars the Lead plays nothing of its own; a figure on the white keys sounds, note for note, and is neither answered
+ * nor taken as the theme (16 bars after it, still only its notes); the same figure with Lead in 0 is answered (the
+ * test tells the two apart). Shown "Off"; 64 still a number of bars */
+static void test_lead_off(void)
+{
+    static const int DG[4] = {0, 2, 4, 2}, DU[4] = {4, 4, 4, 8};
+    char t[16];
+    uint32_t keys;
+    CHECK(en_param_info(P_LDIN)->hi == EN_LDIN_OFF, "test_lead_off: Lead in's top %d", en_param_info(P_LDIN)->hi);
+    en_param_text(P_LDIN, EN_LDIN_OFF, t);
+    CHECK(!strcmp(t, "Off"), "test_lead_off: shown %s", t);
+    en_param_text(P_LDIN, 64, t);
+    CHECK(strcmp(t, "Off") != 0, "test_lead_off: 64 shown %s", t);
+    off_setup(50);
+    en_set(P_LDIN, EN_LDIN_OFF);
+    ld_ons = ld_mono_bad = ld_on_now = 0;
+    run_to(en_bars + 40u * 16u);
+    CHECK(ld_ons == 0, "test_lead_off: %u Lead notes of its own in 40 bars at Off", ld_ons);
+    keys_play(DG, DU, 4);
+    keys = ld_ons;
+    run_to(en_bars + 16u * 16u);
+    CHECK(keys == 4 && ld_ons == 4, "test_lead_off: the figure %u notes, %u after 16 bars (no answer)", keys, ld_ons);
+    off_setup(50);                               /* (the same at Lead in 0: answered) */
+    run_to(en_bars + 8u * 16u);
+    ld_ons = ld_mono_bad = ld_on_now = 0;
+    keys_play(DG, DU, 4);
+    keys = ld_ons;
+    run_to(en_bars + 16u * 16u);
+    CHECK(keys >= 4 && ld_ons > keys, "test_lead_off: at Lead in 0, %u notes with the figure, %u after (an answer)",
+          keys, ld_ons);
+}
 static void test_piano_lead(void)
 {
     char t[16];
@@ -5116,6 +5148,7 @@ int main(void)
     test_fm_lead_return();
     test_choir_lead();
     test_piano_lead();
+    test_lead_off();
 
     /* (the tenth piece, Umeda) it starts from its written theme, the user's second piano motive (C#6 F#6 C#6 A#6 C#6
      * F#6 as the recording has it, in F# major pentatonic): the keys' kind of theme (LD_PLAYED), so its offspring follow it; the first call

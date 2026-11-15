@@ -32,6 +32,8 @@
 #define EN_LOOP_MAX 29
 #define EN_NDRUM 5                     /* kick, shaker, open hat, rim, clap */
 #define EN_NPAD 4                      /* chord voices */
+#define EN_LDIN_OFF 65                 /* Lead in's top: Off, the Lead plays only what the keys and MIDI in play (no
+                                        * phrases of its own, no answers, no theme taken: fm1-nachtfahrt #3) */
 
 /* modes: pools relative to the root (bit i: root + i semitones) */
 enum { MODE_IONIAN, MODE_DORIAN, MODE_PHRYGIAN, MODE_LYDIAN, MODE_MIXOLYDIAN, MODE_AEOLIAN, MODE_PENT_MAJ,
