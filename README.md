@@ -1,5 +1,7 @@
 # NACHTFAHRT for the M-VAVE FM-1
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/Q5Q5MOB4M)
+
 ![NACHTFAHRT](docs/img/site/banner.jpg)
 
 **[Install](https://fartypants.github.io/fm1-nachtfahrt/install/)** (Chrome or Edge, also Chrome on Android or Chromebook; the FM-1
