@@ -214,7 +214,13 @@ static const uint8_t STR1[] = {12, 3, 'D', 0, 'U', 0, 'B', 0, '-', 0, '1', 0};  
 static const uint8_t STR2[] = {30, 3, 'F', 0, 'e', 0, 'l', 0, 'u', 0, 'c', 0, 'c', 0, 'a', 0, ' ', 0, 'U', 0, 'p', 0,
                                'd', 0, 'a', 0, 't', 0, 'e', 0};
 #else
+#if BOARD_SMK37
+/* "NACHTFAHRT SMK-37": 17 characters, 34 bytes of UTF-16, 36 with the length and type bytes. */
+static const uint8_t STR2[] = {36, 3, 'N', 0, 'A', 0, 'C', 0, 'H', 0, 'T', 0, 'F', 0, 'A', 0, 'H', 0, 'R', 0,
+                               'T', 0, ' ', 0, 'S', 0, 'M', 0, 'K', 0, '-', 0, '3', 0, '7', 0};
+#else
 static const uint8_t STR2[] = {22, 3, 'D', 0, 'U', 0, 'B', 0, '-', 0, '1', 0, ' ', 0, 'F', 0, 'M', 0, '-', 0, '1', 0};   /* DUB-1 FM-1 */
+#endif
 #endif
 
 static int get_desc(uint32_t wvalue, const uint8_t **d, uint16_t *l)

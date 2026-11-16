@@ -18,12 +18,25 @@ All integrity checks in the format are CRC16 (poly 0x1021, init 0).
 """
 import argparse
 import os
+import re
 import struct
 from pathlib import Path
 
 APP_SLOT = 0x8DFBC
 FLASH_SIZE = 0x93000
 KEY = 0x980F
+# ---- SMK-37 (--board smk37): the layout the stock firmware and smk37_open's sdk/Package.cs use, which
+# is not the FM-1's. A 1 MiB part, the user area and BTIF reserved above the image, and no key_blob():
+# the SMK's chip key descriptor is jl-misctools' deterministic form.
+SMK = dict(
+    area=0x4000, app_data=0x120, flash_limit=0xFF000, user_size=0x83000, bt_size=0x1000,
+    minimum_vm=0x8000, public_code=0x980F,
+    # the stock firmware's own boot resources, from smk37_open sdk/tools/pack (sizes and SHA-256 as its
+    # manifest.json lists them); the AC79 SDK has uboot.boot but not this boot-config.bin
+    pack=("boot-config.bin", 721), boot=("uboot.boot", 14488), tool=("cfg_tool.bin", 383),
+)
+# "SMK-37 Elite_8NNNNNN" / "SMK-37 Pro_8NNNNNN", exactly as the stock packager accepts it.
+SMK_PRODUCT_RE = re.compile(r"\ASMK-37 (?:Pro|Elite)_8[0-9]{6}\Z")
 # flash header: JieLi SDK defaults (burner_size 544, VID "0.01", flash_size 0xFF000,
 # fs_ver 0x10, PID "AC791N_STORY"), plain, without its CRC
 FLASH_HDR = bytes.fromhex("20022f104cc900f00f001010a4ff4e5d0b41e0cd781dc856417fb367cf9f")
@@ -89,8 +102,8 @@ def key_blob(key):
     return bytes(d) + struct.pack("<H", crc16(d))
 
 
-def sdk_file(rel):
-    root = Path(SDK or os.environ.get("AC79_SDK", ""))
+def sdk_file(rel, sdk=None):
+    root = Path(sdk or SDK or os.environ.get("AC79_SDK", ""))
     path = root / "cpu" / "wl82" / "tools" / rel
     try:
         return path.read_bytes()
@@ -186,6 +199,140 @@ def ufw(flash, ota, product):
     return bytes(raw)
 
 
+# ---------------------------------------------------------------------------- SMK-37 ---
+def smk_pack_file(name, size, pack=None):
+    """A boot resource of the stock firmware, checked against its published size."""
+    root = Path(pack or os.environ.get("SMK37_PACK", ""))
+    path = root / name
+    try:
+        d = path.read_bytes()
+    except OSError as e:
+        raise SystemExit(f"fm1pkg_make: {path}: {e.strerror}. Set SMK37_PACK to smk37_open's sdk/tools/pack.")
+    if len(d) != size:
+        raise SystemExit(f"fm1pkg_make: {path}: {len(d)} B, the stock resource is {size} B")
+    return d
+
+
+def smk_encode_boot(plain):
+    """BANKCB-encode the stock uboot.boot, exactly as sdk/Package.cs EncodeBoot does."""
+    import struct as _st
+    d = bytearray(plain)
+    banks = _st.unpack_from("<H", d, 0)[0]
+    if banks < 1 or banks > len(d) // 16:
+        raise SystemExit("fm1pkg_make: invalid boot directory in uboot.boot")
+    prev_end = banks * 16
+    for i in range(banks):
+        h = i * 16
+        ln = _st.unpack_from("<H", d, h + 2)[0]
+        st = _st.unpack_from("<i", d, h + 8)[0]
+        if ln == 0 or st < prev_end or st > len(d) - ln:
+            raise SystemExit("fm1pkg_make: invalid boot bank in uboot.boot")
+        enc(d, h, 16, 0xFFFF)
+        enc(d, st, ln, 0xFFFF)
+        prev_end = st + ln
+    return bytes(d)
+
+
+def smk_flash_image(app, pack=None):
+    """The 1 MiB flash image the SMK-37's updater expects, built as sdk/Package.cs builds it."""
+    c = SMK
+    boot_plain = smk_pack_file(c["boot"][0], c["boot"][1], pack)
+    # stored BANKCB-encoded, but the record keeps the plain CRC
+    # (Package.cs: Crc(boot) before EncodeBoot)
+    boot = smk_encode_boot(boot_plain)
+    config = smk_pack_file(c["pack"][0], c["pack"][1], pack)
+    tool = smk_pack_file(c["tool"][0], c["tool"][1], pack)
+    # jl-misctools' deterministic chip key descriptor: 16x0x10, then 0x10 XOR (key bit ? 0 : 0xFF)
+    settings = bytearray(34 + len(config))
+    for bit in range(16):
+        settings[bit] = 0x10
+        settings[16 + bit] = 0x10 ^ (0x00 if (c["public_code"] >> bit) & 1 else 0xFF)
+    struct.pack_into("<H", settings, 32, crc16(bytes(settings[0:32])))
+    settings[34:] = config
+    image_size = (c["area"] + c["app_data"] + len(app) + len(tool) + 64 + 0xFFF) & ~0xFFF
+    user_at = c["flash_limit"] - c["user_size"]
+    vm_end = user_at - c["bt_size"]
+    if image_size > vm_end - c["minimum_vm"]:
+        raise SystemExit(f"SMK-37: app {len(app)} B leaves no room for the minimum VM")
+    f = bytearray(b"\xFF" * image_size)
+    # AC791N boot header, the fields the stock firmware ships
+    f[0:32] = bytes.fromhex("000020022f104cc900f00f001010a4ff4e5d0b41e0cd781dc856417fb367cf9f")
+    struct.pack_into("<H", f, 0, crc16(bytes(f[2:32])))
+    boot_at = 160
+    config_at = boot_at + len(boot)
+
+    def rec(at, name, dcrc, address, size, flags, last, extra=None):
+        e = bytearray(b"\xFF" * 32)
+        struct.pack_into("<HIIHH", e, 2, dcrc, address & 0xFFFFFFFF, size & 0xFFFFFFFF, flags, last)
+        nm = name.encode() + b"\0"
+        e[16:16 + len(nm)] = nm
+        if extra is not None:
+            struct.pack_into("<I", e, 28, extra)
+        struct.pack_into("<H", e, 0, crc16(bytes(e[2:32])))
+        f[at:at + 32] = e
+
+    rec(32, "uboot.boot", crc16(boot_plain), boot_at, len(boot), 0, 0)
+    rec(64, "isd_config.ini", crc16(bytes(settings)), config_at, len(settings), 0x8002, 0)
+    rec(96, "app_dir_head", 0xFFFF, c["area"], 0xFFFFFFFF, 0xFF81, 0)
+    rec(128, "key_mac", 0xFFFF, c["flash_limit"], 4096, 0x0112, 0xFFFF)
+    for p in range(0, 160, 32):
+        enc(f, p, 32, 0xFFFF)
+    f[boot_at:boot_at + len(boot)] = boot
+    f[config_at:config_at + len(settings)] = settings
+    app_at = c["area"] + c["app_data"]
+    f[app_at:app_at + len(app)] = app
+    f[app_at + len(app):app_at + len(app) + len(tool)] = tool
+    payload = c["app_data"] + len(app) + len(tool)
+    rec(c["area"] + 32, "app.bin", crc16(app), c["app_data"], len(app), 0xFF82, 0)
+    rec(c["area"] + 64, "cfg_tool.bin", crc16(tool), c["app_data"] + len(app), len(tool), 0xFF82, 0)
+    rec(c["area"] + 96, "VM", 0xFFFF, image_size, vm_end - image_size, 0x8112, 0, c["minimum_vm"])
+    rec(c["area"] + 128, "PRCT", 0xFFFF, 0, image_size, 0x8292, 0, 0x45444F43)
+    rec(c["area"] + 160, "BTIF", 0xFFFF, vm_end, c["bt_size"], 0x8192, 1, 0x4F545541)
+    rec(c["area"], "app_area_head", crc16(bytes(f[c["area"] + 32:c["area"] + payload])),
+        0x02000120, payload, 0xFF83, 0)
+    reserved = c["area"] + payload
+    rec(reserved + 32, "USER", 0xFFFF, user_at, c["user_size"], 0x8192, 1, 0x4F545541)
+    rec(reserved, "EXT_RESERVED", crc16(bytes(f[reserved + 32:reserved + 64])), 32, 64, 0xFF93, 1)
+    # SFC over the app area, one starting key per 32-byte block, mixed with the block's own address
+    # relative to the area (Package.cs: Cipher(Area+p, PublicCode^(p>>2))). base = off so sfc() does
+    # not mix the address in a second time.
+    for p in range(0, payload + 64, 32):
+        at = c["area"] + p
+        sfc(f, at, min(32, payload + 64 - p), at, c["public_code"] ^ (p >> 2))
+    return bytes(f)
+
+
+def smk_ufw(flash, ota, product):
+    """Wrap the flash image and the loader, and lay the identity into the package."""
+    if not SMK_PRODUCT_RE.match(product):
+        raise SystemExit(f"product {product!r}: the SMK-37 takes 'SMK-37 Elite_8NNNNNN' or 'SMK-37 Pro_8NNNNNN'")
+    loader_at = 1024 + ((len(flash) + 31) & ~31)
+    total = loader_at + ((len(ota) + 31) & ~31)
+    u = bytearray(b"\xFF" * total)
+    u[0:224] = b"\0" * 224
+    for i, (typ, name, d) in enumerate([(0, "flash.bin", flash), (100, "ota.bin", ota)]):
+        r = 64 + i * 80
+        at = 1024 if i == 0 else loader_at
+        struct.pack_into("<HHHHIII", u, r, typ, i, crc16(d), 0, at, len(d), (len(d) + 31) & ~31)
+        u[r + 64:r + 64 + len(name)] = name.encode()
+        enc(u, r, 80, 0xFFFF)
+    struct.pack_into("<IHH", u, 4, total, 2, 4)
+    struct.pack_into("<I", u, 12, 512)
+    u[16:16 + len(UFW_CHIP)] = UFW_CHIP
+    struct.pack_into("<H", u, 2, crc16(bytes(u[64:224])))
+    struct.pack_into("<H", u, 0, crc16(bytes(u[2:64])))
+    enc(u, 0, 64, 0xFFFF)
+    u[1024:1024 + len(flash)] = flash
+    u[loader_at:loader_at + len(ota)] = ota
+    out = bytearray()
+    for src in range(total):
+        out.append(u[src])
+        if src < 940 and (src + 1) % 47 == 0:
+            index = src // 47
+            out.append((ord(product[index]) + index + 1) & 0xFF if index < len(product) else 0x7D)
+    return bytes(out)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("app", type=Path)
@@ -193,10 +340,21 @@ def main():
     ap.add_argument("out", type=Path)
     ap.add_argument("--product", default="FM-1_900")
     ap.add_argument("--key", type=lambda s: int(s, 0), default=KEY)
+    ap.add_argument("--board", choices=("fm1", "smk37"), default="fm1",
+                    help="smk37: the 1 MiB layout and the 'SMK-37 Elite_8NNNNNN' identity")
     ap.add_argument("--sdk", type=Path, help="JieLi AC79 SDK checkout (default: $AC79_SDK)")
+    ap.add_argument("--pack", type=Path,
+                    help="smk37: the stock firmware's sdk/tools/pack (default: $SMK37_PACK)")
     a = ap.parse_args()
     global SDK
     SDK = a.sdk
+    if a.board == "smk37":
+        flash = smk_flash_image(a.app.read_bytes(), a.pack)
+        pkg = smk_ufw(flash, a.ota.read_bytes(), a.product)
+        a.out.write_bytes(pkg)
+        print(f"package {a.out}: {len(pkg)} B, identity {a.product}, chip key {SMK['public_code']:#06x},"
+              f" image {len(flash)} B of {SMK['flash_limit']} B")
+        return
     pkg = ufw(flash_image(a.app.read_bytes(), a.key), a.ota.read_bytes(), a.product)
     a.out.write_bytes(pkg)
     print(f"package {a.out}: {len(pkg)} B, identity {a.product}, chip key {a.key:#06x}")

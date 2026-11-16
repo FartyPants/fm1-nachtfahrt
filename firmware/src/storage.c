@@ -46,9 +46,29 @@ static uint32_t st_crc32(const void *p, uint32_t n)   /* zlib CRC-32, 4 bits per
     return ~c;
 }
 
+#if BOARD_SMK37
+/* SMK-37 Pro (fm1_flash_map.h): both objects inside FL_DATA 0x9D000..0xBAFFF, the stock firmware's VM.
+ * The project takes 0x9D000..0x9FFFF (A/B, and the spare room the FM-1's 0xFC000 pair leaves);
+ * the panel calibration 0xA2000 / 0xA3000. Never above 0xA4000, never near BTIF / USRTRIM
+ * (0xC0000..0xC1FFF) or key_mac (0xFF000).
+ * The FM-1 addresses (0xFC000, 0xDC000) lie in the SMK's protected USR / USRTRIM areas, so the build
+ * stops here rather than erase a unit's factory calibration on the first boot. */
+#define ST_SMK_PROJ 0x9D000u                   /* OBJ_PROJ: copies at 0x9D000 / 0x9E000 */
+#define ST_SMK_PANEL 0xA2000u                  /* OBJ_PANEL: copies at 0xA2000 / 0xA3000 */
+_Static_assert(OBJ_NOBJ == 2, "SMK store: a new object needs a sector pair in FL_DATA");
+_Static_assert(ST_SMK_PROJ >= FL_DATA_LO && ST_SMK_PROJ + 2u * ST_SECTOR <= FL_DATA_HI,
+               "SMK store: the project outside FL_DATA");
+_Static_assert(ST_SMK_PANEL >= FL_DATA_LO && ST_SMK_PANEL + 2u * ST_SECTOR <= FL_DATA_HI,
+               "SMK store: the panel calibration outside FL_DATA");
+_Static_assert(ST_SMK_PANEL >= ST_SMK_PROJ + 2u * ST_SECTOR, "SMK store: the object pairs overlap");
+#else
+#define ST_SMK_PROJ 0xFC000u
+#define ST_SMK_PANEL 0xDC000u
+#endif
+
 static uint32_t st_sector(uint32_t obj, uint32_t copy)  /* flash offset of copy A (0) / B (1) */
 {
-    return (obj == OBJ_PANEL ? 0xDC000u : 0xFC000u) + copy * ST_SECTOR;
+    return (obj == OBJ_PANEL ? ST_SMK_PANEL : ST_SMK_PROJ) + copy * ST_SECTOR;
 }
 
 static uint8_t st_buf[ST_PAYLOAD_MAX] __attribute__((aligned(4)));
