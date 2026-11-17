@@ -363,6 +363,9 @@ static void fm1_main(void)
             if (ota_frame_get(&p, &n) && ann_frame(p, n, fm1_ms))
                 ota_frame_done();
         }
+#if NACHTFAHRT_BIG_SCREEN
+        mirror_service();                           /* the FM-1 Big Screen mirror (nachtfahrt_mirror.c) */
+#endif
         ota_service();                              /* M-UPGRADE handshake (other SysEx is dropped) */
         if (usb.ota_req) {
             usb.ota_req = 0;

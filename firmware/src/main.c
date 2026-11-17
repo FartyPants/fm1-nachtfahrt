@@ -4,6 +4,12 @@
  * The instrument (dsp/amb.c) is a separate unit compiled at -O2 by tools/build.py; this one is
  * -Os. Order matters. */
 #include <stdint.h>
+#ifndef NACHTFAHRT_BIG_SCREEN
+#define NACHTFAHRT_BIG_SCREEN 1   /* the FM-1 Big Screen mirror: the screen over USB SysEx to FM-1 Mirror (nachtfahrt_mirror.c) */
+#endif
+#if NACHTFAHRT_BIG_SCREEN
+#define SXQ 512u                  /* usb.c's SysEx ring: room for the screen as well as announce.c */
+#endif
 #include "fm1_time.h"
 #include "fm1_sys.h"
 #include "fm1_irq.h"
@@ -136,4 +142,7 @@ static int ann_wire_send(const uint8_t *p, uint32_t n)   /* never waits: no room
 #include "app/plat_fm1.c"
 #include "app/project.c"
 #include "app/ui.c"
+#if NACHTFAHRT_BIG_SCREEN
+#include "nachtfahrt_mirror.c"   /* the FM-1 Big Screen mirror (MIT; after usb.c, lcd.c and ui.c, before main_fm1.c) */
+#endif
 #include "app/main_fm1.c"
